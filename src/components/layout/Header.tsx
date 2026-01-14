@@ -1,0 +1,169 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, User, ShoppingBag, Menu, X, ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+const menuItems = [
+  { name: "Home", href: "/" },
+  {
+    name: "Shop",
+    href: "/shop",
+    submenu: [
+      { name: "Jewelry", href: "/shop/jewelry", items: ["Necklace", "Earrings", "Rings"] },
+      { name: "Bags & Accessories", href: "/shop/bags", items: ["Hand-painted Bags", "Clutches", "Scarves"] },
+      { name: "Woven Tales", href: "/shop/woven", items: ["Crochet", "Macramé", "Handloom"] },
+      { name: "Fine Art", href: "/shop/art", items: ["Paintings", "Showpieces"] },
+    ],
+  },
+  { name: "Collections", href: "/collections" },
+  { name: "Our Story", href: "/about" },
+  { name: "Contact", href: "/contact" },
+];
+
+const Header = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+
+  return (
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/50">
+      {/* Announcement Bar */}
+      <div className="bg-gold/10 border-b border-gold/20 py-2">
+        <p className="text-center text-sm text-gold tracking-wide font-body">
+          ✨ Free Shipping on Orders Over ৳5,000 ✨
+        </p>
+      </div>
+
+      <div className="container mx-auto px-4 lg:px-8">
+        <nav className="flex items-center justify-between h-20">
+          {/* Mobile Menu Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden text-foreground"
+            onClick={() => setIsOpen(!isOpen)}
+          >
+            {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </Button>
+
+          {/* Logo */}
+          <Link to="/" className="flex-shrink-0">
+            <motion.h1 
+              className="font-display text-2xl md:text-3xl tracking-wide"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6 }}
+            >
+              <span className="text-gold">artistiya</span>
+              <span className="text-foreground">.store</span>
+            </motion.h1>
+          </Link>
+
+          {/* Desktop Navigation */}
+          <ul className="hidden lg:flex items-center gap-8">
+            {menuItems.map((item) => (
+              <li
+                key={item.name}
+                className="relative"
+                onMouseEnter={() => setActiveMenu(item.name)}
+                onMouseLeave={() => setActiveMenu(null)}
+              >
+                <Link
+                  to={item.href}
+                  className="flex items-center gap-1 text-sm font-body tracking-wide text-foreground/80 hover:text-gold transition-colors duration-300 py-2"
+                >
+                  {item.name}
+                  {item.submenu && <ChevronDown className="h-4 w-4" />}
+                </Link>
+
+                {/* Mega Menu */}
+                <AnimatePresence>
+                  {item.submenu && activeMenu === item.name && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute top-full left-0 mt-2 w-[500px] bg-card border border-border rounded-lg shadow-elevated p-6"
+                    >
+                      <div className="grid grid-cols-2 gap-8">
+                        {item.submenu.map((category) => (
+                          <div key={category.name}>
+                            <Link
+                              to={category.href}
+                              className="font-display text-lg text-gold hover:text-gold-light transition-colors"
+                            >
+                              {category.name}
+                            </Link>
+                            <ul className="mt-3 space-y-2">
+                              {category.items.map((subItem) => (
+                                <li key={subItem}>
+                                  <Link
+                                    to={`${category.href}/${subItem.toLowerCase().replace(/\s+/g, '-')}`}
+                                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                  >
+                                    {subItem}
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </li>
+            ))}
+          </ul>
+
+          {/* Right Icons */}
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="text-foreground/80 hover:text-gold">
+              <Search className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="text-foreground/80 hover:text-gold">
+              <User className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="relative text-foreground/80 hover:text-gold">
+              <ShoppingBag className="h-5 w-5" />
+              <span className="absolute -top-1 -right-1 h-5 w-5 bg-gold text-charcoal-deep text-xs font-bold rounded-full flex items-center justify-center">
+                0
+              </span>
+            </Button>
+          </div>
+        </nav>
+      </div>
+
+      {/* Mobile Menu */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="lg:hidden bg-card border-t border-border overflow-hidden"
+          >
+            <div className="container mx-auto px-4 py-6">
+              <ul className="space-y-4">
+                {menuItems.map((item) => (
+                  <li key={item.name}>
+                    <Link
+                      to={item.href}
+                      className="block text-lg font-display text-foreground hover:text-gold transition-colors"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      {item.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </header>
+  );
+};
+
+export default Header;

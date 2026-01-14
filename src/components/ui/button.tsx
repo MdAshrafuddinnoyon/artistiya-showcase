@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 font-body tracking-wide",
   {
     variants: {
       variant: {
@@ -15,11 +15,18 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        // Premium brand variants
+        gold: "bg-gradient-to-br from-gold-light via-gold to-gold-dark text-charcoal-deep font-semibold shadow-gold hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]",
+        "gold-outline": "border border-gold text-gold bg-transparent hover:bg-gold/10 hover:shadow-gold",
+        cream: "bg-cream text-charcoal-deep hover:bg-cream-dark",
+        hero: "bg-gradient-to-br from-gold-light via-gold to-gold-dark text-charcoal-deep font-semibold text-base shadow-gold hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] uppercase tracking-widest",
+        "hero-outline": "border-2 border-gold/50 text-gold bg-transparent hover:border-gold hover:bg-gold/5 uppercase tracking-widest font-semibold",
       },
       size: {
         default: "h-10 px-4 py-2",
         sm: "h-9 rounded-md px-3",
         lg: "h-11 rounded-md px-8",
+        xl: "h-14 rounded-md px-10 text-base",
         icon: "h-10 w-10",
       },
     },
