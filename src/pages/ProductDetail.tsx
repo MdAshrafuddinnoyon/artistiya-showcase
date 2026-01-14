@@ -14,7 +14,6 @@ import WhatsAppOrderButton from "@/components/common/WhatsAppOrderButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
-import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 
 interface Product {
@@ -47,7 +46,7 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { addToCart } = useCart();
-  const { t, language } = useLanguage();
+  
   
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -116,7 +115,7 @@ const ProductDetail = () => {
 
   const handleWishlist = async () => {
     if (!product || !user) {
-      toast.error(language === "bn" ? "অনুগ্রহ করে প্রথমে লগইন করুন" : "Please login first");
+      toast.error("Please login first");
       return;
     }
 
@@ -128,13 +127,13 @@ const ProductDetail = () => {
           .eq("user_id", user.id)
           .eq("product_id", product.id);
         setWishlisted(false);
-        toast.success(language === "bn" ? "উইশলিস্ট থেকে সরানো হয়েছে" : "Removed from wishlist");
+        toast.success("Removed from wishlist");
       } else {
         await supabase
           .from("wishlist_items")
           .insert({ user_id: user.id, product_id: product.id });
         setWishlisted(true);
-        toast.success(language === "bn" ? "উইশলিস্টে যোগ করা হয়েছে" : "Added to wishlist");
+        toast.success("Added to wishlist");
       }
     } catch (error) {
       console.error("Wishlist error:", error);
@@ -147,8 +146,8 @@ const ProductDetail = () => {
     ? Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100)
     : 0;
 
-  const displayName = language === "bn" && product?.name_bn ? product.name_bn : product?.name;
-  const categoryName = language === "bn" && product?.category?.name_bn ? product.category.name_bn : product?.category?.name;
+  const displayName = product?.name;
+  const categoryName = product?.category?.name;
 
   if (loading) {
     return (
@@ -176,9 +175,9 @@ const ProductDetail = () => {
       <div className="min-h-screen bg-background">
         <Header />
         <main className="pt-32 pb-24 text-center">
-          <h1 className="font-display text-3xl text-foreground">{t("product.notFound")}</h1>
+          <h1 className="font-display text-3xl text-foreground">Product not found</h1>
           <Link to="/shop">
-            <Button variant="gold" className="mt-6">{t("product.backToShop")}</Button>
+            <Button variant="gold" className="mt-6">Back to Shop</Button>
           </Link>
         </main>
         <Footer />
@@ -197,9 +196,9 @@ const ProductDetail = () => {
         <div className="container mx-auto px-4">
           {/* Breadcrumb */}
           <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-            <Link to="/" className="hover:text-foreground">{t("nav.home")}</Link>
+            <Link to="/" className="hover:text-foreground">Home</Link>
             <span>/</span>
-            <Link to="/shop" className="hover:text-foreground">{t("nav.shop")}</Link>
+            <Link to="/shop" className="hover:text-foreground">Shop</Link>
             {product.category && (
               <>
                 <span>/</span>
@@ -238,12 +237,12 @@ const ProductDetail = () => {
                       Pre-Order
                     </span>
                   )}
-                  {product.allow_customization && (
-                    <span className="px-3 py-1 bg-bronze text-white text-sm font-semibold rounded">
-                      {t("product.customizable")}
-                    </span>
-                  )}
-                </div>
+                    {product.allow_customization && (
+                      <span className="px-3 py-1 bg-bronze text-white text-sm font-semibold rounded">
+                        Customizable
+                      </span>
+                    )}
+                  </div>
 
                 {productImages.length > 1 && (
                   <>
@@ -291,7 +290,7 @@ const ProductDetail = () => {
                 </Link>
               )}
 
-              <h1 className={`font-display text-3xl md:text-4xl text-foreground ${language === "bn" ? "font-bengali" : ""}`}>
+              <h1 className="font-display text-3xl md:text-4xl text-foreground">
                 {displayName}
               </h1>
 
@@ -307,7 +306,7 @@ const ProductDetail = () => {
               </div>
 
               {product.description && (
-                <p className={`text-muted-foreground leading-relaxed ${language === "bn" ? "font-bengali" : ""}`}>
+                <p className="text-muted-foreground leading-relaxed">
                   {product.description}
                 </p>
               )}
@@ -318,17 +317,17 @@ const ProductDetail = () => {
                     <>
                       <Clock className="h-5 w-5 text-gold" />
                       <span className="text-gold font-medium">
-                        Pre-Order • {t("product.estimatedTime")} {product.production_time}
+                        Pre-Order • Estimated {product.production_time}
                       </span>
                     </>
                   ) : (
-                    <span className="text-destructive font-medium">{t("product.outOfStock")}</span>
+                    <span className="text-destructive font-medium">Out of Stock</span>
                   )
                 ) : (
                   <>
                     <Check className="h-5 w-5 text-green-500" />
                     <span className="text-green-500 font-medium">
-                      {t("product.inStock")} ({product.stock_quantity})
+                      In Stock ({product.stock_quantity})
                     </span>
                   </>
                 )}
@@ -365,12 +364,12 @@ const ProductDetail = () => {
                     {addingToCart ? (
                       <span className="flex items-center gap-2">
                         <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                        {t("common.loading")}
+                        Loading...
                       </span>
                     ) : (
                       <>
                         <ShoppingBag className="h-5 w-5 mr-2" />
-                        {t("product.addToCart")}
+                        Add to Cart
                       </>
                     )}
                   </Button>
@@ -382,7 +381,7 @@ const ProductDetail = () => {
                     onClick={handleBuyNow}
                     disabled={addingToCart || (isOutOfStock && !canPreorder)}
                   >
-                    {canPreorder ? t("product.preorder") : t("product.buyNow")}
+                    {canPreorder ? "Pre-Order Now" : "Buy Now"}
                   </Button>
                 </div>
 
@@ -404,7 +403,7 @@ const ProductDetail = () => {
                   onClick={handleWishlist}
                 >
                   <Heart className={`h-5 w-5 mr-2 ${wishlisted ? "fill-current text-red-500" : ""}`} />
-                  {wishlisted ? t("product.wishlisted") : t("product.wishlist")}
+                  {wishlisted ? "In Wishlist" : "Add to Wishlist"}
                 </Button>
                 <Button variant="outline" size="icon">
                   <Share2 className="h-5 w-5" />
@@ -416,12 +415,9 @@ const ProductDetail = () => {
                   <div className="flex items-start gap-3">
                     <Palette className="h-5 w-5 text-gold mt-0.5" />
                     <div>
-                      <p className="font-medium text-gold">{t("product.customizable")}</p>
-                      <p className={`text-sm text-muted-foreground mt-1 ${language === "bn" ? "font-bengali" : ""}`}>
-                        {language === "bn" 
-                          ? "এই পণ্যটি আপনার পছন্দমতো কাস্টমাইজ করা যাবে। অর্ডার করার সময় বিস্তারিত জানান।"
-                          : "This product can be customized according to your preferences. Share details when ordering."
-                        }
+                      <p className="font-medium text-gold">Customizable</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        This product can be customized according to your preferences. Share details when ordering.
                       </p>
                     </div>
                   </div>
@@ -431,9 +427,9 @@ const ProductDetail = () => {
               <div className="flex items-start gap-3 p-4 bg-muted rounded-lg">
                 <Truck className="h-5 w-5 text-gold mt-0.5" />
                 <div>
-                  <p className="font-medium">{t("product.shipping")}</p>
-                  <p className={`text-sm text-muted-foreground ${language === "bn" ? "font-bengali" : ""}`}>
-                    {t("product.shippingDetails")}
+                  <p className="font-medium">Shipping Info</p>
+                  <p className="text-sm text-muted-foreground">
+                    Dhaka ৳80 • Outside Dhaka ৳130 • Free on ৳5,000+
                   </p>
                 </div>
               </div>
@@ -446,31 +442,28 @@ const ProductDetail = () => {
               <TabsList className="w-full justify-start border-b border-border rounded-none bg-transparent p-0">
                 <TabsTrigger 
                   value="story" 
-                  className={`font-display text-lg data-[state=active]:border-b-2 data-[state=active]:border-gold rounded-none ${language === "bn" ? "font-bengali" : ""}`}
+                  className="font-display text-lg data-[state=active]:border-b-2 data-[state=active]:border-gold rounded-none"
                 >
-                  {t("product.story")}
+                  Story
                 </TabsTrigger>
                 <TabsTrigger 
                   value="specs" 
-                  className={`font-display text-lg data-[state=active]:border-b-2 data-[state=active]:border-gold rounded-none ${language === "bn" ? "font-bengali" : ""}`}
+                  className="font-display text-lg data-[state=active]:border-b-2 data-[state=active]:border-gold rounded-none"
                 >
-                  {t("product.specs")}
+                  Specifications
                 </TabsTrigger>
                 <TabsTrigger 
                   value="reviews" 
-                  className={`font-display text-lg data-[state=active]:border-b-2 data-[state=active]:border-gold rounded-none ${language === "bn" ? "font-bengali" : ""}`}
+                  className="font-display text-lg data-[state=active]:border-b-2 data-[state=active]:border-gold rounded-none"
                 >
-                  {t("product.reviews")}
+                  Reviews
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="story" className="mt-8">
                 <div className="prose prose-invert max-w-none">
-                  <p className={`text-lg text-muted-foreground leading-relaxed ${language === "bn" ? "font-bengali" : ""}`}>
-                    {product.story || (language === "bn" 
-                      ? "প্রতিটি পণ্য হাতে তৈরি, প্রতিটি স্পর্শে শিল্পীর ভালোবাসা।"
-                      : "Each product is handcrafted with love and care by our artisans."
-                    )}
+                  <p className="text-lg text-muted-foreground leading-relaxed">
+                    {product.story || "Each product is handcrafted with love and care by our artisans."}
                   </p>
                 </div>
               </TabsContent>
@@ -479,19 +472,19 @@ const ProductDetail = () => {
                 <div className="grid sm:grid-cols-2 gap-6">
                   {product.materials && (
                     <div>
-                      <h4 className={`font-medium text-foreground mb-2 ${language === "bn" ? "font-bengali" : ""}`}>{t("product.materials")}</h4>
+                      <h4 className="font-medium text-foreground mb-2">Materials</h4>
                       <p className="text-muted-foreground">{product.materials}</p>
                     </div>
                   )}
                   {product.dimensions && (
                     <div>
-                      <h4 className={`font-medium text-foreground mb-2 ${language === "bn" ? "font-bengali" : ""}`}>{t("product.dimensions")}</h4>
+                      <h4 className="font-medium text-foreground mb-2">Dimensions</h4>
                       <p className="text-muted-foreground">{product.dimensions}</p>
                     </div>
                   )}
                   {product.care_instructions && (
                     <div className="sm:col-span-2">
-                      <h4 className={`font-medium text-foreground mb-2 ${language === "bn" ? "font-bengali" : ""}`}>{t("product.care")}</h4>
+                      <h4 className="font-medium text-foreground mb-2">Care Instructions</h4>
                       <p className="text-muted-foreground">{product.care_instructions}</p>
                     </div>
                   )}
@@ -501,9 +494,9 @@ const ProductDetail = () => {
               <TabsContent value="reviews" className="mt-8">
                 <div className="text-center py-12">
                   <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className={`text-muted-foreground ${language === "bn" ? "font-bengali" : ""}`}>{t("product.noReviews")}</p>
+                  <p className="text-muted-foreground">No reviews yet</p>
                   <Button variant="outline" className="mt-4">
-                    {t("product.firstReview")}
+                    Be the first to review
                   </Button>
                 </div>
               </TabsContent>

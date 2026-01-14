@@ -36,12 +36,12 @@ const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
 
     // Validate file
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      toast.error("শুধুমাত্র JPG, PNG বা WEBP ফাইল অনুমোদিত");
+      toast.error("Only JPG, PNG or WEBP files allowed");
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("ফাইল সাইজ ৫MB এর বেশি হতে পারবে না");
+      toast.error("File size cannot exceed 5MB");
       return;
     }
 
@@ -57,19 +57,19 @@ const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
     e.preventDefault();
 
     if (!user) {
-      toast.error("অনুগ্রহ করে প্রথমে লগইন করুন");
+      toast.error("Please login first");
       onOpenChange(false);
       navigate("/auth");
       return;
     }
 
     if (!selectedFile) {
-      toast.error("অনুগ্রহ করে একটি ছবি আপলোড করুন");
+      toast.error("Please upload an image");
       return;
     }
 
     if (!formData.description.trim()) {
-      toast.error("অনুগ্রহ করে বিবরণ লিখুন");
+      toast.error("Please add a description");
       return;
     }
 
@@ -104,7 +104,7 @@ const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
 
       if (insertError) throw insertError;
 
-      toast.success("আপনার কাস্টম অর্ডার রিকোয়েস্ট পাঠানো হয়েছে!");
+      toast.success("Your custom order request has been submitted!");
       onOpenChange(false);
       
       // Reset form
@@ -113,7 +113,7 @@ const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
       setImagePreview(null);
     } catch (error) {
       console.error("Error submitting custom order:", error);
-      toast.error("সমস্যা হয়েছে, আবার চেষ্টা করুন");
+      toast.error("Something went wrong, please try again");
     } finally {
       setLoading(false);
     }
@@ -133,10 +133,10 @@ const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
       <DialogContent className="sm:max-w-lg bg-card border-border">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl text-gold">
-            আপনার ডিজাইন দিন
+            Submit Your Design
           </DialogTitle>
           <p className="text-muted-foreground text-sm mt-1">
-            আপনার পছন্দের ডিজাইন আপলোড করুন, আমরা তৈরি করে দেব
+            Upload your design idea and we'll make it for you
           </p>
         </DialogHeader>
 
@@ -144,7 +144,7 @@ const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
           {/* Image Upload */}
           <div>
             <Label className="text-foreground mb-2 block">
-              রেফারেন্স ছবি <span className="text-destructive">*</span>
+              Reference Image <span className="text-destructive">*</span>
             </Label>
             
             <input
@@ -183,8 +183,8 @@ const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
                   <Upload className="h-6 w-6 text-gold" />
                 </div>
                 <div className="text-center">
-                  <p className="text-foreground font-medium">ছবি আপলোড করুন</p>
-                  <p className="text-muted-foreground text-sm">JPG, PNG বা WEBP (সর্বোচ্চ ৫MB)</p>
+                  <p className="text-foreground font-medium">Upload Image</p>
+                  <p className="text-muted-foreground text-sm">JPG, PNG or WEBP (max 5MB)</p>
                 </div>
               </button>
             )}
@@ -193,11 +193,11 @@ const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
           {/* Description */}
           <div>
             <Label htmlFor="description" className="text-foreground">
-              বিস্তারিত বিবরণ <span className="text-destructive">*</span>
+              Detailed Description <span className="text-destructive">*</span>
             </Label>
             <Textarea
               id="description"
-              placeholder="আপনার পছন্দের রঙ, সাইজ, মেটেরিয়াল, অন্যান্য বিবরণ লিখুন..."
+              placeholder="Describe your preferred colors, size, materials, and other details..."
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="mt-1.5 min-h-[100px]"
@@ -206,12 +206,12 @@ const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
 
           {/* Budget Range */}
           <div>
-            <Label className="text-foreground">বাজেট রেঞ্জ (ঐচ্ছিক)</Label>
+            <Label className="text-foreground">Budget Range (Optional)</Label>
             <div className="grid grid-cols-2 gap-4 mt-1.5">
               <div>
                 <Input
                   type="number"
-                  placeholder="সর্বনিম্ন ৳"
+                  placeholder="Min ৳"
                   value={formData.budgetMin}
                   onChange={(e) => setFormData({ ...formData, budgetMin: e.target.value })}
                 />
@@ -219,7 +219,7 @@ const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
               <div>
                 <Input
                   type="number"
-                  placeholder="সর্বোচ্চ ৳"
+                  placeholder="Max ৳"
                   value={formData.budgetMax}
                   onChange={(e) => setFormData({ ...formData, budgetMax: e.target.value })}
                 />
@@ -235,7 +235,7 @@ const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
               onClick={() => onOpenChange(false)}
               className="flex-1"
             >
-              বাতিল
+              Cancel
             </Button>
             <Button
               type="submit"
@@ -246,10 +246,10 @@ const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
               {loading ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  পাঠানো হচ্ছে...
+                  Submitting...
                 </span>
               ) : (
-                "রিকোয়েস্ট পাঠান"
+                "Submit Request"
               )}
             </Button>
           </div>
