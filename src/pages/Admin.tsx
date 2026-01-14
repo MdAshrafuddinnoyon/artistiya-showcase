@@ -1,0 +1,188 @@
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import {
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
+  Users,
+  Settings,
+  FolderTree,
+  Palette,
+  BarChart3,
+  Menu,
+  LogOut,
+  ChevronRight,
+  Home,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { useAdmin } from "@/hooks/useAdmin";
+import { supabase } from "@/integrations/supabase/client";
+
+// Admin Components
+import AdminDashboardHome from "@/components/admin/AdminDashboardHome";
+import AdminProducts from "@/components/admin/AdminProducts";
+import AdminOrders from "@/components/admin/AdminOrders";
+import AdminCategories from "@/components/admin/AdminCategories";
+import AdminSettings from "@/components/admin/AdminSettings";
+
+const menuItems = [
+  { id: "dashboard", name: "Dashboard", icon: LayoutDashboard },
+  { id: "orders", name: "Orders", icon: ShoppingCart },
+  { id: "products", name: "Products", icon: Package },
+  { id: "categories", name: "Categories", icon: FolderTree },
+  { id: "settings", name: "Settings", icon: Settings },
+];
+
+const Admin = () => {
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+  const { isAdmin, isLoading } = useAdmin();
+  const [activeSection, setActiveSection] = useState("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate("/auth");
+    }
+  }, [user, isLoading, navigate]);
+
+  useEffect(() => {
+    if (!isLoading && user && !isAdmin) {
+      navigate("/");
+    }
+  }, [isAdmin, isLoading, user, navigate]);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-8 w-8 border-2 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-display text-foreground mb-4">Access Denied</h1>
+          <p className="text-muted-foreground mb-6">You don't have admin access.</p>
+          <Link to="/">
+            <Button variant="gold">Go Home</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const renderContent = () => {
+    switch (activeSection) {
+      case "dashboard":
+        return <AdminDashboardHome />;
+      case "orders":
+        return <AdminOrders />;
+      case "products":
+        return <AdminProducts />;
+      case "categories":
+        return <AdminCategories />;
+      case "settings":
+        return <AdminSettings />;
+      default:
+        return <AdminDashboardHome />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex">
+      {/* Sidebar */}
+      <aside
+        className={`${
+          sidebarOpen ? "w-64" : "w-20"
+        } bg-card border-r border-border transition-all duration-300 flex flex-col`}
+      >
+        {/* Logo */}
+        <div className="p-4 border-b border-border flex items-center justify-between">
+          {sidebarOpen && (
+            <Link to="/" className="font-display text-xl">
+              <span className="text-gold">artistiya</span>
+              <span className="text-foreground">.store</span>
+            </Link>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-2">
+          {menuItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveSection(item.id)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                activeSection === item.id
+                  ? "bg-gold/20 text-gold"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              <item.icon className="h-5 w-5 flex-shrink-0" />
+              {sidebarOpen && <span>{item.name}</span>}
+            </button>
+          ))}
+        </nav>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-border space-y-2">
+          <Link to="/">
+            <Button variant="outline" className="w-full justify-start" size="sm">
+              <Home className="h-4 w-4 mr-2" />
+              {sidebarOpen && "View Store"}
+            </Button>
+          </Link>
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-destructive"
+            size="sm"
+            onClick={handleSignOut}
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            {sidebarOpen && "Logout"}
+          </Button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto">
+        {/* Top Bar */}
+        <header className="h-16 border-b border-border bg-card px-6 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Admin</span>
+            <ChevronRight className="h-4 w-4" />
+            <span className="text-foreground capitalize">{activeSection}</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">{user?.email}</span>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <div className="p-6">{renderContent()}</div>
+      </main>
+    </div>
+  );
+};
+
+export default Admin;
