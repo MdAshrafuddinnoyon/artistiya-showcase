@@ -84,15 +84,15 @@ const NewArrivalsSection = () => {
         >
           <div>
             <span className="text-gold text-sm tracking-[0.3em] uppercase font-body">
-              সদ্য এসেছে
+              Just Arrived
             </span>
             <h2 className="font-display text-4xl md:text-5xl text-foreground mt-4">
-              নতুন পণ্য
+              New Arrivals
             </h2>
           </div>
           <Link to="/shop" className="mt-6 md:mt-0">
             <Button variant="gold-outline" className="group">
-              সব দেখুন
+              View All
               <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Button>
           </Link>
@@ -122,12 +122,12 @@ const NewArrivalsSection = () => {
                   <div className="absolute top-4 left-4 flex flex-col gap-2">
                     {product.is_new_arrival && (
                       <span className="px-3 py-1 bg-gold text-charcoal-deep text-xs font-semibold tracking-wider uppercase rounded">
-                        নতুন
+                        New
                       </span>
                     )}
                     {product.stock_quantity === 0 && product.is_preorderable && (
                       <span className="px-3 py-1 bg-bronze text-white text-xs font-semibold rounded">
-                        প্রি-অর্ডার
+                        Pre-order
                       </span>
                     )}
                   </div>
@@ -158,7 +158,7 @@ const NewArrivalsSection = () => {
                     </span>
                   )}
                   <h3 className="font-display text-lg text-foreground group-hover:text-gold transition-colors">
-                    {product.name_bn || product.name}
+                    {product.name}
                   </h3>
                   <div className="flex items-center gap-2">
                     <span className="text-gold font-semibold">

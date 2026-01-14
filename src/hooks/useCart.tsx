@@ -80,7 +80,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const addToCart = async (productId: string, quantity = 1) => {
     if (!user) {
-      toast.error("অনুগ্রহ করে প্রথমে লগইন করুন");
+      toast.error("Please login first");
       return;
     }
 
@@ -100,12 +100,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           });
 
         if (error) throw error;
-        toast.success("কার্টে যোগ করা হয়েছে");
+        toast.success("Added to cart");
         await fetchCart();
       }
     } catch (error) {
       console.error("Error adding to cart:", error);
-      toast.error("কার্টে যোগ করতে সমস্যা হয়েছে");
+      toast.error("Failed to add to cart");
     }
   };
 
@@ -117,11 +117,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         .eq("id", itemId);
 
       if (error) throw error;
-      toast.success("কার্ট থেকে সরানো হয়েছে");
+      toast.success("Removed from cart");
       await fetchCart();
     } catch (error) {
       console.error("Error removing from cart:", error);
-      toast.error("সরাতে সমস্যা হয়েছে");
+      toast.error("Failed to remove");
     }
   };
 
@@ -141,7 +141,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       await fetchCart();
     } catch (error) {
       console.error("Error updating quantity:", error);
-      toast.error("আপডেট করতে সমস্যা হয়েছে");
+      toast.error("Failed to update");
     }
   };
 
