@@ -177,6 +177,138 @@ export type Database = {
         }
         Relationships: []
       }
+      email_templates: {
+        Row: {
+          created_at: string
+          html_content: string
+          id: string
+          is_active: boolean | null
+          subject: string
+          template_key: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          html_content: string
+          id?: string
+          is_active?: boolean | null
+          subject: string
+          template_key: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          html_content?: string
+          id?: string
+          is_active?: boolean | null
+          subject?: string
+          template_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      filter_settings: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          filter_key: string
+          filter_name: string
+          filter_type: string
+          id: string
+          is_active: boolean | null
+          options: Json | null
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          filter_key: string
+          filter_name: string
+          filter_type?: string
+          id?: string
+          is_active?: boolean | null
+          options?: Json | null
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          filter_key?: string
+          filter_name?: string
+          filter_type?: string
+          id?: string
+          is_active?: boolean | null
+          options?: Json | null
+        }
+        Relationships: []
+      }
+      homepage_content: {
+        Row: {
+          content: Json
+          created_at: string
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          section_key: string
+          updated_at: string
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          section_key: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          section_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      invoice_settings: {
+        Row: {
+          company_address: string | null
+          company_email: string | null
+          company_name: string | null
+          company_phone: string | null
+          created_at: string
+          footer_note: string | null
+          id: string
+          logo_url: string | null
+          terms_and_conditions: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_address?: string | null
+          company_email?: string | null
+          company_name?: string | null
+          company_phone?: string | null
+          created_at?: string
+          footer_note?: string | null
+          id?: string
+          logo_url?: string | null
+          terms_and_conditions?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_address?: string | null
+          company_email?: string | null
+          company_name?: string | null
+          company_phone?: string | null
+          created_at?: string
+          footer_note?: string | null
+          id?: string
+          logo_url?: string | null
+          terms_and_conditions?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string
@@ -462,6 +594,48 @@ export type Database = {
           key?: string
           updated_at?: string
           value?: Json | null
+        }
+        Relationships: []
+      }
+      testimonials: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          google_review_id: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          location: string | null
+          name: string
+          rating: number | null
+          source: string | null
+          text: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          google_review_id?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          location?: string | null
+          name: string
+          rating?: number | null
+          source?: string | null
+          text: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          google_review_id?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          location?: string | null
+          name?: string
+          rating?: number | null
+          source?: string | null
+          text?: string
         }
         Relationships: []
       }
