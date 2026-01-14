@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, User, ShoppingBag, Menu, X, ChevronDown, LogOut, Palette, Globe } from "lucide-react";
+import { Search, User, ShoppingBag, Menu, X, ChevronDown, LogOut, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
-import { useLanguage } from "@/hooks/useLanguage";
 import CartDrawer from "@/components/modals/CartDrawer";
 import CustomOrderModal from "@/components/modals/CustomOrderModal";
 import LanguageToggle from "@/components/common/LanguageToggle";
@@ -24,29 +23,26 @@ import categoryWoven from "@/assets/category-woven.jpg";
 import categoryArt from "@/assets/category-art.jpg";
 
 const menuItems = [
-  { name: "Home", nameBn: "হোম", href: "/" },
+  { name: "Home", href: "/" },
   {
     name: "Shop",
-    nameBn: "শপ",
     href: "/shop",
     submenu: [
-      { name: "Jewelry", nameBn: "জুয়েলারি", href: "/shop/jewelry", items: ["Necklace", "Earrings", "Rings", "Bracelets"], image: categoryJewelry },
-      { name: "Resin Art", nameBn: "রেজিন আর্ট", href: "/shop/resin-art", items: ["Rings", "Bracelets", "Coasters", "Trays"], image: categoryBags },
-      { name: "Home Decor", nameBn: "হোম ডেকর", href: "/shop/home-decor", items: ["Wall Hangings", "Candle Holders", "Frames"], image: categoryWoven },
-      { name: "Fine Art", nameBn: "ফাইন আর্ট", href: "/shop/fine-art", items: ["Paintings", "3D Art", "Canvas Coasters"], image: categoryArt },
+      { name: "Jewelry", href: "/shop/jewelry", items: ["Necklace", "Earrings", "Rings", "Bracelets"], image: categoryJewelry },
+      { name: "Resin Art", href: "/shop/resin-art", items: ["Rings", "Bracelets", "Coasters", "Trays"], image: categoryBags },
+      { name: "Home Decor", href: "/shop/home-decor", items: ["Wall Hangings", "Candle Holders", "Frames"], image: categoryWoven },
+      { name: "Fine Art", href: "/shop/fine-art", items: ["Paintings", "3D Art", "Canvas Coasters"], image: categoryArt },
     ],
     banner: {
       title: "New Collection",
-      titleBn: "নতুন কালেকশন",
       subtitle: "Up to 30% Off",
-      subtitleBn: "৩০% পর্যন্ত ছাড়",
       link: "/collections/new-arrivals",
       image: categoryArt,
     }
   },
-  { name: "Collections", nameBn: "কালেকশন", href: "/collections" },
-  { name: "Our Story", nameBn: "আমাদের কথা", href: "/about" },
-  { name: "Contact", nameBn: "যোগাযোগ", href: "/contact" },
+  { name: "Collections", href: "/collections" },
+  { name: "Our Story", href: "/about" },
+  { name: "Contact", href: "/contact" },
 ];
 
 const Header = () => {
@@ -57,16 +53,11 @@ const Header = () => {
   
   const { user, signOut } = useAuth();
   const { itemCount } = useCart();
-  const { t, language } = useLanguage();
   const navigate = useNavigate();
-
+  
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
-  };
-
-  const getMenuName = (item: { name: string; nameBn?: string }) => {
-    return language === "bn" && item.nameBn ? item.nameBn : item.name;
   };
 
   return (
@@ -74,8 +65,8 @@ const Header = () => {
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/50">
         {/* Announcement Bar */}
         <div className="bg-gold/10 border-b border-gold/20 py-2">
-          <p className={`text-center text-sm text-gold tracking-wide font-body ${language === "bn" ? "font-bengali" : ""}`}>
-            {t("header.freeShipping")}
+          <p className="text-center text-sm text-gold tracking-wide font-body">
+            ✨ Free shipping on orders over ৳5,000 ✨
           </p>
         </div>
 
@@ -85,7 +76,7 @@ const Header = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden text-foreground"
+              className="lg:hidden text-foreground hover:text-gold"
               onClick={() => setIsOpen(!isOpen)}
             >
               {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -115,9 +106,9 @@ const Header = () => {
                 >
                   <Link
                     to={item.href}
-                    className={`flex items-center gap-1 text-sm font-body tracking-wide text-foreground/80 hover:text-gold transition-colors duration-300 py-2 ${language === "bn" ? "font-bengali" : ""}`}
+                    className="flex items-center gap-1 text-sm font-body tracking-wide text-foreground/80 hover:text-gold transition-colors duration-300 py-2"
                   >
-                    {getMenuName(item)}
+                    {item.name}
                     {item.submenu && <ChevronDown className="h-4 w-4" />}
                   </Link>
 
@@ -147,8 +138,8 @@ const Header = () => {
                                       className="w-full h-full object-cover group-hover/cat:scale-110 transition-transform duration-300"
                                     />
                                   </div>
-                                  <span className={`font-display text-lg text-gold hover:text-gold-light transition-colors ${language === "bn" ? "font-bengali" : ""}`}>
-                                    {getMenuName(category)}
+                                  <span className="font-display text-lg text-gold hover:text-gold-light transition-colors">
+                                    {category.name}
                                   </span>
                                 </Link>
                                 <ul className="space-y-1.5 pl-15">
@@ -181,11 +172,11 @@ const Header = () => {
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-charcoal-deep via-charcoal-deep/50 to-transparent" />
                                 <div className="absolute bottom-4 left-4 right-4 text-center">
-                                  <p className={`text-gold text-xs uppercase tracking-wider mb-1 ${language === "bn" ? "font-bengali" : ""}`}>
-                                    {language === "bn" ? item.banner.subtitleBn : item.banner.subtitle}
+                                  <p className="text-gold text-xs uppercase tracking-wider mb-1">
+                                    {item.banner.subtitle}
                                   </p>
-                                  <p className={`font-display text-lg text-foreground ${language === "bn" ? "font-bengali" : ""}`}>
-                                    {language === "bn" ? item.banner.titleBn : item.banner.title}
+                                  <p className="font-display text-lg text-foreground">
+                                    {item.banner.title}
                                   </p>
                                 </div>
                               </Link>
@@ -205,17 +196,17 @@ const Header = () => {
               <Button 
                 variant="gold-outline" 
                 size="sm" 
-                className={`hidden md:flex items-center gap-2 ${language === "bn" ? "font-bengali" : ""}`}
+                className="hidden md:flex items-center gap-2"
                 onClick={() => setCustomOrderOpen(true)}
               >
                 <Palette className="h-4 w-4" />
-                {t("header.customDesign")}
+                Custom Design
               </Button>
 
               {/* Language Toggle */}
               <LanguageToggle />
 
-              <Button variant="ghost" size="icon" className="text-foreground/80 hover:text-gold">
+              <Button variant="ghost" size="icon" className="text-foreground/80 hover:text-gold hover:bg-transparent">
                 <Search className="h-5 w-5" />
               </Button>
               
@@ -223,37 +214,37 @@ const Header = () => {
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-foreground/80 hover:text-gold">
+                    <Button variant="ghost" size="icon" className="text-foreground/80 hover:text-gold hover:bg-transparent">
                       <User className="h-5 w-5" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48 bg-card border-border">
+                  <DropdownMenuContent align="end" className="w-48">
                     <div className="px-3 py-2">
                       <p className="text-sm font-medium text-foreground truncate">
                         {user.email}
                       </p>
                     </div>
-                    <DropdownMenuSeparator />
+                    <DropdownMenuSeparator className="bg-border" />
                     <DropdownMenuItem asChild>
-                      <Link to="/orders" className={`cursor-pointer ${language === "bn" ? "font-bengali" : ""}`}>
-                        {t("header.myOrders")}
+                      <Link to="/orders" className="cursor-pointer">
+                        My Orders
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link to="/custom-orders" className={`cursor-pointer ${language === "bn" ? "font-bengali" : ""}`}>
-                        {t("header.customRequests")}
+                      <Link to="/custom-orders" className="cursor-pointer">
+                        Custom Requests
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut} className={`text-destructive cursor-pointer ${language === "bn" ? "font-bengali" : ""}`}>
+                    <DropdownMenuSeparator className="bg-border" />
+                    <DropdownMenuItem onClick={handleSignOut} className="text-destructive cursor-pointer">
                       <LogOut className="h-4 w-4 mr-2" />
-                      {t("header.logout")}
+                      Logout
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
                 <Link to="/auth">
-                  <Button variant="ghost" size="icon" className="text-foreground/80 hover:text-gold">
+                  <Button variant="ghost" size="icon" className="text-foreground/80 hover:text-gold hover:bg-transparent">
                     <User className="h-5 w-5" />
                   </Button>
                 </Link>
@@ -263,12 +254,12 @@ const Header = () => {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="relative text-foreground/80 hover:text-gold"
+                className="relative text-foreground/80 hover:text-gold hover:bg-transparent"
                 onClick={() => setCartOpen(true)}
               >
                 <ShoppingBag className="h-5 w-5" />
                 {itemCount > 0 && (
-                  <span className="absolute -top-1 -right-1 h-5 w-5 bg-gold text-charcoal-deep text-xs font-bold rounded-full flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 h-5 w-5 bg-gold text-background text-xs font-bold rounded-full flex items-center justify-center">
                     {itemCount}
                   </span>
                 )}
@@ -290,14 +281,14 @@ const Header = () => {
                 {/* Custom Order Button - Mobile */}
                 <Button 
                   variant="gold" 
-                  className={`w-full mb-4 flex items-center justify-center gap-2 ${language === "bn" ? "font-bengali" : ""}`}
+                  className="w-full mb-4 flex items-center justify-center gap-2"
                   onClick={() => {
                     setCustomOrderOpen(true);
                     setIsOpen(false);
                   }}
                 >
                   <Palette className="h-4 w-4" />
-                  {t("header.customDesign")}
+                  Custom Design
                 </Button>
 
                 <ul className="space-y-4">
@@ -305,10 +296,10 @@ const Header = () => {
                     <li key={item.name}>
                       <Link
                         to={item.href}
-                        className={`block text-lg font-display text-foreground hover:text-gold transition-colors ${language === "bn" ? "font-bengali" : ""}`}
+                        className="block text-lg font-display text-foreground hover:text-gold transition-colors"
                         onClick={() => setIsOpen(false)}
                       >
-                        {getMenuName(item)}
+                        {item.name}
                       </Link>
                     </li>
                   ))}
@@ -319,15 +310,15 @@ const Header = () => {
                   {user ? (
                     <div className="space-y-3">
                       <p className="text-sm text-muted-foreground">{user.email}</p>
-                      <Button variant="outline" size="sm" onClick={handleSignOut} className={`w-full ${language === "bn" ? "font-bengali" : ""}`}>
+                      <Button variant="outline" size="sm" onClick={handleSignOut} className="w-full">
                         <LogOut className="h-4 w-4 mr-2" />
-                        {t("header.logout")}
+                        Logout
                       </Button>
                     </div>
                   ) : (
                     <Link to="/auth" onClick={() => setIsOpen(false)}>
-                      <Button variant="gold-outline" className={`w-full ${language === "bn" ? "font-bengali" : ""}`}>
-                        {t("header.loginSignup")}
+                      <Button variant="gold-outline" className="w-full">
+                        Login / Sign Up
                       </Button>
                     </Link>
                   )}

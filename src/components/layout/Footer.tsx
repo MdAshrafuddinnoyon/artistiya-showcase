@@ -3,29 +3,26 @@ import { motion } from "framer-motion";
 import { Instagram, Facebook, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useLanguage } from "@/hooks/useLanguage";
 
 const Footer = () => {
-  const { t, language } = useLanguage();
-
   const footerLinks = {
     shop: [
-      { name: language === "bn" ? "জুয়েলারি" : "Jewelry", href: "/shop/jewelry" },
-      { name: language === "bn" ? "ব্যাগ ও এক্সেসরিজ" : "Hand-painted Bags", href: "/shop/bags" },
-      { name: language === "bn" ? "উইভেন আর্ট" : "Woven Tales", href: "/shop/woven" },
-      { name: language === "bn" ? "ফাইন আর্ট" : "Fine Art", href: "/shop/art" },
+      { name: "Jewelry", href: "/shop/jewelry" },
+      { name: "Hand-painted Bags", href: "/shop/bags" },
+      { name: "Woven Tales", href: "/shop/woven" },
+      { name: "Fine Art", href: "/shop/art" },
     ],
     help: [
-      { name: t("footer.shippingInfo"), href: "/shipping" },
-      { name: t("footer.returnPolicy"), href: "/returns" },
-      { name: t("footer.trackOrder"), href: "/track" },
-      { name: t("footer.faq"), href: "/faq" },
+      { name: "Shipping Info", href: "/shipping" },
+      { name: "Return Policy", href: "/returns" },
+      { name: "Track Order", href: "/track" },
+      { name: "FAQs", href: "/faq" },
     ],
     company: [
-      { name: t("footer.ourStory"), href: "/about" },
-      { name: t("footer.contactUs"), href: "/contact" },
-      { name: t("footer.terms"), href: "/terms" },
-      { name: t("footer.privacy"), href: "/privacy" },
+      { name: "Our Story", href: "/about" },
+      { name: "Contact Us", href: "/contact" },
+      { name: "Terms of Service", href: "/terms" },
+      { name: "Privacy Policy", href: "/privacy" },
     ],
   };
 
@@ -48,21 +45,21 @@ const Footer = () => {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className={`font-display text-3xl md:text-4xl text-foreground mb-4 ${language === "bn" ? "font-bengali" : ""}`}
+              className="font-display text-3xl md:text-4xl text-foreground mb-4"
             >
-              {t("footer.newsletter")}
+              Join Our Artistic Journey
             </motion.h3>
-            <p className={`text-muted-foreground mb-8 ${language === "bn" ? "font-bengali" : ""}`}>
-              {t("footer.newsletterDesc")}
+            <p className="text-muted-foreground mb-8">
+              Subscribe to receive updates on new collections and exclusive offers
             </p>
             <form className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
               <Input
                 type="email"
-                placeholder={t("footer.enterEmail")}
+                placeholder="Enter your email"
                 className="flex-1 bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-gold"
               />
-              <Button variant="gold" className={`px-8 ${language === "bn" ? "font-bengali" : ""}`}>
-                {t("footer.subscribe")}
+              <Button variant="gold" className="px-8">
+                Subscribe
               </Button>
             </form>
           </div>
@@ -80,8 +77,8 @@ const Footer = () => {
                 <span className="text-foreground">.store</span>
               </h2>
             </Link>
-            <p className={`text-muted-foreground mb-6 max-w-sm ${language === "bn" ? "font-bengali" : ""}`}>
-              {t("footer.tagline")}
+            <p className="text-muted-foreground mb-6 max-w-sm">
+              Where every piece tells a story of tradition, artistry, and elegance.
             </p>
             <div className="flex gap-4">
               <a
@@ -111,15 +108,15 @@ const Footer = () => {
 
           {/* Shop Links */}
           <div>
-            <h4 className={`font-display text-lg text-foreground mb-4 ${language === "bn" ? "font-bengali" : ""}`}>
-              {t("footer.shop")}
+            <h4 className="font-display text-lg text-foreground mb-4">
+              Shop
             </h4>
             <ul className="space-y-3">
               {footerLinks.shop.map((link) => (
                 <li key={link.name}>
                   <Link
                     to={link.href}
-                    className={`text-muted-foreground hover:text-gold transition-colors text-sm ${language === "bn" ? "font-bengali" : ""}`}
+                    className="text-muted-foreground hover:text-gold transition-colors text-sm"
                   >
                     {link.name}
                   </Link>
@@ -130,15 +127,15 @@ const Footer = () => {
 
           {/* Help Links */}
           <div>
-            <h4 className={`font-display text-lg text-foreground mb-4 ${language === "bn" ? "font-bengali" : ""}`}>
-              {t("footer.help")}
+            <h4 className="font-display text-lg text-foreground mb-4">
+              Help
             </h4>
             <ul className="space-y-3">
               {footerLinks.help.map((link) => (
                 <li key={link.name}>
                   <Link
                     to={link.href}
-                    className={`text-muted-foreground hover:text-gold transition-colors text-sm ${language === "bn" ? "font-bengali" : ""}`}
+                    className="text-muted-foreground hover:text-gold transition-colors text-sm"
                   >
                     {link.name}
                   </Link>
@@ -149,15 +146,15 @@ const Footer = () => {
 
           {/* Company Links */}
           <div>
-            <h4 className={`font-display text-lg text-foreground mb-4 ${language === "bn" ? "font-bengali" : ""}`}>
-              {t("footer.company")}
+            <h4 className="font-display text-lg text-foreground mb-4">
+              Company
             </h4>
             <ul className="space-y-3">
               {footerLinks.company.map((link) => (
                 <li key={link.name}>
                   <Link
                     to={link.href}
-                    className={`text-muted-foreground hover:text-gold transition-colors text-sm ${language === "bn" ? "font-bengali" : ""}`}
+                    className="text-muted-foreground hover:text-gold transition-colors text-sm"
                   >
                     {link.name}
                   </Link>
@@ -172,8 +169,8 @@ const Footer = () => {
       <div className="border-t border-border bg-charcoal-deep/50">
         <div className="container mx-auto px-4 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row items-center justify-center gap-4">
-            <span className={`text-sm text-muted-foreground ${language === "bn" ? "font-bengali" : ""}`}>
-              {t("footer.weAccept")}
+            <span className="text-sm text-muted-foreground">
+              We Accept:
             </span>
             <div className="flex flex-wrap justify-center gap-3">
               {paymentMethods.map((method) => (
@@ -193,16 +190,16 @@ const Footer = () => {
       <div className="border-t border-border">
         <div className="container mx-auto px-4 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className={`text-sm text-muted-foreground ${language === "bn" ? "font-bengali" : ""}`}>
-              © 2026 artistiya.store. {t("footer.rights")}
+            <p className="text-sm text-muted-foreground">
+              © 2026 artistiya.store. All rights reserved.
             </p>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <Link to="/terms" className="hover:text-gold transition-colors">
-                {t("footer.terms")}
+                Terms of Service
               </Link>
               <span>•</span>
               <Link to="/privacy" className="hover:text-gold transition-colors">
-                {t("footer.privacy")}
+                Privacy Policy
               </Link>
             </div>
           </div>

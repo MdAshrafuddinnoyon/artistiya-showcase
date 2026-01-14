@@ -37,9 +37,9 @@ const HeroSection = () => {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="font-display text-5xl md:text-6xl lg:text-7xl text-foreground leading-tight mb-6"
           >
-            শৈল্পিক বুননে,
+            Artistry Woven,
             <br />
-            <span className="text-gold">আভিজাত্যের</span> ছোঁয়া
+            <span className="text-gold">Elegance</span> Defined
           </motion.h1>
 
           <motion.p
