@@ -1,49 +1,76 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ShoppingBag, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import categoryJewelry from "@/assets/category-jewelry.jpg";
-import categoryBags from "@/assets/category-bags.jpg";
-import categoryWoven from "@/assets/category-woven.jpg";
-import categoryArt from "@/assets/category-art.jpg";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useCart } from "@/hooks/useCart";
 
-const products = [
-  {
-    id: 1,
-    name: "Golden Temple Necklace",
-    price: 4500,
-    originalPrice: 5500,
-    image: categoryJewelry,
-    category: "Jewelry",
-    isNew: true,
-  },
-  {
-    id: 2,
-    name: "Floral Bloom Tote",
-    price: 3800,
-    image: categoryBags,
-    category: "Bags",
-    isNew: true,
-  },
-  {
-    id: 3,
-    name: "Macramé Dream Catcher",
-    price: 2200,
-    image: categoryWoven,
-    category: "Woven",
-    isNew: true,
-  },
-  {
-    id: 4,
-    name: "Abstract Gold Canvas",
-    price: 8500,
-    image: categoryArt,
-    category: "Fine Art",
-    isNew: true,
-  },
-];
+interface Product {
+  id: string;
+  name: string;
+  name_bn: string | null;
+  slug: string;
+  price: number;
+  compare_at_price: number | null;
+  images: string[];
+  is_new_arrival: boolean;
+  stock_quantity: number;
+  is_preorderable: boolean;
+  category: {
+    name: string;
+    slug: string;
+  } | null;
+}
 
 const NewArrivalsSection = () => {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { addToCart } = useCart();
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select(`
+          id, name, name_bn, slug, price, compare_at_price, images,
+          is_new_arrival, stock_quantity, is_preorderable,
+          category:categories (name, slug)
+        `)
+        .eq("is_active", true)
+        .eq("is_new_arrival", true)
+        .order("created_at", { ascending: false })
+        .limit(8);
+
+      if (!error && data) {
+        setProducts(data as unknown as Product[]);
+      }
+      setLoading(false);
+    };
+
+    fetchProducts();
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="py-24 bg-charcoal">
+        <div className="container mx-auto px-4 lg:px-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="animate-pulse">
+                <div className="aspect-[3/4] bg-muted rounded-lg mb-4" />
+                <div className="h-4 bg-muted rounded w-3/4 mb-2" />
+                <div className="h-4 bg-muted rounded w-1/2" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (products.length === 0) return null;
+
   return (
     <section className="py-24 bg-charcoal">
       <div className="container mx-auto px-4 lg:px-8">
@@ -57,15 +84,15 @@ const NewArrivalsSection = () => {
         >
           <div>
             <span className="text-gold text-sm tracking-[0.3em] uppercase font-body">
-              Just Arrived
+              সদ্য এসেছে
             </span>
             <h2 className="font-display text-4xl md:text-5xl text-foreground mt-4">
-              New Arrivals
+              নতুন পণ্য
             </h2>
           </div>
           <Link to="/shop" className="mt-6 md:mt-0">
             <Button variant="gold-outline" className="group">
-              View All
+              সব দেখুন
               <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Button>
           </Link>
@@ -82,45 +109,64 @@ const NewArrivalsSection = () => {
               transition={{ duration: 0.6, delay: index * 0.1 }}
               className="group"
             >
-              <Link to={`/product/${product.id}`} className="block">
+              <Link to={`/product/${product.slug}`} className="block">
                 {/* Image Container */}
                 <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-muted mb-4">
                   <img
-                    src={product.image}
+                    src={product.images?.[0] || "/placeholder.svg"}
                     alt={product.name}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                   
-                  {/* New Badge */}
-                  {product.isNew && (
-                    <span className="absolute top-4 left-4 px-3 py-1 bg-gold text-charcoal-deep text-xs font-semibold tracking-wider uppercase rounded">
-                      New
-                    </span>
-                  )}
+                  {/* Badges */}
+                  <div className="absolute top-4 left-4 flex flex-col gap-2">
+                    {product.is_new_arrival && (
+                      <span className="px-3 py-1 bg-gold text-charcoal-deep text-xs font-semibold tracking-wider uppercase rounded">
+                        নতুন
+                      </span>
+                    )}
+                    {product.stock_quantity === 0 && product.is_preorderable && (
+                      <span className="px-3 py-1 bg-bronze text-white text-xs font-semibold rounded">
+                        প্রি-অর্ডার
+                      </span>
+                    )}
+                  </div>
 
                   {/* Quick View Overlay */}
-                  <div className="absolute inset-0 bg-charcoal-deep/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <Button variant="gold" size="sm">
-                      Quick View
+                  <div className="absolute inset-0 bg-charcoal-deep/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
+                    <Button 
+                      variant="gold" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        addToCart(product.id);
+                      }}
+                    >
+                      <ShoppingBag className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" className="bg-background/80">
+                      <Eye className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
 
                 {/* Product Info */}
                 <div className="space-y-2">
-                  <span className="text-xs text-gold tracking-wider uppercase">
-                    {product.category}
-                  </span>
+                  {product.category && (
+                    <span className="text-xs text-gold tracking-wider uppercase">
+                      {product.category.name}
+                    </span>
+                  )}
                   <h3 className="font-display text-lg text-foreground group-hover:text-gold transition-colors">
-                    {product.name}
+                    {product.name_bn || product.name}
                   </h3>
                   <div className="flex items-center gap-2">
                     <span className="text-gold font-semibold">
                       ৳{product.price.toLocaleString()}
                     </span>
-                    {product.originalPrice && (
+                    {product.compare_at_price && (
                       <span className="text-muted-foreground line-through text-sm">
-                        ৳{product.originalPrice.toLocaleString()}
+                        ৳{product.compare_at_price.toLocaleString()}
                       </span>
                     )}
                   </div>

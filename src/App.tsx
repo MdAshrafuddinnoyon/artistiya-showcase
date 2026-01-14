@@ -12,7 +12,9 @@ import Shop from "./pages/Shop";
 import Collections from "./pages/Collections";
 import Auth from "./pages/Auth";
 import Checkout from "./pages/Checkout";
+import ProductDetail from "./pages/ProductDetail";
 import NotFound from "./pages/NotFound";
+import ChatWidgets from "./components/widgets/ChatWidgets";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +32,7 @@ const App = () => (
               <Route path="/contact" element={<Contact />} />
               <Route path="/shop" element={<Shop />} />
               <Route path="/shop/:category" element={<Shop />} />
+              <Route path="/product/:slug" element={<ProductDetail />} />
               <Route path="/collections" element={<Collections />} />
               <Route path="/collections/:slug" element={<Collections />} />
               <Route path="/auth" element={<Auth />} />
@@ -37,6 +40,7 @@ const App = () => (
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <ChatWidgets whatsappNumber="8801XXXXXXXXX" />
           </BrowserRouter>
         </TooltipProvider>
       </CartProvider>
