@@ -192,10 +192,10 @@ const ProductDetail = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="pt-32 pb-24">
+      <main className="pt-24 md:pt-32 pb-16 md:pb-24">
         <div className="container mx-auto px-4">
-          {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
+          {/* Breadcrumb - Hidden on mobile */}
+          <nav className="hidden md:flex items-center gap-2 text-sm text-muted-foreground mb-8">
             <Link to="/" className="hover:text-foreground">Home</Link>
             <span>/</span>
             <Link to="/shop" className="hover:text-foreground">Shop</Link>
@@ -211,9 +211,9 @@ const ProductDetail = () => {
             <span className="text-foreground">{displayName}</span>
           </nav>
 
-          <div className="grid lg:grid-cols-2 gap-12">
+          <div className="grid lg:grid-cols-2 gap-6 md:gap-12">
             {/* Image Gallery */}
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               <motion.div 
                 key={selectedImage}
                 initial={{ opacity: 0 }}
@@ -226,19 +226,19 @@ const ProductDetail = () => {
                   className="w-full h-full object-cover"
                 />
                 
-                <div className="absolute top-4 left-4 flex flex-col gap-2">
+                <div className="absolute top-3 left-3 md:top-4 md:left-4 flex flex-col gap-1.5 md:gap-2">
                   {discount > 0 && (
-                    <span className="px-3 py-1 bg-destructive text-destructive-foreground text-sm font-semibold rounded">
+                    <span className="px-2 py-0.5 md:px-3 md:py-1 bg-destructive text-destructive-foreground text-xs md:text-sm font-semibold rounded">
                       -{discount}%
                     </span>
                   )}
                   {canPreorder && (
-                    <span className="px-3 py-1 bg-gold text-charcoal-deep text-sm font-semibold rounded">
+                    <span className="px-2 py-0.5 md:px-3 md:py-1 bg-gold text-charcoal-deep text-xs md:text-sm font-semibold rounded">
                       Pre-Order
                     </span>
                   )}
                     {product.allow_customization && (
-                      <span className="px-3 py-1 bg-bronze text-white text-sm font-semibold rounded">
+                      <span className="px-2 py-0.5 md:px-3 md:py-1 bg-bronze text-white text-xs md:text-sm font-semibold rounded">
                         Customizable
                       </span>
                     )}
@@ -248,27 +248,27 @@ const ProductDetail = () => {
                   <>
                     <button
                       onClick={() => setSelectedImage(prev => prev === 0 ? productImages.length - 1 : prev - 1)}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-background/80 rounded-full hover:bg-background"
+                      className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 p-1.5 md:p-2 bg-background/80 rounded-full hover:bg-background"
                     >
-                      <ChevronLeft className="h-5 w-5" />
+                      <ChevronLeft className="h-4 w-4 md:h-5 md:w-5" />
                     </button>
                     <button
                       onClick={() => setSelectedImage(prev => prev === productImages.length - 1 ? 0 : prev + 1)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-background/80 rounded-full hover:bg-background"
+                      className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 p-1.5 md:p-2 bg-background/80 rounded-full hover:bg-background"
                     >
-                      <ChevronRight className="h-5 w-5" />
+                      <ChevronRight className="h-4 w-4 md:h-5 md:w-5" />
                     </button>
                   </>
                 )}
               </motion.div>
 
               {productImages.length > 1 && (
-                <div className="flex gap-3 overflow-x-auto pb-2">
+                <div className="flex gap-2 md:gap-3 overflow-x-auto pb-2 scrollbar-hide">
                   {productImages.map((image, index) => (
                     <button
                       key={index}
                       onClick={() => setSelectedImage(index)}
-                      className={`w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-colors ${
+                      className={`w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-colors ${
                         selectedImage === index ? "border-gold" : "border-transparent"
                       }`}
                     >
@@ -280,33 +280,33 @@ const ProductDetail = () => {
             </div>
 
             {/* Product Info */}
-            <div className="space-y-6">
+            <div className="space-y-4 md:space-y-6">
               {product.category && (
                 <Link 
                   to={`/shop/${product.category.slug}`}
-                  className="text-gold text-sm tracking-wider uppercase hover:underline"
+                  className="text-gold text-xs md:text-sm tracking-wider uppercase hover:underline"
                 >
                   {categoryName}
                 </Link>
               )}
 
-              <h1 className="font-display text-3xl md:text-4xl text-foreground">
+              <h1 className="font-display text-2xl md:text-3xl lg:text-4xl text-foreground">
                 {displayName}
               </h1>
 
-              <div className="flex items-center gap-4">
-                <span className="text-3xl font-bold text-gold">
+              <div className="flex items-center gap-3 md:gap-4">
+                <span className="text-2xl md:text-3xl font-bold text-gold">
                   ৳{product.price.toLocaleString()}
                 </span>
                 {product.compare_at_price && (
-                  <span className="text-xl text-muted-foreground line-through">
+                  <span className="text-lg md:text-xl text-muted-foreground line-through">
                     ৳{product.compare_at_price.toLocaleString()}
                   </span>
                 )}
               </div>
 
               {product.description && (
-                <p className="text-muted-foreground leading-relaxed">
+                <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
                   {product.description}
                 </p>
               )}

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import ProductImageUpload from "./ProductImageUpload";
 
 interface Product {
   id: string;
@@ -337,18 +338,10 @@ const AdminProducts = () => {
                   />
                 </div>
 
-                <div>
-                  <Label>Image URLs (comma separated)</Label>
-                  <Textarea
-                    value={formData.images.join(", ")}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      images: e.target.value.split(",").map(s => s.trim()).filter(Boolean)
-                    })}
-                    placeholder="https://example.com/image1.jpg, https://example.com/image2.jpg"
-                    rows={2}
-                  />
-                </div>
+                <ProductImageUpload
+                  images={formData.images}
+                  onImagesChange={(images) => setFormData({ ...formData, images })}
+                />
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center justify-between p-3 bg-muted rounded-lg">

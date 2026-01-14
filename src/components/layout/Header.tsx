@@ -7,6 +7,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import CartDrawer from "@/components/modals/CartDrawer";
 import CustomOrderModal from "@/components/modals/CustomOrderModal";
+import SearchModal from "@/components/modals/SearchModal";
+import MobileBottomNav from "./MobileBottomNav";
 import LanguageToggle from "@/components/common/LanguageToggle";
 import {
   DropdownMenu,
@@ -50,6 +52,7 @@ const Header = () => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [customOrderOpen, setCustomOrderOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   
   const { user, signOut } = useAuth();
   const { itemCount } = useCart();
@@ -63,15 +66,15 @@ const Header = () => {
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/50">
-        {/* Announcement Bar */}
-        <div className="bg-gold/10 border-b border-gold/20 py-2">
+        {/* Announcement Bar - Hidden on mobile */}
+        <div className="hidden md:block bg-gold/10 border-b border-gold/20 py-2">
           <p className="text-center text-sm text-gold tracking-wide font-body">
             ✨ Free shipping on orders over ৳5,000 ✨
           </p>
         </div>
 
         <div className="container mx-auto px-4 lg:px-8">
-          <nav className="flex items-center justify-between h-20">
+          <nav className="flex items-center justify-between h-14 md:h-20">
             {/* Mobile Menu Button */}
             <Button
               variant="ghost"
@@ -206,7 +209,12 @@ const Header = () => {
               {/* Language Toggle */}
               <LanguageToggle />
 
-              <Button variant="ghost" size="icon" className="text-foreground/80 hover:text-gold hover:bg-transparent">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-foreground/80 hover:text-gold hover:bg-transparent"
+                onClick={() => setSearchOpen(true)}
+              >
                 <Search className="h-5 w-5" />
               </Button>
               
@@ -332,6 +340,13 @@ const Header = () => {
       {/* Modals */}
       <CartDrawer open={cartOpen} onOpenChange={setCartOpen} />
       <CustomOrderModal open={customOrderOpen} onOpenChange={setCustomOrderOpen} />
+      <SearchModal open={searchOpen} onOpenChange={setSearchOpen} />
+      
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav 
+        onSearchClick={() => setSearchOpen(true)} 
+        onCartClick={() => setCartOpen(true)} 
+      />
     </>
   );
 };
