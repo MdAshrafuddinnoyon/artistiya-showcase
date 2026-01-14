@@ -14,6 +14,7 @@ import Collections from "./pages/Collections";
 import Auth from "./pages/Auth";
 import Checkout from "./pages/Checkout";
 import ProductDetail from "./pages/ProductDetail";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import ChatWidgets from "./components/widgets/ChatWidgets";
 import ScrollToTop from "./components/common/ScrollToTop";
@@ -41,6 +42,7 @@ const App = () => (
                 <Route path="/collections/:slug" element={<Collections />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/checkout" element={<Checkout />} />
+                <Route path="/admin" element={<Admin />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
