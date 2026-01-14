@@ -8,28 +8,28 @@ import categoryArt from "@/assets/category-art.jpg";
 const categories = [
   {
     name: "Jewelry",
-    bengali: "গয়না",
+    subtitle: "Handcrafted",
     description: "Exquisite handcrafted pieces",
     image: categoryJewelry,
     href: "/shop/jewelry",
   },
   {
     name: "Hand-painted Bags",
-    bengali: "হাতে আঁকা ব্যাগ",
+    subtitle: "Artisan",
     description: "Wearable art pieces",
     image: categoryBags,
     href: "/shop/bags",
   },
   {
     name: "Woven Tales",
-    bengali: "বোনা গল্প",
+    subtitle: "Traditional",
     description: "Crochet, Macramé & Handloom",
     image: categoryWoven,
     href: "/shop/woven",
   },
   {
     name: "Fine Art",
-    bengali: "শিল্পকর্ম",
+    subtitle: "Original",
     description: "Paintings & Showpieces",
     image: categoryArt,
     href: "/shop/art",
@@ -83,7 +83,7 @@ const CategorySection = () => {
                 {/* Content */}
                 <div className="absolute inset-0 flex flex-col items-center justify-end p-6 text-center">
                   <span className="text-gold text-xs tracking-widest uppercase mb-2 font-body">
-                    {category.bengali}
+                    {category.subtitle}
                   </span>
                   <h3 className="font-display text-xl md:text-2xl text-foreground mb-2">
                     {category.name}
