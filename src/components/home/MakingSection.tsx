@@ -36,9 +36,9 @@ const MakingSection = () => {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="font-display text-4xl md:text-5xl lg:text-6xl text-foreground mb-6"
           >
-            প্রতিটি পণ্যের পেছনে
+            Behind Every Piece
             <br />
-            <span className="text-gold">কারিগরের গল্প</span>
+            <span className="text-gold">An Artisan's Story</span>
           </motion.h2>
 
           <motion.p
