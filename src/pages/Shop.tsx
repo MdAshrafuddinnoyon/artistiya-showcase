@@ -163,38 +163,10 @@ const Shop = () => {
 
   const FilterContent = () => (
     <div className="space-y-6">
-      {/* Categories */}
-      <div>
-        <h3 className={`font-display text-lg mb-4 ${language === "bn" ? "font-bengali" : ""}`}>
-          {language === "bn" ? "ক্যাটেগরি" : "Categories"}
-        </h3>
-        <div className="space-y-2">
-          <button
-            onClick={() => setSelectedCategory("all")}
-            className={`block w-full text-left px-3 py-2 rounded transition-colors ${
-              selectedCategory === "all" ? "bg-gold/20 text-gold" : "hover:bg-muted"
-            }`}
-          >
-            {t("shop.all")}
-          </button>
-          {categories.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`block w-full text-left px-3 py-2 rounded transition-colors ${language === "bn" ? "font-bengali" : ""} ${
-                selectedCategory === cat.id ? "bg-gold/20 text-gold" : "hover:bg-muted"
-              }`}
-            >
-              {getCategoryName(cat)}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Price Range */}
       <div>
-        <h3 className={`font-display text-lg mb-4 ${language === "bn" ? "font-bengali" : ""}`}>
-          {language === "bn" ? "মূল্য" : "Price Range"}
+        <h3 className="font-display text-lg mb-4">
+          Price Range
         </h3>
         <Slider
           value={priceRange}
@@ -217,9 +189,37 @@ const Shop = () => {
           checked={showPreorderOnly}
           onCheckedChange={(checked) => setShowPreorderOnly(checked as boolean)}
         />
-        <label htmlFor="preorder" className={`text-sm cursor-pointer ${language === "bn" ? "font-bengali" : ""}`}>
-          {t("shop.preorder")}
+        <label htmlFor="preorder" className="text-sm cursor-pointer">
+          Pre-order Only
         </label>
+      </div>
+
+      {/* Categories */}
+      <div>
+        <h3 className="font-display text-lg mb-4">
+          Categories
+        </h3>
+        <div className="space-y-2">
+          <button
+            onClick={() => setSelectedCategory("all")}
+            className={`block w-full text-left px-3 py-2 rounded transition-colors ${
+              selectedCategory === "all" ? "bg-gold/20 text-gold" : "hover:bg-muted"
+            }`}
+          >
+            All Products
+          </button>
+          {categories.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`block w-full text-left px-3 py-2 rounded transition-colors ${
+                selectedCategory === cat.id ? "bg-gold/20 text-gold" : "hover:bg-muted"
+              }`}
+            >
+              {cat.name}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Clear Filters */}
@@ -233,7 +233,7 @@ const Shop = () => {
         }}
       >
         <X className="h-4 w-4 mr-2" />
-        {language === "bn" ? "ফিল্টার সাফ করুন" : "Clear Filters"}
+        Clear Filters
       </Button>
     </div>
   );

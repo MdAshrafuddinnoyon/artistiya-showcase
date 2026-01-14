@@ -226,12 +226,12 @@ const Checkout = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Header />
-      <main className="pt-32 pb-24">
+      <main className="pt-20 md:pt-32 pb-8 md:pb-24">
         <div className="container mx-auto px-4">
-          <h1 className={`font-display text-3xl md:text-4xl text-foreground mb-8 text-center ${language === "bn" ? "font-bengali" : ""}`}>
-            {t("checkout.title")}
+          <h1 className="font-display text-2xl md:text-4xl text-foreground mb-6 md:mb-8 text-center">
+            Checkout
           </h1>
 
           {/* Guest Checkout Notice */}
@@ -239,54 +239,56 @@ const Checkout = () => {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="max-w-3xl mx-auto mb-6 p-4 bg-muted rounded-lg flex items-center justify-between"
+              className="max-w-3xl mx-auto mb-4 md:mb-6 p-3 md:p-4 bg-muted rounded-lg flex items-center justify-between"
             >
-              <div className="flex items-center gap-3">
-                <User className="h-5 w-5 text-gold" />
-                <span className={`text-sm ${language === "bn" ? "font-bengali" : ""}`}>
-                  {language === "bn" ? "গেস্ট হিসেবে অর্ডার করছেন" : "Ordering as Guest"}
+              <div className="flex items-center gap-2 md:gap-3">
+                <User className="h-4 w-4 md:h-5 md:w-5 text-gold" />
+                <span className="text-xs md:text-sm">
+                  Ordering as Guest
                 </span>
               </div>
               <Link to="/auth">
-                <Button variant="link" size="sm" className="text-gold">
-                  {t("common.login")}
+                <Button variant="link" size="sm" className="text-gold text-xs md:text-sm">
+                  Login
                 </Button>
               </Link>
             </motion.div>
           )}
 
           <form onSubmit={handleSubmit}>
-            <div className="grid lg:grid-cols-3 gap-8">
-              {/* Left Column - Form */}
-              <div className="lg:col-span-2 space-y-8">
+            {/* Single column on mobile, 3 columns on desktop */}
+            <div className="flex flex-col lg:grid lg:grid-cols-3 gap-4 md:gap-8">
+              {/* Form Section */}
+              <div className="lg:col-span-2 space-y-4 md:space-y-8">
                 {/* Shipping Address */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-card border border-border rounded-xl p-6"
+                  className="bg-card border border-border rounded-xl p-4 md:p-6"
                 >
-                  <h2 className={`font-display text-xl flex items-center gap-2 mb-6 ${language === "bn" ? "font-bengali" : ""}`}>
-                    <MapPin className="h-5 w-5 text-gold" />
-                    {t("checkout.address")}
+                  <h2 className="font-display text-lg md:text-xl flex items-center gap-2 mb-4 md:mb-6">
+                    <MapPin className="h-4 w-4 md:h-5 md:w-5 text-gold" />
+                    Shipping Address
                   </h2>
 
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="sm:col-span-2">
-                      <Label htmlFor="fullName" className={language === "bn" ? "font-bengali" : ""}>
-                        {t("checkout.fullName")} *
+                  {/* Mobile-optimized form layout */}
+                  <div className="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
+                    <div className="md:col-span-2">
+                      <Label htmlFor="fullName" className="text-sm">
+                        Full Name *
                       </Label>
                       <Input
                         id="fullName"
-                        placeholder={language === "bn" ? "আপনার নাম" : "Your name"}
+                        placeholder="Your name"
                         value={formData.fullName}
                         onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                        className="mt-1.5"
+                        className="mt-1.5 h-11"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="phone" className={language === "bn" ? "font-bengali" : ""}>
-                        {t("checkout.phone")} *
+                      <Label htmlFor="phone" className="text-sm">
+                        Phone *
                       </Label>
                       <div className="relative mt-1.5">
                         <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -295,7 +297,7 @@ const Checkout = () => {
                           placeholder="01XXXXXXXXX"
                           value={formData.phone}
                           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          className="pl-10"
+                          className="pl-10 h-11"
                         />
                       </div>
                     </div>
@@ -303,8 +305,8 @@ const Checkout = () => {
                     {/* Email for guests */}
                     {!user && (
                       <div>
-                        <Label htmlFor="email">
-                          Email ({t("common.optional")})
+                        <Label htmlFor="email" className="text-sm">
+                          Email (Optional)
                         </Label>
                         <Input
                           id="email"
@@ -312,111 +314,109 @@ const Checkout = () => {
                           placeholder="email@example.com"
                           value={formData.email}
                           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                          className="mt-1.5"
+                          className="mt-1.5 h-11"
                         />
                       </div>
                     )}
 
-                    <div className={user ? "" : "sm:col-span-2"}>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label className={language === "bn" ? "font-bengali" : ""}>
-                            {t("checkout.division")} *
-                          </Label>
-                          <Select value={selectedDivision} onValueChange={(v) => {
-                            setSelectedDivision(v);
-                            setSelectedDistrict("");
+                    {/* Division & District in single row */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-sm">
+                          Division *
+                        </Label>
+                        <Select value={selectedDivision} onValueChange={(v) => {
+                          setSelectedDivision(v);
+                          setSelectedDistrict("");
+                          setSelectedThana("");
+                        }}>
+                          <SelectTrigger className="mt-1.5 h-11">
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {divisions.map(div => (
+                              <SelectItem key={div.name} value={div.name}>
+                                {div.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label className="text-sm">
+                          District *
+                        </Label>
+                        <Select 
+                          value={selectedDistrict} 
+                          onValueChange={(v) => {
+                            setSelectedDistrict(v);
                             setSelectedThana("");
-                          }}>
-                            <SelectTrigger className="mt-1.5">
-                              <SelectValue placeholder={language === "bn" ? "বিভাগ নির্বাচন করুন" : "Select Division"} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {divisions.map(div => (
-                                <SelectItem key={div.name} value={div.name}>
-                                  {language === "bn" ? div.name_bn : div.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div>
-                          <Label className={language === "bn" ? "font-bengali" : ""}>
-                            {t("checkout.district")} *
-                          </Label>
-                          <Select 
-                            value={selectedDistrict} 
-                            onValueChange={(v) => {
-                              setSelectedDistrict(v);
-                              setSelectedThana("");
-                            }}
-                            disabled={!selectedDivision}
-                          >
-                            <SelectTrigger className="mt-1.5">
-                              <SelectValue placeholder={language === "bn" ? "জেলা নির্বাচন করুন" : "Select District"} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {districts.map(dist => (
-                                <SelectItem key={dist.name} value={dist.name}>
-                                  {language === "bn" ? dist.name_bn : dist.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                          }}
+                          disabled={!selectedDivision}
+                        >
+                          <SelectTrigger className="mt-1.5 h-11">
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {districts.map(dist => (
+                              <SelectItem key={dist.name} value={dist.name}>
+                                {dist.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
 
-                    <div>
-                      <Label className={language === "bn" ? "font-bengali" : ""}>
-                        {t("checkout.thana")} *
-                      </Label>
-                      <Select 
-                        value={selectedThana} 
-                        onValueChange={setSelectedThana}
-                        disabled={!selectedDistrict}
-                      >
-                        <SelectTrigger className="mt-1.5">
-                          <SelectValue placeholder={language === "bn" ? "থানা নির্বাচন করুন" : "Select Thana"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {thanas.map(thana => (
-                            <SelectItem key={thana.name} value={thana.name}>
-                              {language === "bn" ? thana.name_bn : thana.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {/* Thana & Shipping in single row */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-sm">
+                          Thana *
+                        </Label>
+                        <Select 
+                          value={selectedThana} 
+                          onValueChange={setSelectedThana}
+                          disabled={!selectedDistrict}
+                        >
+                          <SelectTrigger className="mt-1.5 h-11">
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {thanas.map(thana => (
+                              <SelectItem key={thana.name} value={thana.name}>
+                                {thana.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                    <div>
-                      <Label className={language === "bn" ? "font-bengali" : ""}>
-                        {language === "bn" ? "শিপিং চার্জ" : "Shipping"}
-                      </Label>
-                      <div className="mt-1.5 flex items-center gap-2 h-10">
-                        <Truck className="h-4 w-4 text-gold" />
-                        <span className="font-semibold text-gold">
-                          {selectedDistrict ? `৳${shippingCost}` : (language === "bn" ? "জেলা নির্বাচন করুন" : "Select district")}
-                        </span>
-                        {selectedDistrict && (
-                          <span className="text-xs text-muted-foreground">
-                            ({isDhakaDistrict(selectedDistrict) ? (language === "bn" ? "ঢাকা" : "Dhaka") : (language === "bn" ? "ঢাকার বাইরে" : "Outside Dhaka")})
+                      <div>
+                        <Label className="text-sm">
+                          Shipping
+                        </Label>
+                        <div className="mt-1.5 flex items-center gap-2 h-11 px-3 bg-muted rounded-md">
+                          <Truck className="h-4 w-4 text-gold" />
+                          <span className="font-semibold text-gold text-sm">
+                            {selectedDistrict ? `৳${shippingCost}` : "Select district"}
                           </span>
-                        )}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="sm:col-span-2">
-                      <Label htmlFor="addressLine" className={language === "bn" ? "font-bengali" : ""}>
-                        {t("checkout.addressLine")} *
+                    <div className="md:col-span-2">
+                      <Label htmlFor="addressLine" className="text-sm">
+                        Address *
                       </Label>
                       <Textarea
                         id="addressLine"
-                        placeholder={language === "bn" ? "বাড়ি নং, রোড নং, এলাকা..." : "House No, Road No, Area..."}
+                        placeholder="House No, Road No, Area..."
                         value={formData.addressLine}
                         onChange={(e) => setFormData({ ...formData, addressLine: e.target.value })}
                         className="mt-1.5"
+                        rows={2}
                       />
                     </div>
                   </div>
@@ -427,23 +427,23 @@ const Checkout = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 }}
-                  className="bg-card border border-border rounded-xl p-6"
+                  className="bg-card border border-border rounded-xl p-4 md:p-6"
                 >
-                  <h2 className={`font-display text-xl flex items-center gap-2 mb-6 ${language === "bn" ? "font-bengali" : ""}`}>
-                    <CreditCard className="h-5 w-5 text-gold" />
-                    {t("checkout.payment")}
+                  <h2 className="font-display text-lg md:text-xl flex items-center gap-2 mb-4 md:mb-6">
+                    <CreditCard className="h-4 w-4 md:h-5 md:w-5 text-gold" />
+                    Payment Method
                   </h2>
 
                   <RadioGroup
                     value={formData.paymentMethod}
                     onValueChange={(v) => setFormData({ ...formData, paymentMethod: v as any })}
-                    className="space-y-3"
+                    className="space-y-2 md:space-y-3"
                   >
-                    <div className="flex items-center space-x-3 p-4 border border-border rounded-lg hover:border-gold/50 transition-colors">
+                    <div className="flex items-center space-x-3 p-3 md:p-4 border border-border rounded-lg hover:border-gold/50 transition-colors">
                       <RadioGroupItem value="cod" id="cod" />
                       <Label htmlFor="cod" className="flex-1 cursor-pointer">
-                        <span className={`font-medium ${language === "bn" ? "font-bengali" : ""}`}>
-                          {t("checkout.cod")}
+                        <span className="font-medium text-sm md:text-base">
+                          Cash on Delivery
                         </span>
                         <span className={`block text-sm text-muted-foreground ${language === "bn" ? "font-bengali" : ""}`}>
                           {t("checkout.codDesc")}
