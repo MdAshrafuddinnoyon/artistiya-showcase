@@ -1,13 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Filter, Grid, LayoutGrid, ChevronDown, ShoppingBag, X } from "lucide-react";
+import { Filter, Grid, LayoutGrid, ShoppingBag, X, Heart, Search, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -24,6 +25,8 @@ import {
 } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useWishlist } from "@/hooks/useWishlist";
+import { useCart } from "@/hooks/useCart";
 
 interface Product {
   id: string;
@@ -53,12 +56,18 @@ interface Category {
 const Shop = () => {
   const { category: categorySlug } = useParams();
   const { t, language } = useLanguage();
+  const { isInWishlist, toggleWishlist } = useWishlist();
+  const { addToCart } = useCart();
   
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filterOpen, setFilterOpen] = useState(false);
+  
+  // Search
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchLoading, setSearchLoading] = useState(false);
   
   // Filters
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -94,61 +103,73 @@ const Shop = () => {
     }
   }, [categorySlug, categories]);
 
-  // Fetch products with filters
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
-      try {
-        let query = supabase
-          .from("products")
-          .select(`
-            id, name, name_bn, slug, price, compare_at_price, images, 
-            is_new_arrival, stock_quantity, is_preorderable,
-            category:categories (name, name_bn, slug)
-          `)
-          .eq("is_active", true);
+  // Debounced search function
+  const searchProducts = useCallback(async () => {
+    setSearchLoading(true);
+    try {
+      let query = supabase
+        .from("products")
+        .select(`
+          id, name, name_bn, slug, price, compare_at_price, images, 
+          is_new_arrival, stock_quantity, is_preorderable,
+          category:categories (name, name_bn, slug)
+        `)
+        .eq("is_active", true);
 
-        // Category filter
-        if (selectedCategory !== "all") {
-          query = query.eq("category_id", selectedCategory);
-        }
-
-        // Price filter
-        query = query.gte("price", priceRange[0]).lte("price", priceRange[1]);
-
-        // Pre-order filter
-        if (showPreorderOnly) {
-          query = query.eq("is_preorderable", true).eq("stock_quantity", 0);
-        }
-
-        // Sorting
-        switch (sortBy) {
-          case "newest":
-            query = query.order("created_at", { ascending: false });
-            break;
-          case "price-low":
-            query = query.order("price", { ascending: true });
-            break;
-          case "price-high":
-            query = query.order("price", { ascending: false });
-            break;
-          default:
-            query = query.order("created_at", { ascending: false });
-        }
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-        setProducts((data || []) as Product[]);
-      } catch (error) {
-        console.error("Error fetching products:", error);
-      } finally {
-        setLoading(false);
+      // Search filter
+      if (searchQuery.trim()) {
+        query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
       }
-    };
 
-    fetchProducts();
-  }, [selectedCategory, priceRange, showPreorderOnly, sortBy]);
+      // Category filter
+      if (selectedCategory !== "all") {
+        query = query.eq("category_id", selectedCategory);
+      }
+
+      // Price filter
+      query = query.gte("price", priceRange[0]).lte("price", priceRange[1]);
+
+      // Pre-order filter
+      if (showPreorderOnly) {
+        query = query.eq("is_preorderable", true).eq("stock_quantity", 0);
+      }
+
+      // Sorting
+      switch (sortBy) {
+        case "newest":
+          query = query.order("created_at", { ascending: false });
+          break;
+        case "price-low":
+          query = query.order("price", { ascending: true });
+          break;
+        case "price-high":
+          query = query.order("price", { ascending: false });
+          break;
+        default:
+          query = query.order("created_at", { ascending: false });
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      setProducts((data || []) as Product[]);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    } finally {
+      setLoading(false);
+      setSearchLoading(false);
+    }
+  }, [searchQuery, selectedCategory, priceRange, showPreorderOnly, sortBy]);
+
+  // Debounced search effect
+  useEffect(() => {
+    setLoading(true);
+    const timer = setTimeout(() => {
+      searchProducts();
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchProducts]);
 
   const getCategoryName = (cat: Category | null) => {
     if (!cat) return "";
@@ -161,13 +182,23 @@ const Shop = () => {
 
   const activeCategory = categories.find(c => c.id === selectedCategory);
 
+  const handleWishlistClick = async (e: React.MouseEvent, productId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await toggleWishlist(productId);
+  };
+
+  const handleAddToCart = async (e: React.MouseEvent, productId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await addToCart(productId);
+  };
+
   const FilterContent = () => (
     <div className="space-y-6">
       {/* Price Range */}
       <div>
-        <h3 className="font-display text-lg mb-4">
-          Price Range
-        </h3>
+        <h3 className="font-display text-lg mb-4">Price Range</h3>
         <Slider
           value={priceRange}
           min={0}
@@ -196,9 +227,7 @@ const Shop = () => {
 
       {/* Categories */}
       <div>
-        <h3 className="font-display text-lg mb-4">
-          Categories
-        </h3>
+        <h3 className="font-display text-lg mb-4">Categories</h3>
         <div className="space-y-2">
           <button
             onClick={() => setSelectedCategory("all")}
@@ -216,7 +245,7 @@ const Shop = () => {
                 selectedCategory === cat.id ? "bg-gold/20 text-gold" : "hover:bg-muted"
               }`}
             >
-              {cat.name}
+              {getCategoryName(cat)}
             </button>
           ))}
         </div>
@@ -230,6 +259,7 @@ const Shop = () => {
           setSelectedCategory("all");
           setPriceRange([0, 50000]);
           setShowPreorderOnly(false);
+          setSearchQuery("");
         }}
       >
         <X className="h-4 w-4 mr-2" />
@@ -251,13 +281,37 @@ const Shop = () => {
             transition={{ duration: 0.6 }}
             className="text-center mb-12"
           >
-            <span className={`text-gold text-sm tracking-[0.3em] uppercase font-body ${language === "bn" ? "font-bengali" : ""}`}>
-              {language === "bn" ? "আমাদের কালেকশন" : "Explore Our Collection"}
+            <span className="text-gold text-sm tracking-[0.3em] uppercase font-body">
+              Explore Our Collection
             </span>
-            <h1 className={`font-display text-5xl md:text-6xl text-foreground mt-4 ${language === "bn" ? "font-bengali" : ""}`}>
+            <h1 className="font-display text-5xl md:text-6xl text-foreground mt-4">
               {activeCategory ? getCategoryName(activeCategory) : t("shop.title")}
             </h1>
           </motion.div>
+
+          {/* Search Bar */}
+          <div className="mb-8">
+            <div className="relative max-w-2xl mx-auto">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products..."
+                className="pl-12 pr-12 h-14 text-lg rounded-full border-border bg-card"
+              />
+              {searchLoading && (
+                <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 animate-spin text-gold" />
+              )}
+              {searchQuery && !searchLoading && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded-full"
+                >
+                  <X className="h-4 w-4 text-muted-foreground" />
+                </button>
+              )}
+            </div>
+          </div>
 
           <div className="flex gap-8">
             {/* Desktop Sidebar */}
@@ -323,8 +377,8 @@ const Shop = () => {
                   </div>
                 </div>
 
-                <span className={`text-sm text-muted-foreground ${language === "bn" ? "font-bengali" : ""}`}>
-                  {products.length} {language === "bn" ? "টি পণ্য" : "products"}
+                <span className="text-sm text-muted-foreground">
+                  {products.length} products
                 </span>
               </div>
 
@@ -341,8 +395,8 @@ const Shop = () => {
                 </div>
               ) : products.length === 0 ? (
                 <div className="text-center py-16">
-                  <p className={`text-muted-foreground text-lg ${language === "bn" ? "font-bengali" : ""}`}>
-                    {t("shop.noProducts")}
+                  <p className="text-muted-foreground text-lg">
+                    {searchQuery ? `No products found for "${searchQuery}"` : t("shop.noProducts")}
                   </p>
                   <Button 
                     variant="gold" 
@@ -351,9 +405,10 @@ const Shop = () => {
                       setSelectedCategory("all");
                       setPriceRange([0, 50000]);
                       setShowPreorderOnly(false);
+                      setSearchQuery("");
                     }}
                   >
-                    {language === "bn" ? "সব দেখুন" : "View All"}
+                    View All
                   </Button>
                 </div>
               ) : (
@@ -386,6 +441,16 @@ const Shop = () => {
                               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                             />
                             
+                            {/* Wishlist Button */}
+                            <button
+                              onClick={(e) => handleWishlistClick(e, product.id)}
+                              className="absolute top-3 right-3 p-2 bg-background/80 rounded-full hover:bg-background transition-colors z-10"
+                            >
+                              <Heart 
+                                className={`h-4 w-4 ${isInWishlist(product.id) ? "fill-red-500 text-red-500" : "text-foreground"}`} 
+                              />
+                            </button>
+                            
                             {/* Badges */}
                             <div className="absolute top-3 left-3 flex flex-col gap-1">
                               {discount > 0 && (
@@ -406,10 +471,16 @@ const Shop = () => {
                             </div>
 
                             {/* Hover Overlay */}
-                            <div className="absolute inset-0 bg-charcoal-deep/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                              <Button variant="gold" size="sm">
-                                <ShoppingBag className="h-4 w-4 mr-1" />
-                                {t("shop.viewDetails")}
+                            <div className="absolute inset-0 bg-charcoal-deep/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
+                              <Button 
+                                variant="gold" 
+                                size="sm"
+                                onClick={(e) => handleAddToCart(e, product.id)}
+                              >
+                                <ShoppingBag className="h-4 w-4" />
+                              </Button>
+                              <Button variant="outline" size="sm" className="bg-background/80">
+                                View
                               </Button>
                             </div>
                           </div>
@@ -420,7 +491,7 @@ const Shop = () => {
                                 {language === "bn" && product.category.name_bn ? product.category.name_bn : product.category.name}
                               </span>
                             )}
-                            <h3 className={`font-display text-lg text-foreground group-hover:text-gold transition-colors ${language === "bn" ? "font-bengali" : ""}`}>
+                            <h3 className="font-display text-lg text-foreground group-hover:text-gold transition-colors">
                               {getProductName(product)}
                             </h3>
                             <div className="flex items-center gap-2">

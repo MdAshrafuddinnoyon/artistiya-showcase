@@ -1,1 +1,7 @@
 project_id = "dacbflyswlopvexyouam"
+
+[functions.send-order-email]
+verify_jwt = false
+
+[functions.generate-invoice]
+verify_jwt = false

@@ -1,10 +1,11 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowRight, ShoppingBag, Eye } from "lucide-react";
+import { ArrowRight, ShoppingBag, Eye, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/hooks/useCart";
+import { useWishlist } from "@/hooks/useWishlist";
 
 interface Product {
   id: string;
@@ -27,6 +28,7 @@ const NewArrivalsSection = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const { addToCart } = useCart();
+  const { isInWishlist, toggleWishlist } = useWishlist();
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -50,6 +52,18 @@ const NewArrivalsSection = () => {
 
     fetchProducts();
   }, []);
+
+  const handleWishlistClick = async (e: React.MouseEvent, productId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await toggleWishlist(productId);
+  };
+
+  const handleAddToCart = async (e: React.MouseEvent, productId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await addToCart(productId);
+  };
 
   if (loading) {
     return (
@@ -118,6 +132,16 @@ const NewArrivalsSection = () => {
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                   
+                  {/* Wishlist Button */}
+                  <button
+                    onClick={(e) => handleWishlistClick(e, product.id)}
+                    className="absolute top-2 right-2 md:top-3 md:right-3 p-1.5 md:p-2 bg-background/80 rounded-full hover:bg-background transition-colors z-10"
+                  >
+                    <Heart 
+                      className={`h-3.5 w-3.5 md:h-4 md:w-4 ${isInWishlist(product.id) ? "fill-red-500 text-red-500" : "text-foreground"}`} 
+                    />
+                  </button>
+                  
                   {/* Badges */}
                   <div className="absolute top-2 left-2 md:top-4 md:left-4 flex flex-col gap-1 md:gap-2">
                     {product.is_new_arrival && (
@@ -137,10 +161,7 @@ const NewArrivalsSection = () => {
                     <Button 
                       variant="gold" 
                       size="sm"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        addToCart(product.id);
-                      }}
+                      onClick={(e) => handleAddToCart(e, product.id)}
                     >
                       <ShoppingBag className="h-4 w-4" />
                     </Button>
