@@ -30,6 +30,7 @@ interface DeliveryProvider {
   api_secret: string | null;
   is_active: boolean;
   config: any;
+}
 
 const providerTypes = [
   { value: "pathao", label: "Pathao Courier", logo: "🚚" },

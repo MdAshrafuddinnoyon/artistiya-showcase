@@ -31,6 +31,7 @@ interface PaymentProvider {
   is_active: boolean;
   is_sandbox: boolean;
   config: any;
+}
 
 const providerTypes = [
   { value: "cod", label: "Cash on Delivery", logo: "💵", requiresApi: false },
