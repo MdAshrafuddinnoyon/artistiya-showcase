@@ -21,6 +21,9 @@ import {
   Truck,
   CreditCard,
   DollarSign,
+  FolderOpen,
+  Instagram,
+  Gift,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -47,25 +50,33 @@ import AdminCategorySettings from "@/components/admin/AdminCategorySettings";
 import AdminSiteBranding from "@/components/admin/AdminSiteBranding";
 import AdminMenuManager from "@/components/admin/AdminMenuManager";
 import AdminCheckoutSettings from "@/components/admin/AdminCheckoutSettings";
+import AdminMediaManager from "@/components/admin/AdminMediaManager";
+import AdminContentPages from "@/components/admin/AdminContentPages";
+import AdminInstagramPosts from "@/components/admin/AdminInstagramPosts";
+import AdminUpsellOffers from "@/components/admin/AdminUpsellOffers";
 
 const menuItems = [
   { id: "dashboard", name: "Dashboard", icon: LayoutDashboard },
   { id: "orders", name: "Orders", icon: ShoppingCart },
   { id: "products", name: "Products", icon: Package },
   { id: "categories", name: "Categories", icon: FolderTree },
+  { id: "media", name: "Media Manager", icon: FolderOpen },
   { id: "blog", name: "Blog Posts", icon: FileText },
   { id: "youtube", name: "YouTube", icon: Youtube },
   { id: "leads", name: "Leads", icon: Users },
-  { id: "marketing", name: "Marketing", icon: Megaphone },
+  { id: "hero-slider", name: "Hero Slider", icon: Image },
+  { id: "homepage", name: "Homepage CMS", icon: Image },
+  { id: "instagram", name: "Instagram Posts", icon: Instagram },
+  { id: "category-settings", name: "Category Display", icon: FolderTree },
+  { id: "content-pages", name: "Content Pages", icon: FileText },
+  { id: "branding", name: "Site Branding", icon: Home },
+  { id: "menu-manager", name: "Menu Manager", icon: Menu },
+  { id: "upsells", name: "Upsell Offers", icon: Gift },
+  { id: "checkout", name: "Checkout Settings", icon: ShoppingCart },
   { id: "payments", name: "Payments", icon: CreditCard },
   { id: "delivery", name: "Delivery", icon: Truck },
   { id: "currency", name: "Currency", icon: DollarSign },
-  { id: "hero-slider", name: "Hero Slider", icon: Image },
-  { id: "category-settings", name: "Category Display", icon: FolderTree },
-  { id: "branding", name: "Site Branding", icon: Home },
-  { id: "menu-manager", name: "Menu Manager", icon: Menu },
-  { id: "homepage", name: "Homepage CMS", icon: Image },
-  { id: "checkout", name: "Checkout Settings", icon: ShoppingCart },
+  { id: "marketing", name: "Marketing", icon: Megaphone },
   { id: "email-templates", name: "Email Templates", icon: Mail },
   { id: "invoice", name: "Invoice Settings", icon: Receipt },
   { id: "settings", name: "Settings", icon: Settings },
@@ -130,6 +141,8 @@ const Admin = () => {
         return <AdminProducts />;
       case "categories":
         return <AdminCategories />;
+      case "media":
+        return <AdminMediaManager />;
       case "blog":
         return <AdminBlogPosts />;
       case "youtube":
@@ -154,6 +167,12 @@ const Admin = () => {
         return <AdminMenuManager />;
       case "homepage":
         return <AdminHomepageCMS />;
+      case "instagram":
+        return <AdminInstagramPosts />;
+      case "content-pages":
+        return <AdminContentPages />;
+      case "upsells":
+        return <AdminUpsellOffers />;
       case "checkout":
         return <AdminCheckoutSettings />;
       case "email-templates":
