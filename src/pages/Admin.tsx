@@ -42,6 +42,11 @@ import AdminLeads from "@/components/admin/AdminLeads";
 import AdminDeliveryProviders from "@/components/admin/AdminDeliveryProviders";
 import AdminPaymentProviders from "@/components/admin/AdminPaymentProviders";
 import AdminCurrencySettings from "@/components/admin/AdminCurrencySettings";
+import AdminHeroSlider from "@/components/admin/AdminHeroSlider";
+import AdminCategorySettings from "@/components/admin/AdminCategorySettings";
+import AdminSiteBranding from "@/components/admin/AdminSiteBranding";
+import AdminMenuManager from "@/components/admin/AdminMenuManager";
+import AdminCheckoutSettings from "@/components/admin/AdminCheckoutSettings";
 
 const menuItems = [
   { id: "dashboard", name: "Dashboard", icon: LayoutDashboard },
@@ -55,7 +60,12 @@ const menuItems = [
   { id: "payments", name: "Payments", icon: CreditCard },
   { id: "delivery", name: "Delivery", icon: Truck },
   { id: "currency", name: "Currency", icon: DollarSign },
+  { id: "hero-slider", name: "Hero Slider", icon: Image },
+  { id: "category-settings", name: "Category Display", icon: FolderTree },
+  { id: "branding", name: "Site Branding", icon: Home },
+  { id: "menu-manager", name: "Menu Manager", icon: Menu },
   { id: "homepage", name: "Homepage CMS", icon: Image },
+  { id: "checkout", name: "Checkout Settings", icon: ShoppingCart },
   { id: "email-templates", name: "Email Templates", icon: Mail },
   { id: "invoice", name: "Invoice Settings", icon: Receipt },
   { id: "settings", name: "Settings", icon: Settings },
@@ -134,8 +144,18 @@ const Admin = () => {
         return <AdminDeliveryProviders />;
       case "currency":
         return <AdminCurrencySettings />;
+      case "hero-slider":
+        return <AdminHeroSlider />;
+      case "category-settings":
+        return <AdminCategorySettings />;
+      case "branding":
+        return <AdminSiteBranding />;
+      case "menu-manager":
+        return <AdminMenuManager />;
       case "homepage":
         return <AdminHomepageCMS />;
+      case "checkout":
+        return <AdminCheckoutSettings />;
       case "email-templates":
         return <AdminEmailTemplates />;
       case "invoice":

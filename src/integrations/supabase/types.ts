@@ -186,6 +186,111 @@ export type Database = {
           },
         ]
       }
+      category_display_settings: {
+        Row: {
+          auto_slide: boolean | null
+          card_shape: string | null
+          columns_desktop: number | null
+          columns_mobile: number | null
+          columns_tablet: number | null
+          created_at: string
+          enable_slider: boolean | null
+          id: string
+          items_to_show: number | null
+          section_subtitle: string | null
+          section_title: string | null
+          show_description: boolean | null
+          show_subtitle: boolean | null
+          slide_interval: number | null
+          updated_at: string
+        }
+        Insert: {
+          auto_slide?: boolean | null
+          card_shape?: string | null
+          columns_desktop?: number | null
+          columns_mobile?: number | null
+          columns_tablet?: number | null
+          created_at?: string
+          enable_slider?: boolean | null
+          id?: string
+          items_to_show?: number | null
+          section_subtitle?: string | null
+          section_title?: string | null
+          show_description?: boolean | null
+          show_subtitle?: boolean | null
+          slide_interval?: number | null
+          updated_at?: string
+        }
+        Update: {
+          auto_slide?: boolean | null
+          card_shape?: string | null
+          columns_desktop?: number | null
+          columns_mobile?: number | null
+          columns_tablet?: number | null
+          created_at?: string
+          enable_slider?: boolean | null
+          id?: string
+          items_to_show?: number | null
+          section_subtitle?: string | null
+          section_title?: string | null
+          show_description?: boolean | null
+          show_subtitle?: boolean | null
+          slide_interval?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      checkout_settings: {
+        Row: {
+          cod_enabled: boolean | null
+          cod_extra_charge: number | null
+          created_at: string
+          default_shipping_cost: number | null
+          free_shipping_threshold: number | null
+          id: string
+          min_order_amount: number | null
+          require_address: boolean | null
+          require_phone: boolean | null
+          show_gift_message: boolean | null
+          show_order_notes: boolean | null
+          show_promo_code: boolean | null
+          show_shipping_calculator: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          cod_enabled?: boolean | null
+          cod_extra_charge?: number | null
+          created_at?: string
+          default_shipping_cost?: number | null
+          free_shipping_threshold?: number | null
+          id?: string
+          min_order_amount?: number | null
+          require_address?: boolean | null
+          require_phone?: boolean | null
+          show_gift_message?: boolean | null
+          show_order_notes?: boolean | null
+          show_promo_code?: boolean | null
+          show_shipping_calculator?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          cod_enabled?: boolean | null
+          cod_extra_charge?: number | null
+          created_at?: string
+          default_shipping_cost?: number | null
+          free_shipping_threshold?: number | null
+          id?: string
+          min_order_amount?: number | null
+          require_address?: boolean | null
+          require_phone?: boolean | null
+          show_gift_message?: boolean | null
+          show_order_notes?: boolean | null
+          show_promo_code?: boolean | null
+          show_shipping_calculator?: boolean | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       currency_rates: {
         Row: {
           currency_code: string
@@ -360,6 +465,128 @@ export type Database = {
         }
         Relationships: []
       }
+      footer_link_groups: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      footer_links: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          group_id: string
+          href: string
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          group_id: string
+          href: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          group_id?: string
+          href?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "footer_links_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "footer_link_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hero_slides: {
+        Row: {
+          badge_text: string | null
+          button_link: string | null
+          button_text: string | null
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          secondary_button_link: string | null
+          secondary_button_text: string | null
+          title: string | null
+          title_end: string | null
+          title_highlight: string | null
+          updated_at: string
+        }
+        Insert: {
+          badge_text?: string | null
+          button_link?: string | null
+          button_text?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          secondary_button_link?: string | null
+          secondary_button_text?: string | null
+          title?: string | null
+          title_end?: string | null
+          title_highlight?: string | null
+          updated_at?: string
+        }
+        Update: {
+          badge_text?: string | null
+          button_link?: string | null
+          button_text?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          secondary_button_link?: string | null
+          secondary_button_text?: string | null
+          title?: string | null
+          title_end?: string | null
+          title_highlight?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       homepage_content: {
         Row: {
           content: Json
@@ -464,6 +691,112 @@ export type Database = {
           source?: string | null
         }
         Relationships: []
+      }
+      menu_items: {
+        Row: {
+          banner_image_url: string | null
+          banner_link: string | null
+          banner_subtitle: string | null
+          banner_title: string | null
+          created_at: string
+          display_order: number | null
+          href: string
+          id: string
+          is_active: boolean | null
+          is_mega_menu: boolean | null
+          menu_type: string | null
+          name: string
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          banner_image_url?: string | null
+          banner_link?: string | null
+          banner_subtitle?: string | null
+          banner_title?: string | null
+          created_at?: string
+          display_order?: number | null
+          href: string
+          id?: string
+          is_active?: boolean | null
+          is_mega_menu?: boolean | null
+          menu_type?: string | null
+          name: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          banner_image_url?: string | null
+          banner_link?: string | null
+          banner_subtitle?: string | null
+          banner_title?: string | null
+          created_at?: string
+          display_order?: number | null
+          href?: string
+          id?: string
+          is_active?: boolean | null
+          is_mega_menu?: boolean | null
+          menu_type?: string | null
+          name?: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_items_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_sub_items: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          href: string
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          items: string[] | null
+          menu_item_id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          href: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          items?: string[] | null
+          menu_item_id: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          href?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          items?: string[] | null
+          menu_item_id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_sub_items_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_items: {
         Row: {
@@ -820,6 +1153,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      site_branding: {
+        Row: {
+          created_at: string
+          favicon_url: string | null
+          footer_copyright: string | null
+          footer_description: string | null
+          header_announcement_active: boolean | null
+          header_announcement_text: string | null
+          id: string
+          logo_text: string | null
+          logo_text_secondary: string | null
+          logo_url: string | null
+          social_email: string | null
+          social_facebook: string | null
+          social_instagram: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          favicon_url?: string | null
+          footer_copyright?: string | null
+          footer_description?: string | null
+          header_announcement_active?: boolean | null
+          header_announcement_text?: string | null
+          id?: string
+          logo_text?: string | null
+          logo_text_secondary?: string | null
+          logo_url?: string | null
+          social_email?: string | null
+          social_facebook?: string | null
+          social_instagram?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          favicon_url?: string | null
+          footer_copyright?: string | null
+          footer_description?: string | null
+          header_announcement_active?: boolean | null
+          header_announcement_text?: string | null
+          id?: string
+          logo_text?: string | null
+          logo_text_secondary?: string | null
+          logo_url?: string | null
+          social_email?: string | null
+          social_facebook?: string | null
+          social_instagram?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       site_settings: {
         Row: {
