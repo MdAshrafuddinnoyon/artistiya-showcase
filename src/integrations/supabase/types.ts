@@ -107,6 +107,42 @@ export type Database = {
         }
         Relationships: []
       }
+      bundle_products: {
+        Row: {
+          bundle_id: string | null
+          created_at: string
+          id: string
+          product_id: string | null
+        }
+        Insert: {
+          bundle_id?: string | null
+          created_at?: string
+          id?: string
+          product_id?: string | null
+        }
+        Update: {
+          bundle_id?: string | null
+          created_at?: string
+          id?: string
+          product_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bundle_products_bundle_id_fkey"
+            columns: ["bundle_id"]
+            isOneToOne: false
+            referencedRelation: "product_bundles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bundle_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cart_items: {
         Row: {
           created_at: string
@@ -287,6 +323,48 @@ export type Database = {
           show_order_notes?: boolean | null
           show_promo_code?: boolean | null
           show_shipping_calculator?: boolean | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      content_pages: {
+        Row: {
+          content: string
+          content_bn: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          meta_description: string | null
+          meta_title: string | null
+          page_key: string
+          title: string
+          title_bn: string | null
+          updated_at: string
+        }
+        Insert: {
+          content?: string
+          content_bn?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          meta_description?: string | null
+          meta_title?: string | null
+          page_key: string
+          title: string
+          title_bn?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          content_bn?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          meta_description?: string | null
+          meta_title?: string | null
+          page_key?: string
+          title?: string
+          title_bn?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -535,6 +613,7 @@ export type Database = {
       }
       hero_slides: {
         Row: {
+          animation_type: string | null
           badge_text: string | null
           button_link: string | null
           button_text: string | null
@@ -544,14 +623,17 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean | null
+          overlay_opacity: number | null
           secondary_button_link: string | null
           secondary_button_text: string | null
+          text_alignment: string | null
           title: string | null
           title_end: string | null
           title_highlight: string | null
           updated_at: string
         }
         Insert: {
+          animation_type?: string | null
           badge_text?: string | null
           button_link?: string | null
           button_text?: string | null
@@ -561,14 +643,17 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          overlay_opacity?: number | null
           secondary_button_link?: string | null
           secondary_button_text?: string | null
+          text_alignment?: string | null
           title?: string | null
           title_end?: string | null
           title_highlight?: string | null
           updated_at?: string
         }
         Update: {
+          animation_type?: string | null
           badge_text?: string | null
           button_link?: string | null
           button_text?: string | null
@@ -578,8 +663,10 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          overlay_opacity?: number | null
           secondary_button_link?: string | null
           secondary_button_text?: string | null
+          text_alignment?: string | null
           title?: string | null
           title_end?: string | null
           title_highlight?: string | null
@@ -614,6 +701,36 @@ export type Database = {
           is_active?: boolean | null
           section_key?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      instagram_posts: {
+        Row: {
+          caption: string | null
+          created_at: string
+          display_order: number | null
+          id: string
+          image_url: string
+          is_active: boolean | null
+          link_url: string | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          image_url: string
+          is_active?: boolean | null
+          link_url?: string | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          image_url?: string
+          is_active?: boolean | null
+          link_url?: string | null
         }
         Relationships: []
       }
@@ -1000,6 +1117,36 @@ export type Database = {
           },
         ]
       }
+      product_bundles: {
+        Row: {
+          created_at: string
+          description: string | null
+          discount_percent: number | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          discount_percent?: number | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          discount_percent?: number | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           allow_customization: boolean | null
@@ -1270,6 +1417,53 @@ export type Database = {
           text?: string
         }
         Relationships: []
+      }
+      upsell_offers: {
+        Row: {
+          created_at: string
+          description: string | null
+          discount_percent: number | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          product_id: string | null
+          title: string
+          trigger_type: string | null
+          trigger_value: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          discount_percent?: number | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          product_id?: string | null
+          title: string
+          trigger_type?: string | null
+          trigger_value?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          discount_percent?: number | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          product_id?: string | null
+          title?: string
+          trigger_type?: string | null
+          trigger_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "upsell_offers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
