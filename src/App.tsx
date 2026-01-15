@@ -22,6 +22,7 @@ import TrackOrder from "./pages/TrackOrder";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
+import OrderSuccess from "./pages/OrderSuccess";
 import ChatWidgets from "./components/widgets/ChatWidgets";
 import ScrollToTop from "./components/common/ScrollToTop";
 
@@ -49,6 +50,7 @@ const App = () => (
                   <Route path="/collections/:slug" element={<Collections />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/order-success" element={<OrderSuccess />} />
                   <Route path="/admin" element={<Admin />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/orders" element={<Dashboard />} />

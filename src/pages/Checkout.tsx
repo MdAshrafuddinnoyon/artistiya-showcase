@@ -1,19 +1,21 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { MapPin, Phone, CreditCard, Truck, Loader2, CheckCircle2, MessageCircle, User } from "lucide-react";
+import { MapPin, Phone, CreditCard, Truck, Loader2, CheckCircle2, MessageCircle, User, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import WhatsAppOrderButton from "@/components/common/WhatsAppOrderButton";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { useLanguage } from "@/hooks/useLanguage";
+import { usePayment } from "@/hooks/usePayment";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { divisions, calculateShippingCost, isDhakaDistrict } from "@/data/bangladeshLocations";
@@ -23,10 +25,14 @@ const Checkout = () => {
   const { items, subtotal, clearCart } = useCart();
   const { t, language } = useLanguage();
   const navigate = useNavigate();
+  const { initiateBkashPayment, initiateNagadPayment, redirectToPayment, loading: paymentLoading } = usePayment();
   
   const [loading, setLoading] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
+  const [paymentMode, setPaymentMode] = useState<"auto" | "manual">("auto");
+  const [bkashAvailable, setBkashAvailable] = useState(false);
+  const [nagadAvailable, setNagadAvailable] = useState(false);
   
   const [selectedDivision, setSelectedDivision] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
@@ -41,6 +47,22 @@ const Checkout = () => {
     transactionId: "",
     notes: "",
   });
+
+  // Check if automated payment providers are available
+  useEffect(() => {
+    const checkPaymentProviders = async () => {
+      const { data: providers } = await supabase
+        .from("payment_providers")
+        .select("provider_type, is_active")
+        .eq("is_active", true);
+
+      if (providers) {
+        setBkashAvailable(providers.some(p => p.provider_type === "bkash"));
+        setNagadAvailable(providers.some(p => p.provider_type === "nagad"));
+      }
+    };
+    checkPaymentProviders();
+  }, []);
 
   const districts = selectedDivision
     ? divisions.find(d => d.name === selectedDivision)?.districts || []
@@ -78,7 +100,13 @@ const Checkout = () => {
       return;
     }
 
-    if ((formData.paymentMethod === "bkash" || formData.paymentMethod === "nagad") && 
+    // For manual payment mode, require transaction ID
+    const isAutomatedPayment = 
+      (formData.paymentMethod === "bkash" && bkashAvailable && paymentMode === "auto") ||
+      (formData.paymentMethod === "nagad" && nagadAvailable && paymentMode === "auto");
+
+    if (!isAutomatedPayment && 
+        (formData.paymentMethod === "bkash" || formData.paymentMethod === "nagad") && 
         !formData.transactionId) {
       toast.error(t("checkout.enterTxn"));
       return;
@@ -149,13 +177,45 @@ const Checkout = () => {
 
       if (itemsError) throw itemsError;
 
-      // Clear cart
+      // Handle automated payment
+      const isAutomatedPayment = 
+        (formData.paymentMethod === "bkash" && bkashAvailable && paymentMode === "auto") ||
+        (formData.paymentMethod === "nagad" && nagadAvailable && paymentMode === "auto");
+
+      if (isAutomatedPayment) {
+        // Initiate automated payment
+        if (formData.paymentMethod === "bkash") {
+          const result = await initiateBkashPayment(total, orderData.id);
+          if (result.success && result.bkashURL) {
+            // Redirect to bKash payment page
+            redirectToPayment(result.bkashURL);
+            return;
+          } else {
+            toast.error(result.error || "Failed to initiate bKash payment");
+            // Fall back to manual payment
+            setPaymentMode("manual");
+            return;
+          }
+        } else if (formData.paymentMethod === "nagad") {
+          const result = await initiateNagadPayment(total, orderData.id);
+          if (result.success && result.callBackUrl) {
+            // Redirect to Nagad payment page
+            redirectToPayment(result.callBackUrl);
+            return;
+          } else {
+            toast.error(result.error || "Failed to initiate Nagad payment");
+            // Fall back to manual payment
+            setPaymentMode("manual");
+            return;
+          }
+        }
+      }
+
+      // Clear cart for COD or manual payment
       await clearCart();
 
-      // Show success
-      setOrderNumber(orderData.order_number);
-      setOrderSuccess(true);
-      toast.success(language === "bn" ? "অর্ডার সফল হয়েছে!" : "Order placed successfully!");
+      // Redirect to success page
+      navigate(`/order-success?orderId=${orderData.id}`);
 
     } catch (error) {
       console.error("Checkout error:", error);
@@ -451,33 +511,100 @@ const Checkout = () => {
                       </Label>
                     </div>
 
-                    <div className="flex items-center space-x-3 p-4 border border-border rounded-lg hover:border-gold/50 transition-colors">
+                    <div className={`flex items-center space-x-3 p-4 border rounded-lg transition-colors ${formData.paymentMethod === "bkash" ? "border-pink-500/50 bg-pink-500/5" : "border-border hover:border-gold/50"}`}>
                       <RadioGroupItem value="bkash" id="bkash" />
                       <Label htmlFor="bkash" className="flex-1 cursor-pointer">
-                        <span className="font-medium text-pink-500">bKash</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-pink-500">bKash</span>
+                          {bkashAvailable && (
+                            <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-500">
+                              {language === "bn" ? "অটো পেমেন্ট" : "Auto Pay"}
+                            </Badge>
+                          )}
+                        </div>
                         <span className="block text-sm text-muted-foreground">
-                          01XXXXXXXXX {language === "bn" ? "নম্বরে Send Money করুন" : "- Send Money"}
+                          {bkashAvailable 
+                            ? (language === "bn" ? "bKash পেজে রিডাইরেক্ট হবে" : "Redirect to bKash checkout")
+                            : (language === "bn" ? "ম্যানুয়াল পেমেন্ট" : "Manual payment")}
                         </span>
                       </Label>
                     </div>
 
-                    <div className="flex items-center space-x-3 p-4 border border-border rounded-lg hover:border-gold/50 transition-colors">
+                    <div className={`flex items-center space-x-3 p-4 border rounded-lg transition-colors ${formData.paymentMethod === "nagad" ? "border-orange-500/50 bg-orange-500/5" : "border-border hover:border-gold/50"}`}>
                       <RadioGroupItem value="nagad" id="nagad" />
                       <Label htmlFor="nagad" className="flex-1 cursor-pointer">
-                        <span className="font-medium text-orange-500">Nagad</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-orange-500">Nagad</span>
+                          {nagadAvailable && (
+                            <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-500">
+                              {language === "bn" ? "অটো পেমেন্ট" : "Auto Pay"}
+                            </Badge>
+                          )}
+                        </div>
                         <span className="block text-sm text-muted-foreground">
-                          01XXXXXXXXX {language === "bn" ? "নম্বরে Send Money করুন" : "- Send Money"}
+                          {nagadAvailable 
+                            ? (language === "bn" ? "Nagad পেজে রিডাইরেক্ট হবে" : "Redirect to Nagad checkout")
+                            : (language === "bn" ? "ম্যানুয়াল পেমেন্ট" : "Manual payment")}
                         </span>
                       </Label>
                     </div>
                   </RadioGroup>
 
-                  {(formData.paymentMethod === "bkash" || formData.paymentMethod === "nagad") && (
+                  {/* Show payment mode selector for bKash/Nagad */}
+                  {((formData.paymentMethod === "bkash" && bkashAvailable) || 
+                    (formData.paymentMethod === "nagad" && nagadAvailable)) && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      className="mt-4 p-3 bg-muted rounded-lg"
+                    >
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="paymentMode"
+                            checked={paymentMode === "auto"}
+                            onChange={() => setPaymentMode("auto")}
+                            className="accent-gold"
+                          />
+                          <span className="text-sm">
+                            {language === "bn" ? "অটো পেমেন্ট" : "Auto Payment"}
+                            <ExternalLink className="inline h-3 w-3 ml-1" />
+                          </span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="paymentMode"
+                            checked={paymentMode === "manual"}
+                            onChange={() => setPaymentMode("manual")}
+                            className="accent-gold"
+                          />
+                          <span className="text-sm">
+                            {language === "bn" ? "ম্যানুয়াল" : "Manual"}
+                          </span>
+                        </label>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Manual transaction ID field */}
+                  {(formData.paymentMethod === "bkash" || formData.paymentMethod === "nagad") && 
+                   (paymentMode === "manual" || 
+                    (formData.paymentMethod === "bkash" && !bkashAvailable) ||
+                    (formData.paymentMethod === "nagad" && !nagadAvailable)) && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
                       className="mt-4"
                     >
+                      <div className="p-3 bg-gold/5 border border-gold/20 rounded-lg mb-3">
+                        <p className="text-sm text-muted-foreground">
+                          {formData.paymentMethod === "bkash" 
+                            ? (language === "bn" ? "01XXXXXXXXX নম্বরে Send Money করে Transaction ID দিন" : "Send Money to 01XXXXXXXXX and enter Transaction ID")
+                            : (language === "bn" ? "01XXXXXXXXX নম্বরে Send Money করে Transaction ID দিন" : "Send Money to 01XXXXXXXXX and enter Transaction ID")}
+                        </p>
+                      </div>
                       <Label htmlFor="transactionId" className={language === "bn" ? "font-bengali" : ""}>
                         {t("checkout.transactionId")} *
                       </Label>
@@ -590,12 +717,23 @@ const Checkout = () => {
                     variant="gold"
                     className={`w-full mt-6 ${language === "bn" ? "font-bengali" : ""}`}
                     size="lg"
-                    disabled={loading}
+                    disabled={loading || paymentLoading}
                   >
-                    {loading ? (
+                    {loading || paymentLoading ? (
                       <span className="flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        {t("checkout.processing")}
+                        {paymentLoading 
+                          ? (language === "bn" ? "পেমেন্ট প্রসেসিং..." : "Processing payment...")
+                          : t("checkout.processing")}
+                      </span>
+                    ) : formData.paymentMethod !== "cod" && paymentMode === "auto" && 
+                        ((formData.paymentMethod === "bkash" && bkashAvailable) || 
+                         (formData.paymentMethod === "nagad" && nagadAvailable)) ? (
+                      <span className="flex items-center gap-2">
+                        <ExternalLink className="h-4 w-4" />
+                        {language === "bn" 
+                          ? `${formData.paymentMethod === "bkash" ? "bKash" : "Nagad"} দিয়ে পে করুন • ৳${total.toLocaleString()}`
+                          : `Pay with ${formData.paymentMethod === "bkash" ? "bKash" : "Nagad"} • ৳${total.toLocaleString()}`}
                       </span>
                     ) : (
                       `${t("checkout.placeOrder")} • ৳${total.toLocaleString()}`
