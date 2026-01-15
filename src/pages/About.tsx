@@ -105,17 +105,17 @@ const About = () => {
               {[
                 {
                   title: "Artistry",
-                  bengali: "শিল্পকলা",
+                  subtitle: "Creative Excellence",
                   description: "Every piece is a work of art, crafted with meticulous attention to detail and an unwavering commitment to quality."
                 },
                 {
                   title: "Heritage",
-                  bengali: "ঐতিহ্য",
+                  subtitle: "Cultural Legacy",
                   description: "We honor the traditions passed down through generations while creating designs that speak to modern aesthetics."
                 },
                 {
                   title: "Sustainability",
-                  bengali: "টেকসই",
+                  subtitle: "Ethical Practices",
                   description: "Our commitment to ethical sourcing and sustainable practices ensures beauty that doesn't cost the earth."
                 }
               ].map((value, index) => (
@@ -128,7 +128,7 @@ const About = () => {
                   className="text-center p-8 border border-border rounded-lg"
                 >
                   <span className="text-gold text-xs tracking-widest uppercase">
-                    {value.bengali}
+                    {value.subtitle}
                   </span>
                   <h3 className="font-display text-2xl text-foreground mt-2 mb-4">
                     {value.title}
@@ -157,9 +157,9 @@ const About = () => {
               viewport={{ once: true }}
               className="font-display text-5xl md:text-7xl text-foreground text-center"
             >
-              শৈল্পিক বুননে,
+              Crafted with Love,
               <br />
-              <span className="text-gold">আভিজাত্যের ছোঁয়া</span>
+              <span className="text-gold">Designed for You</span>
             </motion.h2>
           </div>
         </section>

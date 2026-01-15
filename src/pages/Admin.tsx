@@ -5,20 +5,20 @@ import {
   LayoutDashboard,
   Package,
   ShoppingCart,
-  Users,
   Settings,
   FolderTree,
-  Palette,
-  BarChart3,
   Menu,
   LogOut,
   ChevronRight,
   Home,
+  FileText,
+  Mail,
+  Image,
+  Receipt,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
-import { supabase } from "@/integrations/supabase/client";
 
 // Admin Components
 import AdminDashboardHome from "@/components/admin/AdminDashboardHome";
@@ -26,12 +26,18 @@ import AdminProducts from "@/components/admin/AdminProducts";
 import AdminOrders from "@/components/admin/AdminOrders";
 import AdminCategories from "@/components/admin/AdminCategories";
 import AdminSettings from "@/components/admin/AdminSettings";
+import AdminHomepageCMS from "@/components/admin/AdminHomepageCMS";
+import AdminEmailTemplates from "@/components/admin/AdminEmailTemplates";
+import AdminInvoiceSettings from "@/components/admin/AdminInvoiceSettings";
 
 const menuItems = [
   { id: "dashboard", name: "Dashboard", icon: LayoutDashboard },
   { id: "orders", name: "Orders", icon: ShoppingCart },
   { id: "products", name: "Products", icon: Package },
   { id: "categories", name: "Categories", icon: FolderTree },
+  { id: "homepage", name: "Homepage CMS", icon: Image },
+  { id: "email-templates", name: "Email Templates", icon: Mail },
+  { id: "invoice", name: "Invoice Settings", icon: Receipt },
   { id: "settings", name: "Settings", icon: Settings },
 ];
 
@@ -94,6 +100,12 @@ const Admin = () => {
         return <AdminProducts />;
       case "categories":
         return <AdminCategories />;
+      case "homepage":
+        return <AdminHomepageCMS />;
+      case "email-templates":
+        return <AdminEmailTemplates />;
+      case "invoice":
+        return <AdminInvoiceSettings />;
       case "settings":
         return <AdminSettings />;
       default:
@@ -127,7 +139,7 @@ const Admin = () => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2">
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           {menuItems.map((item) => (
             <button
               key={item.id}
@@ -139,7 +151,7 @@ const Admin = () => {
               }`}
             >
               <item.icon className="h-5 w-5 flex-shrink-0" />
-              {sidebarOpen && <span>{item.name}</span>}
+              {sidebarOpen && <span className="text-sm">{item.name}</span>}
             </button>
           ))}
         </nav>
@@ -171,7 +183,7 @@ const Admin = () => {
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>Admin</span>
             <ChevronRight className="h-4 w-4" />
-            <span className="text-foreground capitalize">{activeSection}</span>
+            <span className="text-foreground capitalize">{activeSection.replace("-", " ")}</span>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">{user?.email}</span>
