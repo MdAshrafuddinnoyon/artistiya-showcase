@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, User, ShoppingBag, Menu, X, ChevronDown, LogOut, Palette } from "lucide-react";
@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useCart } from "@/hooks/useCart";
+import { supabase } from "@/integrations/supabase/client";
 import CartDrawer from "@/components/modals/CartDrawer";
 import CustomOrderModal from "@/components/modals/CustomOrderModal";
 import SearchModal from "@/components/modals/SearchModal";
@@ -19,34 +20,43 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Import category images
+// Import category images as fallbacks
 import categoryJewelry from "@/assets/category-jewelry.jpg";
 import categoryBags from "@/assets/category-bags.jpg";
 import categoryWoven from "@/assets/category-woven.jpg";
 import categoryArt from "@/assets/category-art.jpg";
 
-const menuItems = [
-  { name: "Home", href: "/" },
-  {
-    name: "Shop",
-    href: "/shop",
-    submenu: [
-      { name: "Jewelry", href: "/shop/jewelry", items: ["Necklace", "Earrings", "Rings", "Bracelets"], image: categoryJewelry },
-      { name: "Resin Art", href: "/shop/resin-art", items: ["Rings", "Bracelets", "Coasters", "Trays"], image: categoryBags },
-      { name: "Home Decor", href: "/shop/home-decor", items: ["Wall Hangings", "Candle Holders", "Frames"], image: categoryWoven },
-      { name: "Fine Art", href: "/shop/fine-art", items: ["Paintings", "3D Art", "Canvas Coasters"], image: categoryArt },
-    ],
-    banner: {
-      title: "New Collection",
-      subtitle: "Up to 30% Off",
-      link: "/collections/new-arrivals",
-      image: categoryArt,
-    }
-  },
-  { name: "Collections", href: "/collections" },
-  { name: "Our Story", href: "/about" },
-  { name: "Contact", href: "/contact" },
-];
+interface SiteBranding {
+  logo_url: string | null;
+  logo_text: string;
+  logo_text_secondary: string;
+  header_announcement_text: string;
+  header_announcement_active: boolean;
+}
+
+interface MenuItem {
+  id: string;
+  name: string;
+  href: string;
+  is_mega_menu: boolean;
+  banner_title: string | null;
+  banner_subtitle: string | null;
+  banner_link: string | null;
+  banner_image_url: string | null;
+  is_active: boolean;
+}
+
+interface MenuSubItem {
+  id: string;
+  menu_item_id: string;
+  name: string;
+  href: string;
+  image_url: string | null;
+  items: string[] | null;
+  is_active: boolean;
+}
+
+const defaultImages = [categoryJewelry, categoryBags, categoryWoven, categoryArt];
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -55,25 +65,70 @@ const Header = () => {
   const [customOrderOpen, setCustomOrderOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   
+  const [branding, setBranding] = useState<SiteBranding>({
+    logo_url: null,
+    logo_text: "artistiya",
+    logo_text_secondary: ".store",
+    header_announcement_text: "✨ Free shipping on orders over ৳5,000 ✨",
+    header_announcement_active: true,
+  });
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [subItems, setSubItems] = useState<MenuSubItem[]>([]);
+  
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdmin();
   const { itemCount } = useCart();
   const navigate = useNavigate();
-  
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [brandingRes, menuRes, subRes] = await Promise.all([
+        supabase.from("site_branding").select("*").single(),
+        supabase.from("menu_items").select("*").eq("menu_type", "header").eq("is_active", true).order("display_order"),
+        supabase.from("menu_sub_items").select("*").eq("is_active", true).order("display_order"),
+      ]);
+
+      if (brandingRes.data) setBranding(brandingRes.data);
+      if (menuRes.data) setMenuItems(menuRes.data);
+      if (subRes.data) setSubItems(subRes.data);
+    } catch (error) {
+      console.error("Error fetching header data:", error);
+    }
+  };
+
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
+  };
+
+  // Fallback menu items if database is empty
+  const displayMenuItems = menuItems.length > 0 ? menuItems : [
+    { id: "1", name: "Home", href: "/", is_mega_menu: false, is_active: true, banner_title: null, banner_subtitle: null, banner_link: null, banner_image_url: null },
+    { id: "2", name: "Shop", href: "/shop", is_mega_menu: true, is_active: true, banner_title: "New Collection", banner_subtitle: "Up to 30% Off", banner_link: "/collections/new-arrivals", banner_image_url: null },
+    { id: "3", name: "Collections", href: "/collections", is_mega_menu: false, is_active: true, banner_title: null, banner_subtitle: null, banner_link: null, banner_image_url: null },
+    { id: "4", name: "Our Story", href: "/about", is_mega_menu: false, is_active: true, banner_title: null, banner_subtitle: null, banner_link: null, banner_image_url: null },
+    { id: "5", name: "Contact", href: "/contact", is_mega_menu: false, is_active: true, banner_title: null, banner_subtitle: null, banner_link: null, banner_image_url: null },
+  ];
+
+  const getSubItemsForMenu = (menuId: string) => {
+    return subItems.filter(s => s.menu_item_id === menuId);
   };
 
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/50">
         {/* Announcement Bar - Hidden on mobile */}
-        <div className="hidden md:block bg-gold/10 border-b border-gold/20 py-2">
-          <p className="text-center text-sm text-gold tracking-wide font-body">
-            ✨ Free shipping on orders over ৳5,000 ✨
-          </p>
-        </div>
+        {branding.header_announcement_active && (
+          <div className="hidden md:block bg-gold/10 border-b border-gold/20 py-2">
+            <p className="text-center text-sm text-gold tracking-wide font-body">
+              {branding.header_announcement_text}
+            </p>
+          </div>
+        )}
 
         <div className="container mx-auto px-4 lg:px-8">
           <nav className="flex items-center justify-between h-14 md:h-20">
@@ -89,24 +144,32 @@ const Header = () => {
 
             {/* Logo */}
             <Link to="/" className="flex-shrink-0">
-              <motion.h1 
-                className="font-display text-2xl md:text-3xl tracking-wide"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.6 }}
-              >
-                <span className="text-gold">artistiya</span>
-                <span className="text-foreground">.store</span>
-              </motion.h1>
+              {branding.logo_url ? (
+                <img 
+                  src={branding.logo_url} 
+                  alt="Logo" 
+                  className="h-8 md:h-10 w-auto"
+                />
+              ) : (
+                <motion.h1 
+                  className="font-display text-2xl md:text-3xl tracking-wide"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.6 }}
+                >
+                  <span className="text-gold">{branding.logo_text}</span>
+                  <span className="text-foreground">{branding.logo_text_secondary}</span>
+                </motion.h1>
+              )}
             </Link>
 
             {/* Desktop Navigation */}
             <ul className="hidden lg:flex items-center gap-8">
-              {menuItems.map((item) => (
+              {displayMenuItems.map((item) => (
                 <li
-                  key={item.name}
+                  key={item.id}
                   className="relative"
-                  onMouseEnter={() => setActiveMenu(item.name)}
+                  onMouseEnter={() => setActiveMenu(item.id)}
                   onMouseLeave={() => setActiveMenu(null)}
                 >
                   <Link
@@ -114,12 +177,12 @@ const Header = () => {
                     className="flex items-center gap-1 text-sm font-body tracking-wide text-foreground/80 hover:text-gold transition-colors duration-300 py-2"
                   >
                     {item.name}
-                    {item.submenu && <ChevronDown className="h-4 w-4" />}
+                    {item.is_mega_menu && <ChevronDown className="h-4 w-4" />}
                   </Link>
 
                   {/* Enhanced Mega Menu */}
                   <AnimatePresence>
-                    {item.submenu && activeMenu === item.name && (
+                    {item.is_mega_menu && activeMenu === item.id && (
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -130,15 +193,15 @@ const Header = () => {
                         <div className="grid grid-cols-3 gap-6">
                           {/* Categories */}
                           <div className="col-span-2 grid grid-cols-2 gap-6">
-                            {item.submenu.map((category) => (
-                              <div key={category.name} className="group/cat">
+                            {getSubItemsForMenu(item.id).map((category, idx) => (
+                              <div key={category.id} className="group/cat">
                                 <Link
                                   to={category.href}
                                   className="flex items-center gap-3 mb-3"
                                 >
                                   <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted">
                                     <img 
-                                      src={category.image} 
+                                      src={category.image_url || defaultImages[idx % defaultImages.length]} 
                                       alt={category.name}
                                       className="w-full h-full object-cover group-hover/cat:scale-110 transition-transform duration-300"
                                     />
@@ -147,41 +210,43 @@ const Header = () => {
                                     {category.name}
                                   </span>
                                 </Link>
-                                <ul className="space-y-1.5 pl-15">
-                                  {category.items.map((subItem) => (
-                                    <li key={subItem}>
-                                      <Link
-                                        to={`${category.href}/${subItem.toLowerCase().replace(/\s+/g, '-')}`}
-                                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                                      >
-                                        {subItem}
-                                      </Link>
-                                    </li>
-                                  ))}
-                                </ul>
+                                {category.items && category.items.length > 0 && (
+                                  <ul className="space-y-1.5 pl-15">
+                                    {category.items.map((subItem) => (
+                                      <li key={subItem}>
+                                        <Link
+                                          to={`${category.href}/${subItem.toLowerCase().replace(/\s+/g, '-')}`}
+                                          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                        >
+                                          {subItem}
+                                        </Link>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
                               </div>
                             ))}
                           </div>
 
                           {/* Banner Section */}
-                          {item.banner && (
+                          {item.banner_title && (
                             <div className="col-span-1">
                               <Link 
-                                to={item.banner.link}
+                                to={item.banner_link || "/"}
                                 className="block relative h-full rounded-lg overflow-hidden group/banner"
                               >
                                 <img 
-                                  src={item.banner.image}
-                                  alt={item.banner.title}
+                                  src={item.banner_image_url || categoryArt}
+                                  alt={item.banner_title}
                                   className="w-full h-full object-cover group-hover/banner:scale-105 transition-transform duration-500"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-charcoal-deep via-charcoal-deep/50 to-transparent" />
                                 <div className="absolute bottom-4 left-4 right-4 text-center">
                                   <p className="text-gold text-xs uppercase tracking-wider mb-1">
-                                    {item.banner.subtitle}
+                                    {item.banner_subtitle}
                                   </p>
                                   <p className="font-display text-lg text-foreground">
-                                    {item.banner.title}
+                                    {item.banner_title}
                                   </p>
                                 </div>
                               </Link>
@@ -314,8 +379,8 @@ const Header = () => {
                 </Button>
 
                 <ul className="space-y-4">
-                  {menuItems.map((item) => (
-                    <li key={item.name}>
+                  {displayMenuItems.map((item) => (
+                    <li key={item.id}>
                       <Link
                         to={item.href}
                         className="block text-lg font-display text-foreground hover:text-gold transition-colors"
