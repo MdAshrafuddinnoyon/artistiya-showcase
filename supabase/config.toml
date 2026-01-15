@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.generate-invoice]
 verify_jwt = false
+
+[functions.bkash-payment]
+verify_jwt = false
+
+[functions.nagad-payment]
+verify_jwt = false
