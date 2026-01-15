@@ -24,20 +24,15 @@ export const useAdmin = (): UseAdminResult => {
       }
 
       try {
-        const { data, error } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id)
-          .single();
+        const { data, error } = await supabase.rpc("is_admin", {
+          check_user_id: user.id,
+        });
 
-        if (error) {
-          // No role found = customer
-          setIsAdmin(false);
-          setRole("customer");
-        } else {
-          setRole(data.role);
-          setIsAdmin(data.role === "admin");
-        }
+        if (error) throw error;
+
+        const admin = Boolean(data);
+        setIsAdmin(admin);
+        setRole(admin ? "admin" : "customer");
       } catch (error) {
         console.error("Error checking admin status:", error);
         setIsAdmin(false);

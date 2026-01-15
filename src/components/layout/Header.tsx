@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, User, ShoppingBag, Menu, X, ChevronDown, LogOut, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdmin } from "@/hooks/useAdmin";
 import { useCart } from "@/hooks/useCart";
 import CartDrawer from "@/components/modals/CartDrawer";
 import CustomOrderModal from "@/components/modals/CustomOrderModal";
@@ -55,6 +56,7 @@ const Header = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   
   const { user, signOut } = useAuth();
+  const { isAdmin } = useAdmin();
   const { itemCount } = useCart();
   const navigate = useNavigate();
   
@@ -234,6 +236,11 @@ const Header = () => {
                     </div>
                     <DropdownMenuSeparator className="bg-border" />
                     <DropdownMenuItem asChild>
+                      <Link to="/dashboard" className="cursor-pointer">
+                        My Account
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
                       <Link to="/orders" className="cursor-pointer">
                         My Orders
                       </Link>
@@ -243,6 +250,13 @@ const Header = () => {
                         Custom Requests
                       </Link>
                     </DropdownMenuItem>
+                    {isAdmin && (
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin" className="cursor-pointer">
+                          Admin Dashboard
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator className="bg-border" />
                     <DropdownMenuItem onClick={handleSignOut} className="text-destructive cursor-pointer">
                       <LogOut className="h-4 w-4 mr-2" />
