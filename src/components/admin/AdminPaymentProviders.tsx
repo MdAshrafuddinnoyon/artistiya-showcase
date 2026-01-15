@@ -56,6 +56,12 @@ const AdminPaymentProviders = () => {
     store_password: "",
     is_active: false,
     is_sandbox: true,
+    // bKash specific
+    bkash_username: "",
+    bkash_password: "",
+    // Nagad specific
+    nagad_public_key: "",
+    nagad_private_key: "",
   });
 
   useEffect(() => {
@@ -83,6 +89,20 @@ const AdminPaymentProviders = () => {
     e.preventDefault();
 
     try {
+      // Build config based on provider type
+      let config: Record<string, string> = {};
+      if (formData.provider_type === "bkash") {
+        config = {
+          username: formData.bkash_username,
+          password: formData.bkash_password,
+        };
+      } else if (formData.provider_type === "nagad") {
+        config = {
+          public_key: formData.nagad_public_key,
+          private_key: formData.nagad_private_key,
+        };
+      }
+
       const providerData = {
         name: formData.name,
         provider_type: formData.provider_type,
@@ -90,6 +110,7 @@ const AdminPaymentProviders = () => {
         store_password: formData.store_password || null,
         is_active: formData.is_active,
         is_sandbox: formData.is_sandbox,
+        config,
       };
 
       if (editingProvider) {
@@ -118,6 +139,7 @@ const AdminPaymentProviders = () => {
 
   const handleEdit = (provider: PaymentProvider) => {
     setEditingProvider(provider);
+    const config = provider.config || {};
     setFormData({
       name: provider.name,
       provider_type: provider.provider_type,
@@ -125,6 +147,10 @@ const AdminPaymentProviders = () => {
       store_password: provider.store_password || "",
       is_active: provider.is_active,
       is_sandbox: provider.is_sandbox,
+      bkash_username: config.username || "",
+      bkash_password: config.password || "",
+      nagad_public_key: config.public_key || "",
+      nagad_private_key: config.private_key || "",
     });
     setDialogOpen(true);
   };
@@ -168,6 +194,10 @@ const AdminPaymentProviders = () => {
       store_password: "",
       is_active: false,
       is_sandbox: true,
+      bkash_username: "",
+      bkash_password: "",
+      nagad_public_key: "",
+      nagad_private_key: "",
     });
   };
 
@@ -241,28 +271,119 @@ const AdminPaymentProviders = () => {
 
               {formData.provider_type && getProviderInfo(formData.provider_type).requiresApi && (
                 <>
-                  <div>
-                    <Label htmlFor="store_id">Store ID / API Key</Label>
-                    <Input
-                      id="store_id"
-                      value={formData.store_id}
-                      onChange={(e) => setFormData({ ...formData, store_id: e.target.value })}
-                      placeholder="Enter store ID or API key"
-                    />
-                  </div>
+                  {/* bKash specific fields */}
+                  {formData.provider_type === "bkash" && (
+                    <>
+                      <div>
+                        <Label htmlFor="store_id">App Key</Label>
+                        <Input
+                          id="store_id"
+                          value={formData.store_id}
+                          onChange={(e) => setFormData({ ...formData, store_id: e.target.value })}
+                          placeholder="bKash App Key"
+                        />
+                      </div>
 
-                  <div>
-                    <Label htmlFor="store_password">Store Password / Secret Key</Label>
-                    <Input
-                      id="store_password"
-                      type="password"
-                      value={formData.store_password}
-                      onChange={(e) =>
-                        setFormData({ ...formData, store_password: e.target.value })
-                      }
-                      placeholder="Enter store password or secret"
-                    />
-                  </div>
+                      <div>
+                        <Label htmlFor="store_password">App Secret</Label>
+                        <Input
+                          id="store_password"
+                          type="password"
+                          value={formData.store_password}
+                          onChange={(e) =>
+                            setFormData({ ...formData, store_password: e.target.value })
+                          }
+                          placeholder="bKash App Secret"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="bkash_username">Username</Label>
+                        <Input
+                          id="bkash_username"
+                          value={formData.bkash_username}
+                          onChange={(e) => setFormData({ ...formData, bkash_username: e.target.value })}
+                          placeholder="bKash Username"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="bkash_password">Password</Label>
+                        <Input
+                          id="bkash_password"
+                          type="password"
+                          value={formData.bkash_password}
+                          onChange={(e) => setFormData({ ...formData, bkash_password: e.target.value })}
+                          placeholder="bKash Password"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Nagad specific fields */}
+                  {formData.provider_type === "nagad" && (
+                    <>
+                      <div>
+                        <Label htmlFor="store_id">Merchant ID</Label>
+                        <Input
+                          id="store_id"
+                          value={formData.store_id}
+                          onChange={(e) => setFormData({ ...formData, store_id: e.target.value })}
+                          placeholder="Nagad Merchant ID"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="nagad_public_key">Public Key</Label>
+                        <textarea
+                          id="nagad_public_key"
+                          value={formData.nagad_public_key}
+                          onChange={(e) => setFormData({ ...formData, nagad_public_key: e.target.value })}
+                          placeholder="-----BEGIN PUBLIC KEY-----"
+                          className="w-full h-24 px-3 py-2 text-sm border border-input rounded-md bg-background"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="nagad_private_key">Private Key</Label>
+                        <textarea
+                          id="nagad_private_key"
+                          value={formData.nagad_private_key}
+                          onChange={(e) => setFormData({ ...formData, nagad_private_key: e.target.value })}
+                          placeholder="-----BEGIN PRIVATE KEY-----"
+                          className="w-full h-24 px-3 py-2 text-sm border border-input rounded-md bg-background"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Generic fields for other providers */}
+                  {!["bkash", "nagad"].includes(formData.provider_type) && (
+                    <>
+                      <div>
+                        <Label htmlFor="store_id">Store ID / API Key</Label>
+                        <Input
+                          id="store_id"
+                          value={formData.store_id}
+                          onChange={(e) => setFormData({ ...formData, store_id: e.target.value })}
+                          placeholder="Enter store ID or API key"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="store_password">Store Password / Secret Key</Label>
+                        <Input
+                          id="store_password"
+                          type="password"
+                          value={formData.store_password}
+                          onChange={(e) =>
+                            setFormData({ ...formData, store_password: e.target.value })
+                          }
+                          placeholder="Enter store password or secret"
+                        />
+                      </div>
+                    </>
+                  )}
 
                   <div className="flex items-center gap-2">
                     <Switch
