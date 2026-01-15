@@ -53,6 +53,60 @@ export type Database = {
         }
         Relationships: []
       }
+      blog_posts: {
+        Row: {
+          author_id: string | null
+          content: string
+          content_bn: string | null
+          created_at: string
+          excerpt: string | null
+          excerpt_bn: string | null
+          featured_image: string | null
+          id: string
+          is_featured: boolean | null
+          is_published: boolean | null
+          published_at: string | null
+          slug: string
+          title: string
+          title_bn: string | null
+          updated_at: string
+        }
+        Insert: {
+          author_id?: string | null
+          content: string
+          content_bn?: string | null
+          created_at?: string
+          excerpt?: string | null
+          excerpt_bn?: string | null
+          featured_image?: string | null
+          id?: string
+          is_featured?: boolean | null
+          is_published?: boolean | null
+          published_at?: string | null
+          slug: string
+          title: string
+          title_bn?: string | null
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string | null
+          content?: string
+          content_bn?: string | null
+          created_at?: string
+          excerpt?: string | null
+          excerpt_bn?: string | null
+          featured_image?: string | null
+          id?: string
+          is_featured?: boolean | null
+          is_published?: boolean | null
+          published_at?: string | null
+          slug?: string
+          title?: string
+          title_bn?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cart_items: {
         Row: {
           created_at: string
@@ -174,6 +228,42 @@ export type Database = {
           status?: Database["public"]["Enums"]["custom_order_status"] | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      delivery_providers: {
+        Row: {
+          api_key: string | null
+          api_secret: string | null
+          config: Json | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          name: string
+          provider_type: string
+          updated_at: string
+        }
+        Insert: {
+          api_key?: string | null
+          api_secret?: string | null
+          config?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          provider_type: string
+          updated_at?: string
+        }
+        Update: {
+          api_key?: string | null
+          api_secret?: string | null
+          config?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          provider_type?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -309,6 +399,42 @@ export type Database = {
         }
         Relationships: []
       }
+      leads: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          is_contacted: boolean | null
+          message: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          source: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_contacted?: boolean | null
+          message?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          source?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_contacted?: boolean | null
+          message?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          source?: string | null
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string
@@ -418,6 +544,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payment_providers: {
+        Row: {
+          config: Json | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          is_sandbox: boolean | null
+          name: string
+          provider_type: string
+          store_id: string | null
+          store_password: string | null
+          updated_at: string
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          is_sandbox?: boolean | null
+          name: string
+          provider_type: string
+          store_id?: string | null
+          store_password?: string | null
+          updated_at?: string
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          is_sandbox?: boolean | null
+          name?: string
+          provider_type?: string
+          store_id?: string | null
+          store_password?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       products: {
         Row: {
@@ -691,6 +856,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      youtube_videos: {
+        Row: {
+          created_at: string
+          description: string | null
+          description_bn: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          thumbnail_url: string | null
+          title: string
+          title_bn: string | null
+          updated_at: string
+          video_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          description_bn?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          thumbnail_url?: string | null
+          title: string
+          title_bn?: string | null
+          updated_at?: string
+          video_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          description_bn?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          thumbnail_url?: string | null
+          title?: string
+          title_bn?: string | null
+          updated_at?: string
+          video_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
