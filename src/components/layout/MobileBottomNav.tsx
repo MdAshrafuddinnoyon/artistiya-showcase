@@ -1,5 +1,6 @@
 import { Home, ShoppingBag, Search, User, Menu } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { cn } from "@/lib/utils";
 
@@ -10,13 +11,16 @@ interface MobileNavProps {
 
 const MobileBottomNav = ({ onSearchClick, onCartClick }: MobileNavProps) => {
   const location = useLocation();
+  const { user } = useAuth();
   const { itemCount } = useCart();
+
+  const accountHref = user ? "/dashboard" : "/auth";
 
   const navItems = [
     { icon: Home, label: "Home", href: "/" },
     { icon: Search, label: "Search", action: onSearchClick },
     { icon: ShoppingBag, label: "Cart", action: onCartClick, badge: itemCount },
-    { icon: User, label: "Account", href: "/auth" },
+    { icon: User, label: "Account", href: accountHref },
   ];
 
   return (
