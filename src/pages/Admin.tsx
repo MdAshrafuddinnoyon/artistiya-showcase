@@ -15,6 +15,12 @@ import {
   Mail,
   Image,
   Receipt,
+  Youtube,
+  Megaphone,
+  Users,
+  Truck,
+  CreditCard,
+  DollarSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -29,12 +35,26 @@ import AdminSettings from "@/components/admin/AdminSettings";
 import AdminHomepageCMS from "@/components/admin/AdminHomepageCMS";
 import AdminEmailTemplates from "@/components/admin/AdminEmailTemplates";
 import AdminInvoiceSettings from "@/components/admin/AdminInvoiceSettings";
+import AdminBlogPosts from "@/components/admin/AdminBlogPosts";
+import AdminYouTubeVideos from "@/components/admin/AdminYouTubeVideos";
+import AdminMarketingSettings from "@/components/admin/AdminMarketingSettings";
+import AdminLeads from "@/components/admin/AdminLeads";
+import AdminDeliveryProviders from "@/components/admin/AdminDeliveryProviders";
+import AdminPaymentProviders from "@/components/admin/AdminPaymentProviders";
+import AdminCurrencySettings from "@/components/admin/AdminCurrencySettings";
 
 const menuItems = [
   { id: "dashboard", name: "Dashboard", icon: LayoutDashboard },
   { id: "orders", name: "Orders", icon: ShoppingCart },
   { id: "products", name: "Products", icon: Package },
   { id: "categories", name: "Categories", icon: FolderTree },
+  { id: "blog", name: "Blog Posts", icon: FileText },
+  { id: "youtube", name: "YouTube", icon: Youtube },
+  { id: "leads", name: "Leads", icon: Users },
+  { id: "marketing", name: "Marketing", icon: Megaphone },
+  { id: "payments", name: "Payments", icon: CreditCard },
+  { id: "delivery", name: "Delivery", icon: Truck },
+  { id: "currency", name: "Currency", icon: DollarSign },
   { id: "homepage", name: "Homepage CMS", icon: Image },
   { id: "email-templates", name: "Email Templates", icon: Mail },
   { id: "invoice", name: "Invoice Settings", icon: Receipt },
@@ -100,6 +120,20 @@ const Admin = () => {
         return <AdminProducts />;
       case "categories":
         return <AdminCategories />;
+      case "blog":
+        return <AdminBlogPosts />;
+      case "youtube":
+        return <AdminYouTubeVideos />;
+      case "leads":
+        return <AdminLeads />;
+      case "marketing":
+        return <AdminMarketingSettings />;
+      case "payments":
+        return <AdminPaymentProviders />;
+      case "delivery":
+        return <AdminDeliveryProviders />;
+      case "currency":
+        return <AdminCurrencySettings />;
       case "homepage":
         return <AdminHomepageCMS />;
       case "email-templates":

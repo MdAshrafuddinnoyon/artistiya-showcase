@@ -186,6 +186,36 @@ export type Database = {
           },
         ]
       }
+      currency_rates: {
+        Row: {
+          currency_code: string
+          currency_name: string
+          id: string
+          is_active: boolean | null
+          rate_to_bdt: number
+          symbol: string
+          updated_at: string
+        }
+        Insert: {
+          currency_code: string
+          currency_name: string
+          id?: string
+          is_active?: boolean | null
+          rate_to_bdt?: number
+          symbol: string
+          updated_at?: string
+        }
+        Update: {
+          currency_code?: string
+          currency_name?: string
+          id?: string
+          is_active?: boolean | null
+          rate_to_bdt?: number
+          symbol?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       custom_order_requests: {
         Row: {
           admin_notes: string | null
