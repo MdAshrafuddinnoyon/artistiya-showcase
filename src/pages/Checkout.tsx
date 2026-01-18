@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import WhatsAppOrderButton from "@/components/common/WhatsAppOrderButton";
+import CheckoutOffersSidebar from "@/components/checkout/CheckoutOffersSidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { useLanguage } from "@/hooks/useLanguage";
