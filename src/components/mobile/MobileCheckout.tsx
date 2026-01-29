@@ -14,7 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { divisions, calculateShippingCost } from "@/data/bangladeshLocations";
+import { divisions, calculateShippingCost, getDistrictsByDivision, getThanasByDistrict } from "@/data/bangladeshLocations";
 
 const MobileCheckout = () => {
   const { user } = useAuth();
@@ -43,11 +43,11 @@ const MobileCheckout = () => {
   }, [items.length, navigate]);
 
   const districts = selectedDivision
-    ? divisions.find(d => d.name === selectedDivision)?.districts || []
+    ? getDistrictsByDivision(selectedDivision)
     : [];
 
   const thanas = selectedDistrict
-    ? districts.find(d => d.name === selectedDistrict)?.thanas || []
+    ? getThanasByDistrict(selectedDistrict)
     : [];
 
   const shippingCost = selectedDistrict ? calculateShippingCost(selectedDistrict) : 0;
@@ -315,7 +315,7 @@ const MobileCheckout = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {districts.map(dist => (
-                      <SelectItem key={dist.name} value={dist.name}>{dist.name}</SelectItem>
+                      <SelectItem key={dist} value={dist}>{dist}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -334,7 +334,7 @@ const MobileCheckout = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {thanas.map(thana => (
-                    <SelectItem key={thana.name} value={thana.name}>{thana.name}</SelectItem>
+                    <SelectItem key={thana} value={thana}>{thana}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

@@ -21,7 +21,7 @@ import { usePayment } from "@/hooks/usePayment";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { divisions, calculateShippingCost, isDhakaDistrict } from "@/data/bangladeshLocations";
+import { divisions, calculateShippingCost, isDhakaDistrict, getDistrictsByDivision, getThanasByDistrict } from "@/data/bangladeshLocations";
 
 const Checkout = () => {
   const { user } = useAuth();
@@ -74,11 +74,11 @@ const Checkout = () => {
   }, []);
 
   const districts = selectedDivision
-    ? divisions.find(d => d.name === selectedDivision)?.districts || []
+    ? getDistrictsByDivision(selectedDivision)
     : [];
 
   const thanas = selectedDistrict
-    ? districts.find(d => d.name === selectedDistrict)?.thanas || []
+    ? getThanasByDistrict(selectedDistrict)
     : [];
 
   const shippingCost = selectedDistrict ? calculateShippingCost(selectedDistrict) : 0;
@@ -429,8 +429,8 @@ const Checkout = () => {
                           </SelectTrigger>
                           <SelectContent>
                             {districts.map(dist => (
-                              <SelectItem key={dist.name} value={dist.name}>
-                                {dist.name}
+                              <SelectItem key={dist} value={dist}>
+                                {dist}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -454,8 +454,8 @@ const Checkout = () => {
                           </SelectTrigger>
                           <SelectContent>
                             {thanas.map(thana => (
-                              <SelectItem key={thana.name} value={thana.name}>
-                                {thana.name}
+                              <SelectItem key={thana} value={thana}>
+                                {thana}
                               </SelectItem>
                             ))}
                           </SelectContent>
