@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 // WhatsApp icon SVG
 const WhatsAppIcon = () => (
@@ -13,6 +14,8 @@ interface Product {
   name: string;
   price: number;
   slug: string;
+  images?: string[];
+  sku?: string;
 }
 
 interface WhatsAppOrderButtonProps {
@@ -24,9 +27,26 @@ interface WhatsAppOrderButtonProps {
 
 const WhatsAppOrderButton = ({ product, quantity = 1, className = "", variant = "full" }: WhatsAppOrderButtonProps) => {
   const [whatsappNumber, setWhatsappNumber] = useState("8801XXXXXXXXX");
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchSettings = async () => {
+      // First try to get from whatsapp setting
+      const { data: whatsappData } = await supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", "whatsapp")
+        .single();
+
+      if (whatsappData?.value && typeof whatsappData.value === 'object' && 'number' in whatsappData.value) {
+        const value = whatsappData.value as { number: string };
+        if (value.number) {
+          setWhatsappNumber(value.number);
+          return;
+        }
+      }
+
+      // Fallback to legacy whatsapp_number key
       const { data } = await supabase
         .from("site_settings")
         .select("value")
@@ -41,17 +61,68 @@ const WhatsAppOrderButton = ({ product, quantity = 1, className = "", variant = 
     fetchSettings();
   }, []);
 
-  const handleWhatsAppOrder = () => {
+  const trackLead = async () => {
+    try {
+      // Get user info if logged in
+      let customerName = "Guest";
+      let customerPhone = "";
+      let customerEmail = "";
+
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name, phone, email")
+          .eq("user_id", user.id)
+          .single();
+
+        if (profile) {
+          customerName = profile.full_name || user.email?.split("@")[0] || "Guest";
+          customerPhone = profile.phone || "";
+          customerEmail = profile.email || user.email || "";
+        }
+      }
+
+      // Create lead entry
+      const productInfo = `Product: ${product.name}\nSKU: ${product.sku || product.id.slice(0, 8).toUpperCase()}\nPrice: ৳${(product.price * quantity).toLocaleString()}\nQuantity: ${quantity}\nLink: ${window.location.origin}/product/${product.slug}`;
+
+      await supabase.from("leads").insert({
+        name: customerName,
+        phone: customerPhone,
+        email: customerEmail,
+        message: productInfo,
+        source: "whatsapp_click",
+        is_contacted: false,
+      });
+    } catch (error) {
+      console.error("Error tracking lead:", error);
+    }
+  };
+
+  const handleWhatsAppOrder = async () => {
+    // Track the lead
+    await trackLead();
+
     const total = product.price * quantity;
-    const message = encodeURIComponent(
-      `হ্যালো! আমি এই প্রোডাক্টটি অর্ডার করতে চাই:\n\n` +
-      `📦 ${product.name}\n` +
-      `📊 পরিমাণ: ${quantity}\n` +
-      `💰 মূল্য: ৳${total.toLocaleString()}\n` +
-      `🔗 লিংক: ${window.location.origin}/product/${product.slug}\n\n` +
-      `অনুগ্রহ করে ডেলিভারি সম্পর্কে তথ্য দিন।`
-    );
-    window.open(`https://wa.me/${whatsappNumber}?text=${message}`, "_blank");
+    const productUrl = `${window.location.origin}/product/${product.slug}`;
+    const sku = product.sku || product.id.slice(0, 8).toUpperCase();
+    
+    // Create message with product details
+    let message = `🛍️ *অর্ডার করতে চাই*\n\n`;
+    message += `📦 *প্রোডাক্ট:* ${product.name}\n`;
+    message += `🏷️ *SKU:* ${sku}\n`;
+    message += `📊 *পরিমাণ:* ${quantity}\n`;
+    message += `💰 *মূল্য:* ৳${total.toLocaleString()}\n`;
+    message += `🔗 *লিংক:* ${productUrl}\n\n`;
+    
+    // Add product image link if available
+    if (product.images && product.images.length > 0) {
+      message += `📷 *ছবি:* ${product.images[0]}\n\n`;
+    }
+    
+    message += `---\n*আমার তথ্য:*\nনাম:\nফোন:\nঠিকানা:\n\nঅনুগ্রহ করে ডেলিভারি সম্পর্কে জানান।`;
+
+    const encodedMessage = encodeURIComponent(message);
+    window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, "_blank");
   };
 
   if (variant === "icon") {

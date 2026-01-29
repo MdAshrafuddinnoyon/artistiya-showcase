@@ -1,6 +1,6 @@
 import { useIsMobile } from "@/hooks/use-mobile";
 import MobileHeroSlider from "./MobileHeroSlider";
-import MobileCategoryPills from "./MobileCategoryPills";
+import MobileCategorySlider from "./MobileCategorySlider";
 import MobileProductSlider from "./MobileProductSlider";
 import MobileRecentlyViewed from "./MobileRecentlyViewed";
 
@@ -14,8 +14,8 @@ const MobileHomeLayout = () => {
       {/* Hero Slider - Dynamic from hero_slides table */}
       <MobileHeroSlider />
 
-      {/* Category Pills - Dynamic from categories table */}
-      <MobileCategoryPills />
+      {/* Category Slider with Images/Icons - Dynamic from categories table */}
+      <MobileCategorySlider />
 
       {/* Featured Products (Hot Sales) - Dynamic with Slider */}
       <MobileProductSlider 
