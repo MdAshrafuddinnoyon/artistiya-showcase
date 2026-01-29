@@ -52,6 +52,24 @@ const Footer = () => {
 
   useEffect(() => {
     fetchData();
+
+    // Real-time subscription
+    const channel = supabase
+      .channel('footer_data')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'site_branding' }, () => {
+        fetchData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'footer_link_groups' }, () => {
+        fetchData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'footer_links' }, () => {
+        fetchData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchData = async () => {

@@ -58,6 +58,21 @@ const CategorySection = () => {
 
   useEffect(() => {
     fetchData();
+
+    // Real-time subscription
+    const channel = supabase
+      .channel('categories_section')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
+        fetchData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'category_display_settings' }, () => {
+        fetchData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchData = async () => {

@@ -151,7 +151,7 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
     : 0;
 
   return (
-    <div className="min-h-screen bg-background pb-36">
+    <div className="min-h-screen bg-background pb-20">
       {/* Top Navigation - Floating */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-background/90 to-transparent">
         <div className="flex items-center justify-between p-4">
@@ -402,19 +402,9 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
           quantity={quantity}
           className="w-full" 
         />
-      </div>
 
-      {/* Related Products Section */}
-      <div className="px-4 pb-4">
-        <RelatedProducts 
-          currentProductId={product.id} 
-          categoryId={product.category_id}
-        />
-      </div>
-
-      {/* Fixed Bottom Action Bar - positioned above mobile nav */}
-      <div className="fixed bottom-16 left-0 right-0 bg-background border-t border-border p-3 z-40 safe-area-bottom">
-        <div className="flex gap-3">
+        {/* Add to Cart & Buy Now - Below WhatsApp */}
+        <div className="flex gap-3 mt-3">
           <Button
             variant="outline"
             size="lg"
@@ -423,9 +413,7 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
             disabled={addingToCart || isOutOfStock}
           >
             {addingToCart ? (
-              <span className="flex items-center gap-2">
-                <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-              </span>
+              <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
             ) : (
               <>
                 <ShoppingBag className="h-5 w-5 mr-2" />
@@ -440,9 +428,17 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
             onClick={handleBuyNow}
             disabled={addingToCart || isOutOfStock}
           >
-            {canPreorder ? "Pre-Order Now" : "Buy Now"}
+            {canPreorder ? "Pre-Order" : "Buy Now"}
           </Button>
         </div>
+      </div>
+
+      {/* Related Products Section */}
+      <div className="px-4 pb-24">
+        <RelatedProducts 
+          currentProductId={product.id} 
+          categoryId={product.category_id}
+        />
       </div>
     </div>
   );
