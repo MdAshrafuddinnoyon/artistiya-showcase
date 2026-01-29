@@ -204,6 +204,68 @@
     background: linear-gradient(180deg, transparent 50%, hsl(var(--charcoal-deep)) 100%);
     pointer-events: none;
   }
+
+  /* Consistent hover effects for buttons */
+  .hover-gold {
+    @apply transition-all duration-300;
+  }
+  
+  .hover-gold:hover {
+    @apply text-gold border-gold;
+    box-shadow: 0 0 20px hsl(var(--gold) / 0.2);
+  }
+
+  /* Link hover effect */
+  a:not(.no-hover):hover {
+    @apply text-gold;
+  }
+
+  /* Button hover states */
+  button:not([disabled]):hover,
+  [role="button"]:not([disabled]):hover {
+    @apply transition-colors duration-200;
+  }
+
+  /* Rich text editor styles */
+  .ProseMirror {
+    @apply min-h-[200px] outline-none;
+  }
+
+  .ProseMirror h1 {
+    @apply text-2xl font-bold mb-4;
+  }
+
+  .ProseMirror h2 {
+    @apply text-xl font-bold mb-3;
+  }
+
+  .ProseMirror h3 {
+    @apply text-lg font-bold mb-2;
+  }
+
+  .ProseMirror p {
+    @apply mb-3;
+  }
+
+  .ProseMirror ul {
+    @apply list-disc pl-6 mb-3;
+  }
+
+  .ProseMirror ol {
+    @apply list-decimal pl-6 mb-3;
+  }
+
+  .ProseMirror blockquote {
+    @apply border-l-4 border-gold pl-4 italic my-4;
+  }
+
+  .ProseMirror code {
+    @apply bg-muted px-1 rounded;
+  }
+
+  .ProseMirror pre {
+    @apply bg-muted p-4 rounded-lg my-4 overflow-x-auto;
+  }
 }
 
 @layer utilities {
