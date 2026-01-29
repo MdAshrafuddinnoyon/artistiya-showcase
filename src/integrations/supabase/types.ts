@@ -915,6 +915,50 @@ export type Database = {
           },
         ]
       }
+      order_fraud_flags: {
+        Row: {
+          created_at: string
+          flag_reason: string
+          flag_type: string
+          id: string
+          is_resolved: boolean | null
+          order_id: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+        }
+        Insert: {
+          created_at?: string
+          flag_reason: string
+          flag_type: string
+          id?: string
+          is_resolved?: boolean | null
+          order_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+        }
+        Update: {
+          created_at?: string
+          flag_reason?: string
+          flag_type?: string
+          id?: string
+          is_resolved?: boolean | null
+          order_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_fraud_flags_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string
@@ -970,7 +1014,11 @@ export type Database = {
         Row: {
           address_id: string | null
           created_at: string
+          device_fingerprint: string | null
+          fraud_score: number | null
           id: string
+          ip_address: string | null
+          is_flagged: boolean | null
           is_preorder: boolean | null
           notes: string | null
           order_number: string
@@ -986,7 +1034,11 @@ export type Database = {
         Insert: {
           address_id?: string | null
           created_at?: string
+          device_fingerprint?: string | null
+          fraud_score?: number | null
           id?: string
+          ip_address?: string | null
+          is_flagged?: boolean | null
           is_preorder?: boolean | null
           notes?: string | null
           order_number: string
@@ -1002,7 +1054,11 @@ export type Database = {
         Update: {
           address_id?: string | null
           created_at?: string
+          device_fingerprint?: string | null
+          fraud_score?: number | null
           id?: string
+          ip_address?: string | null
+          is_flagged?: boolean | null
           is_preorder?: boolean | null
           notes?: string | null
           order_number?: string
@@ -1379,6 +1435,7 @@ export type Database = {
       testimonials: {
         Row: {
           created_at: string
+          customer_photo_url: string | null
           display_order: number | null
           google_review_id: string | null
           id: string
@@ -1386,12 +1443,16 @@ export type Database = {
           is_active: boolean | null
           location: string | null
           name: string
+          order_id: string | null
+          product_id: string | null
           rating: number | null
           source: string | null
           text: string
+          verified_purchase: boolean | null
         }
         Insert: {
           created_at?: string
+          customer_photo_url?: string | null
           display_order?: number | null
           google_review_id?: string | null
           id?: string
@@ -1399,12 +1460,16 @@ export type Database = {
           is_active?: boolean | null
           location?: string | null
           name: string
+          order_id?: string | null
+          product_id?: string | null
           rating?: number | null
           source?: string | null
           text: string
+          verified_purchase?: boolean | null
         }
         Update: {
           created_at?: string
+          customer_photo_url?: string | null
           display_order?: number | null
           google_review_id?: string | null
           id?: string
@@ -1412,11 +1477,29 @@ export type Database = {
           is_active?: boolean | null
           location?: string | null
           name?: string
+          order_id?: string | null
+          product_id?: string | null
           rating?: number | null
           source?: string | null
           text?: string
+          verified_purchase?: boolean | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "testimonials_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "testimonials_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       upsell_offers: {
         Row: {
