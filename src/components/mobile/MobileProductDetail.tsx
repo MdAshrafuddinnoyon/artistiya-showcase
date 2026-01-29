@@ -150,7 +150,7 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
     : 0;
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="min-h-screen bg-background pb-36">
       {/* Top Navigation - Floating */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-background/90 to-transparent">
         <div className="flex items-center justify-between p-4">
@@ -398,13 +398,13 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
         />
       </div>
 
-      {/* Fixed Bottom Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 z-40" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+      {/* Fixed Bottom Action Bar - positioned above mobile nav */}
+      <div className="fixed bottom-16 left-0 right-0 bg-background border-t border-border p-3 z-40 safe-area-bottom">
         <div className="flex gap-3">
           <Button
             variant="outline"
             size="lg"
-            className="flex-1 h-14 bg-charcoal-deep hover:bg-charcoal-deep/90 border-border text-foreground font-semibold"
+            className="flex-1 h-12 bg-charcoal-deep hover:bg-charcoal-deep/90 border-border text-foreground font-semibold"
             onClick={handleAddToCart}
             disabled={addingToCart || isOutOfStock}
           >
@@ -422,7 +422,7 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
           
           <Button
             size="lg"
-            className="flex-1 h-14 bg-gold hover:bg-gold/90 text-charcoal-deep font-semibold"
+            className="flex-1 h-12 bg-gold hover:bg-gold/90 text-charcoal-deep font-semibold"
             onClick={handleBuyNow}
             disabled={addingToCart || isOutOfStock}
           >
