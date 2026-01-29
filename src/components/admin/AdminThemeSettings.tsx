@@ -18,6 +18,12 @@ interface ThemeColors {
   muted: string;
   border: string;
   accent: string;
+  // Extended hover/gradient tokens
+  buttonHover: string;
+  buttonActive: string;
+  gradientStart: string;
+  gradientEnd: string;
+  shadowColor: string;
 }
 
 interface ThemeFonts {
@@ -46,11 +52,13 @@ const bodyFontOptions = [
   { value: "Roboto", label: "Roboto (Modern)" },
   { value: "Source Sans Pro", label: "Source Sans Pro (Clean)" },
   { value: "Nunito", label: "Nunito (Friendly)" },
+  { value: "Inter", label: "Inter (UI Focused)" },
 ];
 
 const bengaliFontOptions = [
   { value: "Hind Siliguri", label: "Hind Siliguri" },
   { value: "Noto Sans Bengali", label: "Noto Sans Bengali" },
+  { value: "Noto Serif Bengali", label: "Noto Serif Bengali" },
   { value: "Baloo Da 2", label: "Baloo Da 2" },
 ];
 
@@ -59,11 +67,16 @@ const AdminThemeSettings = () => {
     primary: "#d4af37",
     primaryLight: "#e5c158",
     background: "#0a0a0a",
-    foreground: "#ffffff",
+    foreground: "#f5f0e8",
     card: "#1a1a1a",
     muted: "#262626",
     border: "#333333",
     accent: "#c4a035",
+    buttonHover: "#e5c158",
+    buttonActive: "#b89830",
+    gradientStart: "#e5c158",
+    gradientEnd: "#8b7020",
+    shadowColor: "rgba(212, 175, 55, 0.3)",
   });
 
   const [fonts, setFonts] = useState<ThemeFonts>({
@@ -144,11 +157,16 @@ const AdminThemeSettings = () => {
       primary: "#d4af37",
       primaryLight: "#e5c158",
       background: "#0a0a0a",
-      foreground: "#ffffff",
+      foreground: "#f5f0e8",
       card: "#1a1a1a",
       muted: "#262626",
       border: "#333333",
       accent: "#c4a035",
+      buttonHover: "#e5c158",
+      buttonActive: "#b89830",
+      gradientStart: "#e5c158",
+      gradientEnd: "#8b7020",
+      shadowColor: "rgba(212, 175, 55, 0.3)",
     });
     setFonts({
       display: "Playfair Display",
@@ -358,17 +376,114 @@ const AdminThemeSettings = () => {
                 </div>
               </div>
 
+              {/* Extended Colors - Hover, Gradient, Shadow */}
+              <div className="border-t border-border pt-6">
+                <h4 className="font-medium text-foreground mb-4">Hover & Gradient Settings</h4>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <div>
+                    <Label className="text-xs mb-2 block">Button Hover</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="color"
+                        value={colors.buttonHover}
+                        onChange={(e) => setColors({ ...colors, buttonHover: e.target.value })}
+                        className="w-12 h-10 p-1 cursor-pointer"
+                      />
+                      <Input
+                        value={colors.buttonHover}
+                        onChange={(e) => setColors({ ...colors, buttonHover: e.target.value })}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs mb-2 block">Button Active</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="color"
+                        value={colors.buttonActive}
+                        onChange={(e) => setColors({ ...colors, buttonActive: e.target.value })}
+                        className="w-12 h-10 p-1 cursor-pointer"
+                      />
+                      <Input
+                        value={colors.buttonActive}
+                        onChange={(e) => setColors({ ...colors, buttonActive: e.target.value })}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs mb-2 block">Gradient Start</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="color"
+                        value={colors.gradientStart}
+                        onChange={(e) => setColors({ ...colors, gradientStart: e.target.value })}
+                        className="w-12 h-10 p-1 cursor-pointer"
+                      />
+                      <Input
+                        value={colors.gradientStart}
+                        onChange={(e) => setColors({ ...colors, gradientStart: e.target.value })}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs mb-2 block">Gradient End</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="color"
+                        value={colors.gradientEnd}
+                        onChange={(e) => setColors({ ...colors, gradientEnd: e.target.value })}
+                        className="w-12 h-10 p-1 cursor-pointer"
+                      />
+                      <Input
+                        value={colors.gradientEnd}
+                        onChange={(e) => setColors({ ...colors, gradientEnd: e.target.value })}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs mb-2 block">Shadow Color</Label>
+                    <Input
+                      value={colors.shadowColor}
+                      onChange={(e) => setColors({ ...colors, shadowColor: e.target.value })}
+                      placeholder="rgba(212, 175, 55, 0.3)"
+                      className="h-10"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Preview */}
               <div className="mt-6 p-6 rounded-xl border" style={{ backgroundColor: colors.background, borderColor: colors.border }}>
                 <h3 style={{ color: colors.foreground }} className="text-lg font-semibold mb-4">Color Preview</h3>
                 <div className="flex gap-4 flex-wrap">
-                  <div className="px-4 py-2 rounded" style={{ backgroundColor: colors.primary, color: colors.background }}>
-                    Primary Button
+                  <div 
+                    className="px-4 py-2 rounded cursor-pointer transition-colors" 
+                    style={{ 
+                      background: `linear-gradient(135deg, ${colors.gradientStart} 0%, ${colors.primary} 50%, ${colors.gradientEnd} 100%)`, 
+                      color: colors.background,
+                      boxShadow: `0 4px 20px ${colors.shadowColor}`
+                    }}
+                  >
+                    Gold Button
                   </div>
-                  <div className="px-4 py-2 rounded border" style={{ backgroundColor: colors.card, color: colors.foreground, borderColor: colors.border }}>
+                  <div 
+                    className="px-4 py-2 rounded border cursor-pointer" 
+                    style={{ backgroundColor: colors.card, color: colors.foreground, borderColor: colors.border }}
+                  >
                     Card Element
                   </div>
-                  <div className="px-4 py-2 rounded" style={{ backgroundColor: colors.muted, color: colors.foreground }}>
+                  <div 
+                    className="px-4 py-2 rounded" 
+                    style={{ backgroundColor: colors.muted, color: colors.foreground }}
+                  >
                     Muted Background
                   </div>
                 </div>
