@@ -70,6 +70,7 @@ import AdminHomepageSections from "@/components/admin/AdminHomepageSections";
 import AdminDeliveryZones from "@/components/admin/AdminDeliveryZones";
 import AdminTeamMembers from "@/components/admin/AdminTeamMembers";
 import AdminFAQs from "@/components/admin/AdminFAQs";
+import AdminFooterLinks from "@/components/admin/AdminFooterLinks";
 
 // Menu sections for organized navigation
 const menuSections = [
@@ -122,6 +123,7 @@ const menuSections = [
       { id: "theme", name: "Theme Settings", icon: Palette },
       { id: "branding", name: "Site Branding", icon: Palette },
       { id: "menu-manager", name: "Mega Menu", icon: Menu },
+      { id: "footer-links", name: "Footer Links", icon: Sliders },
     ],
   },
   {
@@ -248,6 +250,8 @@ const Admin = () => {
         return <AdminTeamMembers />;
       case "faqs":
         return <AdminFAQs />;
+      case "footer-links":
+        return <AdminFooterLinks />;
       case "upsells":
         return <AdminUpsellOffers />;
       case "checkout":

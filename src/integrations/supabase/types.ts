@@ -53,9 +53,43 @@ export type Database = {
         }
         Relationships: []
       }
+      blog_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          name_bn: string | null
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          name_bn?: string | null
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          name_bn?: string | null
+          slug?: string
+        }
+        Relationships: []
+      }
       blog_posts: {
         Row: {
           author_id: string | null
+          category_id: string | null
           content: string
           content_bn: string | null
           created_at: string
@@ -73,6 +107,7 @@ export type Database = {
         }
         Insert: {
           author_id?: string | null
+          category_id?: string | null
           content: string
           content_bn?: string | null
           created_at?: string
@@ -90,6 +125,7 @@ export type Database = {
         }
         Update: {
           author_id?: string | null
+          category_id?: string | null
           content?: string
           content_bn?: string | null
           created_at?: string
@@ -103,6 +139,53 @@ export type Database = {
           slug?: string
           title?: string
           title_bn?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_posts_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "blog_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blog_settings: {
+        Row: {
+          banner_image_url: string | null
+          banner_link: string | null
+          banner_title: string | null
+          banner_title_bn: string | null
+          created_at: string
+          id: string
+          is_blog_active: boolean | null
+          posts_per_page: number | null
+          show_banner: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          banner_image_url?: string | null
+          banner_link?: string | null
+          banner_title?: string | null
+          banner_title_bn?: string | null
+          created_at?: string
+          id?: string
+          is_blog_active?: boolean | null
+          posts_per_page?: number | null
+          show_banner?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          banner_image_url?: string | null
+          banner_link?: string | null
+          banner_title?: string | null
+          banner_title_bn?: string | null
+          created_at?: string
+          id?: string
+          is_blog_active?: boolean | null
+          posts_per_page?: number | null
+          show_banner?: boolean | null
           updated_at?: string
         }
         Relationships: []
