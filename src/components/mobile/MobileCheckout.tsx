@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
   ChevronLeft, MapPin, Phone, Truck, Store, 
-  CreditCard, Wallet, User, Loader2 
+  CreditCard, Wallet, User, Loader2, Navigation 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,14 +15,19 @@ import { useCart } from "@/hooks/useCart";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { divisions, calculateShippingCost, getDistrictsByDivision, getThanasByDistrict } from "@/data/bangladeshLocations";
+import { useGeolocation, useShippingCost } from "@/hooks/useGeolocation";
 
 const MobileCheckout = () => {
   const { user } = useAuth();
   const { items, subtotal, clearCart } = useCart();
   const navigate = useNavigate();
+  const { loading: geoLoading, detectLocation } = useGeolocation();
+  const { getShippingCost } = useShippingCost();
   
   const [loading, setLoading] = useState(false);
   const [shippingMethod, setShippingMethod] = useState<"delivery" | "pickup">("delivery");
+  const [dynamicShippingCost, setDynamicShippingCost] = useState<number | null>(null);
+  const [estimatedDays, setEstimatedDays] = useState<string | null>(null);
   
   const [selectedDivision, setSelectedDivision] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
@@ -42,6 +47,30 @@ const MobileCheckout = () => {
     }
   }, [items.length, navigate]);
 
+  // Update shipping cost when location changes
+  useEffect(() => {
+    const updateShippingCost = async () => {
+      if (selectedDivision && selectedDistrict) {
+        const result = await getShippingCost(selectedDivision, selectedDistrict, selectedThana);
+        setDynamicShippingCost(result.cost);
+        setEstimatedDays(result.estimatedDays);
+      }
+    };
+    updateShippingCost();
+  }, [selectedDivision, selectedDistrict, selectedThana, getShippingCost]);
+
+  const handleAutoDetectLocation = async () => {
+    const location = await detectLocation();
+    if (location) {
+      setSelectedDivision(location.division);
+      setSelectedDistrict(location.district);
+      setSelectedThana(location.thana);
+      toast.success(`Location detected: ${location.district}, ${location.division}`);
+    } else {
+      toast.error("Could not detect your location");
+    }
+  };
+
   const districts = selectedDivision
     ? getDistrictsByDivision(selectedDivision)
     : [];
@@ -50,7 +79,7 @@ const MobileCheckout = () => {
     ? getThanasByDistrict(selectedDistrict)
     : [];
 
-  const shippingCost = selectedDistrict ? calculateShippingCost(selectedDistrict) : 0;
+  const shippingCost = dynamicShippingCost ?? (selectedDistrict ? calculateShippingCost(selectedDistrict) : 0);
   const total = subtotal + (shippingMethod === "delivery" ? shippingCost : 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -277,10 +306,26 @@ const MobileCheckout = () => {
             exit={{ opacity: 0, height: 0 }}
             className="p-4 space-y-3 border-b border-border"
           >
-            <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-gold" />
-              Delivery Address
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-gold" />
+                Delivery Address
+              </h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAutoDetectLocation}
+                disabled={geoLoading}
+                className="text-xs h-8"
+              >
+                {geoLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                ) : (
+                  <Navigation className="h-3 w-3 mr-1" />
+                )}
+                Auto-detect
+              </Button>
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
