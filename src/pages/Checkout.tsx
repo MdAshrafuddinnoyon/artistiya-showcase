@@ -38,11 +38,6 @@ const Checkout = () => {
   const [paymentMode, setPaymentMode] = useState<"auto" | "manual">("auto");
   const [bkashAvailable, setBkashAvailable] = useState(false);
   const [nagadAvailable, setNagadAvailable] = useState(false);
-
-  // Render mobile checkout
-  if (isMobile) {
-    return <MobileCheckout />;
-  }
   
   const [selectedDivision, setSelectedDivision] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
@@ -74,6 +69,23 @@ const Checkout = () => {
     checkPaymentProviders();
   }, []);
 
+  // Redirect if cart is empty (but not after success)
+  useEffect(() => {
+    if (items.length === 0 && !orderSuccess) {
+      navigate("/shop");
+    }
+  }, [items.length, orderSuccess, navigate]);
+
+  // All hooks must be called before any conditional returns
+  // Render mobile checkout
+  if (isMobile) {
+    return <MobileCheckout />;
+  }
+
+  if (items.length === 0 && !orderSuccess) {
+    return null;
+  }
+
   const districts = selectedDivision
     ? getDistrictsByDivision(selectedDivision)
     : [];
@@ -88,17 +100,6 @@ const Checkout = () => {
   const hasPreorderItems = items.some(
     item => item.product.stock_quantity === 0 && item.product.is_preorderable
   );
-
-  // Redirect if cart is empty (but not after success)
-  useEffect(() => {
-    if (items.length === 0 && !orderSuccess) {
-      navigate("/shop");
-    }
-  }, [items.length, orderSuccess, navigate]);
-
-  if (items.length === 0 && !orderSuccess) {
-    return null;
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
