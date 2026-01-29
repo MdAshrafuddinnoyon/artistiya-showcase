@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, EyeOff, Mail, Lock, User as UserIcon } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User as UserIcon, Calculator, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,50 @@ const signInSchema = z.object({
   password: z.string().min(1, "পাসওয়ার্ড দিন"),
 });
 
+// Math CAPTCHA hook
+const useMathCaptcha = () => {
+  const [num1, setNum1] = useState(0);
+  const [num2, setNum2] = useState(0);
+  const [operator, setOperator] = useState<'+' | '-' | '×'>('+');
+  const [answer, setAnswer] = useState(0);
+
+  const generateCaptcha = useCallback(() => {
+    const operators: ('+' | '-' | '×')[] = ['+', '-', '×'];
+    const op = operators[Math.floor(Math.random() * operators.length)];
+    let n1 = Math.floor(Math.random() * 10) + 1;
+    let n2 = Math.floor(Math.random() * 10) + 1;
+    
+    // Ensure subtraction doesn't go negative
+    if (op === '-' && n2 > n1) {
+      [n1, n2] = [n2, n1];
+    }
+    
+    // Keep multiplication small
+    if (op === '×') {
+      n1 = Math.floor(Math.random() * 5) + 1;
+      n2 = Math.floor(Math.random() * 5) + 1;
+    }
+
+    let result = 0;
+    switch (op) {
+      case '+': result = n1 + n2; break;
+      case '-': result = n1 - n2; break;
+      case '×': result = n1 * n2; break;
+    }
+
+    setNum1(n1);
+    setNum2(n2);
+    setOperator(op);
+    setAnswer(result);
+  }, []);
+
+  useEffect(() => {
+    generateCaptcha();
+  }, [generateCaptcha]);
+
+  return { num1, num2, operator, answer, regenerate: generateCaptcha };
+};
+
 const Auth = () => {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [showPassword, setShowPassword] = useState(false);
@@ -31,10 +75,12 @@ const Auth = () => {
     email: "",
     password: "",
   });
+  const [captchaInput, setCaptchaInput] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
+  const { num1, num2, operator, answer, regenerate } = useMathCaptcha();
 
   useEffect(() => {
     if (user) {
@@ -70,6 +116,14 @@ const Auth = () => {
     
     if (!validateForm()) return;
 
+    // Validate CAPTCHA
+    if (parseInt(captchaInput) !== answer) {
+      setErrors({ ...errors, captcha: "গণনার উত্তর ভুল হয়েছে" });
+      regenerate();
+      setCaptchaInput("");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -81,6 +135,8 @@ const Auth = () => {
           } else {
             toast.error(error.message);
           }
+          regenerate();
+          setCaptchaInput("");
         } else {
           toast.success("অ্যাকাউন্ট তৈরি সফল হয়েছে!");
           navigate("/");
@@ -93,6 +149,8 @@ const Auth = () => {
           } else {
             toast.error(error.message);
           }
+          regenerate();
+          setCaptchaInput("");
         } else {
           toast.success("স্বাগতম!");
           navigate("/");
@@ -106,29 +164,29 @@ const Auth = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="pt-32 pb-24">
-        <div className="container mx-auto px-4 max-w-md">
+      <main className="pt-24 md:pt-32 pb-24 px-4">
+        <div className="container mx-auto max-w-md">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="bg-card border border-border rounded-2xl p-8 shadow-elevated"
+            className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-elevated"
           >
             {/* Logo */}
-            <div className="text-center mb-8">
-              <h1 className="font-display text-3xl">
+            <div className="text-center mb-6 md:mb-8">
+              <h1 className="font-display text-2xl md:text-3xl">
                 <span className="text-gold">artistiya</span>
                 <span className="text-foreground">.store</span>
               </h1>
-              <p className="text-muted-foreground mt-2 font-body">
+              <p className="text-muted-foreground mt-2 font-body text-sm">
                 {mode === "signin" ? "আপনার অ্যাকাউন্টে প্রবেশ করুন" : "নতুন অ্যাকাউন্ট তৈরি করুন"}
               </p>
             </div>
 
             {/* Toggle */}
-            <div className="flex bg-muted rounded-lg p-1 mb-8">
+            <div className="flex bg-muted rounded-lg p-1 mb-6">
               <button
-                onClick={() => setMode("signin")}
+                onClick={() => { setMode("signin"); regenerate(); setCaptchaInput(""); }}
                 className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
                   mode === "signin"
                     ? "bg-background text-foreground shadow-sm"
@@ -138,7 +196,7 @@ const Auth = () => {
                 লগইন
               </button>
               <button
-                onClick={() => setMode("signup")}
+                onClick={() => { setMode("signup"); regenerate(); setCaptchaInput(""); }}
                 className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
                   mode === "signup"
                     ? "bg-background text-foreground shadow-sm"
@@ -150,7 +208,7 @@ const Auth = () => {
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <AnimatePresence mode="wait">
                 {mode === "signup" && (
                   <motion.div
@@ -160,78 +218,111 @@ const Auth = () => {
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <Label htmlFor="fullName" className="text-foreground">
+                    <Label htmlFor="fullName" className="text-foreground text-sm">
                       পুরো নাম
                     </Label>
-                    <div className="relative mt-1.5">
-                      <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <div className="relative mt-1">
+                      <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="fullName"
                         type="text"
                         placeholder="আপনার নাম"
                         value={formData.fullName}
                         onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                        className="pl-10"
+                        className="pl-9 h-10"
                       />
                     </div>
                     {errors.fullName && (
-                      <p className="text-destructive text-sm mt-1">{errors.fullName}</p>
+                      <p className="text-destructive text-xs mt-1">{errors.fullName}</p>
                     )}
                   </motion.div>
                 )}
               </AnimatePresence>
 
               <div>
-                <Label htmlFor="email" className="text-foreground">
+                <Label htmlFor="email" className="text-foreground text-sm">
                   ইমেইল
                 </Label>
-                <div className="relative mt-1.5">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <div className="relative mt-1">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
                     placeholder="example@email.com"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="pl-10"
+                    className="pl-9 h-10"
                   />
                 </div>
                 {errors.email && (
-                  <p className="text-destructive text-sm mt-1">{errors.email}</p>
+                  <p className="text-destructive text-xs mt-1">{errors.email}</p>
                 )}
               </div>
 
               <div>
-                <Label htmlFor="password" className="text-foreground">
+                <Label htmlFor="password" className="text-foreground text-sm">
                   পাসওয়ার্ড
                 </Label>
-                <div className="relative mt-1.5">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <div className="relative mt-1">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="pl-10 pr-10"
+                    className="pl-9 pr-10 h-10"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="text-destructive text-sm mt-1">{errors.password}</p>
+                  <p className="text-destructive text-xs mt-1">{errors.password}</p>
+                )}
+              </div>
+
+              {/* Math CAPTCHA */}
+              <div className="bg-muted/50 rounded-lg p-4 border border-border">
+                <Label className="text-foreground text-sm flex items-center gap-2 mb-2">
+                  <Calculator className="h-4 w-4 text-gold" />
+                  নিরাপত্তা যাচাই
+                </Label>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 bg-background rounded-lg px-4 py-2.5 text-center font-mono text-lg border border-border">
+                    {num1} {operator} {num2} = ?
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { regenerate(); setCaptchaInput(""); }}
+                    className="p-2 hover:bg-muted rounded-lg transition-colors"
+                    title="নতুন প্রশ্ন"
+                  >
+                    <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                </div>
+                <div className="relative mt-2">
+                  <Input
+                    type="number"
+                    placeholder="উত্তর লিখুন"
+                    value={captchaInput}
+                    onChange={(e) => setCaptchaInput(e.target.value)}
+                    className="h-10 text-center font-mono"
+                  />
+                </div>
+                {errors.captcha && (
+                  <p className="text-destructive text-xs mt-1">{errors.captcha}</p>
                 )}
               </div>
 
               <Button
                 type="submit"
                 variant="gold"
-                className="w-full"
+                className="w-full h-11"
                 disabled={loading}
               >
                 {loading ? (
@@ -252,7 +343,7 @@ const Auth = () => {
                 <>
                   অ্যাকাউন্ট নেই?{" "}
                   <button
-                    onClick={() => setMode("signup")}
+                    onClick={() => { setMode("signup"); regenerate(); }}
                     className="text-gold hover:underline"
                   >
                     সাইন আপ করুন
@@ -262,7 +353,7 @@ const Auth = () => {
                 <>
                   আগে থেকে অ্যাকাউন্ট আছে?{" "}
                   <button
-                    onClick={() => setMode("signin")}
+                    onClick={() => { setMode("signin"); regenerate(); }}
                     className="text-gold hover:underline"
                   >
                     লগইন করুন

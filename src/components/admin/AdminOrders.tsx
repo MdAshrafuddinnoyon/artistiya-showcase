@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Eye, Truck, CheckCircle, XCircle, Clock, Search, AlertTriangle, Shield } from "lucide-react";
+import { Eye, Truck, CheckCircle, XCircle, Clock, Search, AlertTriangle, Shield, FileText, Printer, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -508,11 +508,105 @@ const AdminOrders = () => {
                   </p>
                 </div>
               )}
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-3 pt-4 border-t border-border">
+                <InvoiceButton orderId={selectedOrder.id} orderNumber={selectedOrder.order_number} />
+                <DeliverySlipButton orderId={selectedOrder.id} orderNumber={selectedOrder.order_number} />
+              </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
     </div>
+  );
+};
+
+// Invoice Button Component
+const InvoiceButton = ({ orderId, orderNumber }: { orderId: string; orderNumber: string }) => {
+  const [loading, setLoading] = useState(false);
+
+  const generateInvoice = async () => {
+    setLoading(true);
+    try {
+      const response = await supabase.functions.invoke('generate-invoice', {
+        body: { orderId }
+      });
+
+      if (response.error) throw new Error(response.error.message);
+
+      // Open invoice in new window for printing
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(response.data.html);
+        printWindow.document.close();
+        printWindow.print();
+      }
+      
+      toast.success("Invoice generated successfully");
+    } catch (error: any) {
+      console.error("Error generating invoice:", error);
+      toast.error("Failed to generate invoice");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={generateInvoice}
+      disabled={loading}
+      className="gap-2"
+    >
+      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+      Invoice PDF
+    </Button>
+  );
+};
+
+// Delivery Slip Button Component
+const DeliverySlipButton = ({ orderId, orderNumber }: { orderId: string; orderNumber: string }) => {
+  const [loading, setLoading] = useState(false);
+
+  const generateDeliverySlip = async () => {
+    setLoading(true);
+    try {
+      const response = await supabase.functions.invoke('generate-delivery-slip', {
+        body: { orderId }
+      });
+
+      if (response.error) throw new Error(response.error.message);
+
+      // Open delivery slip in new window for printing
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(response.data.html);
+        printWindow.document.close();
+        printWindow.print();
+      }
+      
+      toast.success("Delivery slip generated successfully");
+    } catch (error: any) {
+      console.error("Error generating delivery slip:", error);
+      toast.error("Failed to generate delivery slip");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={generateDeliverySlip}
+      disabled={loading}
+      className="gap-2"
+    >
+      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+      Delivery Slip
+    </Button>
   );
 };
 

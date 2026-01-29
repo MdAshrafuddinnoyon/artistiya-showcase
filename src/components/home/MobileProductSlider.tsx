@@ -139,15 +139,15 @@ const MobileProductSlider = ({ title, queryType, showViewAll = true }: MobilePro
 
   const updateCurrentIndex = () => {
     if (sliderRef.current) {
-      const itemWidth = 160 + 12; // width + gap
+      const itemWidth = 128 + 12; // width + gap (w-32 = 128px)
       const newIndex = Math.round(sliderRef.current.scrollLeft / itemWidth);
-      setCurrentIndex(Math.min(newIndex, Math.max(0, products.length - 2)));
+      setCurrentIndex(Math.min(newIndex, Math.max(0, products.length - 3)));
     }
   };
 
   const scrollToIndex = (index: number) => {
     if (sliderRef.current) {
-      const itemWidth = 160 + 12;
+      const itemWidth = 128 + 12;
       sliderRef.current.scrollTo({
         left: index * itemWidth,
         behavior: "smooth"
@@ -157,24 +157,24 @@ const MobileProductSlider = ({ title, queryType, showViewAll = true }: MobilePro
   };
 
   const handlePrev = () => {
-    const newIndex = Math.max(0, currentIndex - 2);
+    const newIndex = Math.max(0, currentIndex - 3);
     scrollToIndex(newIndex);
   };
 
   const handleNext = () => {
-    const newIndex = Math.min(products.length - 2, currentIndex + 2);
+    const newIndex = Math.min(products.length - 3, currentIndex + 3);
     scrollToIndex(newIndex);
   };
 
   if (loading) {
     return (
-      <div className="md:hidden px-4 py-4">
+      <div className="md:hidden px-4 py-3">
         <div className="flex gap-3 overflow-x-auto">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="flex-shrink-0 w-40">
-              <div className="aspect-square bg-muted rounded-xl animate-pulse" />
-              <div className="h-3 bg-muted rounded mt-2 w-3/4" />
-              <div className="h-3 bg-muted rounded mt-1 w-1/2" />
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex-shrink-0 w-32">
+              <div className="aspect-square bg-muted rounded-lg animate-pulse" />
+              <div className="h-2.5 bg-muted rounded mt-1.5 w-3/4" />
+              <div className="h-2.5 bg-muted rounded mt-1 w-1/2" />
             </div>
           ))}
         </div>
@@ -185,12 +185,12 @@ const MobileProductSlider = ({ title, queryType, showViewAll = true }: MobilePro
   if (products.length === 0) return null;
 
   // Calculate pagination dots
-  const dotsCount = Math.ceil(products.length / 2);
-  const activeDot = Math.floor(currentIndex / 2);
+  const dotsCount = Math.ceil(products.length / 3);
+  const activeDot = Math.floor(currentIndex / 3);
 
   return (
     <>
-      <section className="md:hidden px-4 py-4">
+      <section className="md:hidden px-4 py-3">
         {/* Section Header */}
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-display text-foreground">{title}</h2>
@@ -240,7 +240,7 @@ const MobileProductSlider = ({ title, queryType, showViewAll = true }: MobilePro
             {products.map((product) => (
               <div 
                 key={product.id} 
-                className="flex-shrink-0 w-40"
+                className="flex-shrink-0 w-32"
                 style={{ scrollSnapAlign: "start" }}
               >
                 <Link 
@@ -249,7 +249,7 @@ const MobileProductSlider = ({ title, queryType, showViewAll = true }: MobilePro
                   onClick={(e) => isDragging && e.preventDefault()}
                 >
                   {/* Product Image */}
-                  <div className="relative aspect-square bg-card rounded-xl overflow-hidden mb-2 border border-border/50 group">
+                  <div className="relative aspect-square bg-card rounded-lg overflow-hidden mb-1.5 border border-border/50 group">
                     <img
                       src={product.images?.[0] || "/placeholder.svg"}
                       alt={product.name}
@@ -258,57 +258,45 @@ const MobileProductSlider = ({ title, queryType, showViewAll = true }: MobilePro
                     />
                     
                     {/* Action Buttons */}
-                    <div className="absolute top-2 right-2 flex flex-col gap-1.5">
+                    <div className="absolute top-1 right-1 flex flex-col gap-1">
                       <button
                         onClick={(e) => handleWishlistClick(e, product.id)}
-                        className="w-8 h-8 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center"
+                        className="w-6 h-6 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center"
                       >
                         <Heart 
-                          className={`h-4 w-4 ${
+                          className={`h-3 w-3 ${
                             isInWishlist(product.id) 
                               ? "fill-gold text-gold" 
                               : "text-muted-foreground"
                           }`} 
                         />
                       </button>
-
-                      <button
-                        onClick={(e) => handleQuickView(e, product)}
-                        className="w-8 h-8 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center"
-                      >
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                    </div>
-
-                    {/* WhatsApp Button */}
-                    <div className="absolute bottom-2 right-2" onClick={(e) => e.preventDefault()}>
-                      <WhatsAppOrderButton product={product} variant="icon" />
                     </div>
 
                     {/* Badges */}
                     {product.is_new_arrival && (
-                      <span className="absolute top-2 left-2 px-2 py-0.5 bg-gold text-charcoal-deep text-[9px] font-semibold rounded">
+                      <span className="absolute top-1 left-1 px-1.5 py-0.5 bg-gold text-charcoal-deep text-[8px] font-semibold rounded">
                         NEW
                       </span>
                     )}
 
                     {product.stock_quantity === 0 && !product.is_preorderable && (
                       <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
-                        <span className="text-xs text-foreground font-medium">Out of Stock</span>
+                        <span className="text-[10px] text-foreground font-medium">Out of Stock</span>
                       </div>
                     )}
                   </div>
 
                   {/* Product Info */}
-                  <h3 className="text-xs text-foreground font-medium line-clamp-2 leading-tight">
+                  <h3 className="text-[11px] text-foreground font-medium line-clamp-1 leading-tight">
                     {product.name}
                   </h3>
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <span className="text-sm font-semibold text-gold">
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="text-xs font-semibold text-gold">
                       ৳{product.price.toLocaleString()}
                     </span>
                     {product.compare_at_price && product.compare_at_price > product.price && (
-                      <span className="text-[10px] text-muted-foreground line-through">
+                      <span className="text-[9px] text-muted-foreground line-through">
                         ৳{product.compare_at_price.toLocaleString()}
                       </span>
                     )}
