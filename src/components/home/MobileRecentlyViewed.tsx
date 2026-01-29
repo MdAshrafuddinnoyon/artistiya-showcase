@@ -19,11 +19,12 @@ const MobileRecentlyViewed = () => {
 
   useEffect(() => {
     const fetchProducts = async () => {
-      // Get random featured products as "recently viewed" placeholder
+      // Get featured products as "recently viewed" placeholder
       const { data, error } = await supabase
         .from("products")
         .select("id, name, slug, price, images")
         .eq("is_active", true)
+        .eq("is_featured", true)
         .limit(4);
 
       if (!error && data) {
@@ -33,6 +34,22 @@ const MobileRecentlyViewed = () => {
     };
 
     fetchProducts();
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel('products_recently_viewed')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products' },
+        () => {
+          fetchProducts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleWishlistClick = async (e: React.MouseEvent, productId: string) => {
@@ -43,44 +60,49 @@ const MobileRecentlyViewed = () => {
 
   if (loading || products.length === 0) return null;
 
-  // Pastel background colors
-  const bgColors = ["bg-purple-50", "bg-amber-50", "bg-blue-50", "bg-pink-50"];
-
   return (
-    <section className="md:hidden px-4 py-4 bg-white">
+    <section className="md:hidden px-4 py-4">
       {/* Section Header */}
-      <h2 className="text-base font-semibold text-gray-900 mb-3">Recently viewed</h2>
+      <h2 className="text-base font-display text-foreground mb-3">Recently viewed</h2>
 
       {/* 2-Column Grid */}
       <div className="grid grid-cols-2 gap-3">
-        {products.slice(0, 4).map((product, index) => (
+        {products.slice(0, 4).map((product) => (
           <Link
             key={product.id}
             to={`/product/${product.slug}`}
             className="relative"
           >
             {/* Product Card */}
-            <div className={`relative aspect-square ${bgColors[index % bgColors.length]} rounded-xl overflow-hidden`}>
+            <div className="relative aspect-square bg-card rounded-xl overflow-hidden border border-border/50">
               <img
                 src={product.images?.[0] || "/placeholder.svg"}
                 alt={product.name}
-                className="w-full h-full object-contain p-4"
+                className="w-full h-full object-cover"
               />
               
               {/* Wishlist Button */}
               <button
                 onClick={(e) => handleWishlistClick(e, product.id)}
-                className="absolute top-2 right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm"
+                className="absolute top-2 right-2 w-8 h-8 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center"
               >
                 <Heart 
                   className={`h-4 w-4 ${
                     isInWishlist(product.id) 
-                      ? "fill-orange-500 text-orange-500" 
-                      : "text-gray-400"
+                      ? "fill-gold text-gold" 
+                      : "text-muted-foreground"
                   }`} 
                 />
               </button>
             </div>
+
+            {/* Product Info */}
+            <h3 className="text-xs text-foreground font-medium mt-2 line-clamp-1">
+              {product.name}
+            </h3>
+            <span className="text-sm font-semibold text-gold">
+              ৳{product.price.toLocaleString()}
+            </span>
           </Link>
         ))}
       </div>
