@@ -1,245 +1,321 @@
-// Bangladesh Divisions, Districts, and Thanas/Upazilas
+// Bangladesh Complete Divisions, Districts, and Thanas/Upazilas
+// Parsed from official postal data
 
-export interface Thana {
+export interface Location {
+  code: number;
   name: string;
-  name_bn: string;
-}
-
-export interface District {
-  name: string;
-  name_bn: string;
-  thanas: Thana[];
+  station: string;
+  district: string;
+  division: string;
 }
 
 export interface Division {
   name: string;
-  name_bn: string;
-  districts: District[];
+  districts: string[];
 }
 
+export interface DistrictData {
+  name: string;
+  division: string;
+  thanas: string[];
+}
+
+// All divisions with their districts
 export const divisions: Division[] = [
   {
     name: "Dhaka",
-    name_bn: "ঢাকা",
-    districts: [
-      {
-        name: "Dhaka",
-        name_bn: "ঢাকা",
-        thanas: [
-          { name: "Dhanmondi", name_bn: "ধানমন্ডি" },
-          { name: "Gulshan", name_bn: "গুলশান" },
-          { name: "Mirpur", name_bn: "মিরপুর" },
-          { name: "Mohammadpur", name_bn: "মোহাম্মদপুর" },
-          { name: "Uttara", name_bn: "উত্তরা" },
-          { name: "Banani", name_bn: "বনানী" },
-          { name: "Tejgaon", name_bn: "তেজগাঁও" },
-          { name: "Motijheel", name_bn: "মতিঝিল" },
-          { name: "Lalbagh", name_bn: "লালবাগ" },
-          { name: "Ramna", name_bn: "রমনা" },
-        ],
-      },
-      {
-        name: "Gazipur",
-        name_bn: "গাজীপুর",
-        thanas: [
-          { name: "Gazipur Sadar", name_bn: "গাজীপুর সদর" },
-          { name: "Kaliakair", name_bn: "কালিয়াকৈর" },
-          { name: "Kapasia", name_bn: "কাপাসিয়া" },
-          { name: "Sreepur", name_bn: "শ্রীপুর" },
-          { name: "Tongi", name_bn: "টঙ্গী" },
-        ],
-      },
-      {
-        name: "Narayanganj",
-        name_bn: "নারায়ণগঞ্জ",
-        thanas: [
-          { name: "Narayanganj Sadar", name_bn: "নারায়ণগঞ্জ সদর" },
-          { name: "Araihazar", name_bn: "আড়াইহাজার" },
-          { name: "Bandar", name_bn: "বন্দর" },
-          { name: "Rupganj", name_bn: "রূপগঞ্জ" },
-          { name: "Sonargaon", name_bn: "সোনারগাঁও" },
-        ],
-      },
-    ],
+    districts: ["Dhaka", "Faridpur", "Gazipur", "Gopalganj", "Kishoreganj", "Madaripur", "Manikganj", "Munshiganj", "Narayanganj", "Narsingdi", "Rajbari", "Shariatpur", "Tangail"]
   },
   {
-    name: "Chittagong",
-    name_bn: "চট্টগ্রাম",
-    districts: [
-      {
-        name: "Chittagong",
-        name_bn: "চট্টগ্রাম",
-        thanas: [
-          { name: "Chittagong Sadar", name_bn: "চট্টগ্রাম সদর" },
-          { name: "Agrabad", name_bn: "আগ্রাবাদ" },
-          { name: "Nasirabad", name_bn: "নাসিরাবাদ" },
-          { name: "Panchlaish", name_bn: "পাঁচলাইশ" },
-          { name: "Kotwali", name_bn: "কোতোয়ালি" },
-        ],
-      },
-      {
-        name: "Cox's Bazar",
-        name_bn: "কক্সবাজার",
-        thanas: [
-          { name: "Cox's Bazar Sadar", name_bn: "কক্সবাজার সদর" },
-          { name: "Teknaf", name_bn: "টেকনাফ" },
-          { name: "Ukhiya", name_bn: "উখিয়া" },
-          { name: "Ramu", name_bn: "রামু" },
-        ],
-      },
-    ],
+    name: "Chattogram",
+    districts: ["Bandarban", "Brahmanbaria", "Chandpur", "Chattogram", "Comilla", "Cox's Bazar", "Feni", "Khagrachhari", "Lakshmipur", "Noakhali", "Rangamati"]
   },
   {
     name: "Rajshahi",
-    name_bn: "রাজশাহী",
-    districts: [
-      {
-        name: "Rajshahi",
-        name_bn: "রাজশাহী",
-        thanas: [
-          { name: "Rajshahi Sadar", name_bn: "রাজশাহী সদর" },
-          { name: "Boalia", name_bn: "বোয়ালিয়া" },
-          { name: "Rajpara", name_bn: "রাজপাড়া" },
-          { name: "Motihar", name_bn: "মতিহার" },
-        ],
-      },
-      {
-        name: "Bogra",
-        name_bn: "বগুড়া",
-        thanas: [
-          { name: "Bogra Sadar", name_bn: "বগুড়া সদর" },
-          { name: "Sherpur", name_bn: "শেরপুর" },
-          { name: "Shibganj", name_bn: "শিবগঞ্জ" },
-        ],
-      },
-    ],
+    districts: ["Bogura", "Chapai Nawabganj", "Joypurhat", "Naogaon", "Natore", "Pabna", "Rajshahi", "Sirajganj"]
   },
   {
     name: "Khulna",
-    name_bn: "খুলনা",
-    districts: [
-      {
-        name: "Khulna",
-        name_bn: "খুলনা",
-        thanas: [
-          { name: "Khulna Sadar", name_bn: "খুলনা সদর" },
-          { name: "Sonadanga", name_bn: "সোনাডাঙ্গা" },
-          { name: "Khalishpur", name_bn: "খালিশপুর" },
-        ],
-      },
-      {
-        name: "Jessore",
-        name_bn: "যশোর",
-        thanas: [
-          { name: "Jessore Sadar", name_bn: "যশোর সদর" },
-          { name: "Benapole", name_bn: "বেনাপোল" },
-          { name: "Jhikargacha", name_bn: "ঝিকরগাছা" },
-        ],
-      },
-    ],
+    districts: ["Bagerhat", "Chuadanga", "Jashore", "Jhenaidah", "Khulna", "Kushtia", "Magura", "Meherpur", "Narail", "Satkhira"]
   },
   {
     name: "Sylhet",
-    name_bn: "সিলেট",
-    districts: [
-      {
-        name: "Sylhet",
-        name_bn: "সিলেট",
-        thanas: [
-          { name: "Sylhet Sadar", name_bn: "সিলেট সদর" },
-          { name: "Kotwali", name_bn: "কোতোয়ালি" },
-          { name: "Jalalabad", name_bn: "জালালাবাদ" },
-          { name: "Moglabazar", name_bn: "মোগলাবাজার" },
-        ],
-      },
-      {
-        name: "Sunamganj",
-        name_bn: "সুনামগঞ্জ",
-        thanas: [
-          { name: "Sunamganj Sadar", name_bn: "সুনামগঞ্জ সদর" },
-          { name: "Tahirpur", name_bn: "তাহিরপুর" },
-        ],
-      },
-    ],
+    districts: ["Habiganj", "Moulvibazar", "Sunamganj", "Sylhet"]
   },
   {
-    name: "Barisal",
-    name_bn: "বরিশাল",
-    districts: [
-      {
-        name: "Barisal",
-        name_bn: "বরিশাল",
-        thanas: [
-          { name: "Barisal Sadar", name_bn: "বরিশাল সদর" },
-          { name: "Kotwali", name_bn: "কোতোয়ালি" },
-          { name: "Kawnia", name_bn: "কাউনিয়া" },
-        ],
-      },
-      {
-        name: "Patuakhali",
-        name_bn: "পটুয়াখালী",
-        thanas: [
-          { name: "Patuakhali Sadar", name_bn: "পটুয়াখালী সদর" },
-          { name: "Kuakata", name_bn: "কুয়াকাটা" },
-        ],
-      },
-    ],
+    name: "Barishal",
+    districts: ["Barguna", "Barishal", "Bhola", "Jhalokati", "Patuakhali", "Pirojpur"]
   },
   {
     name: "Rangpur",
-    name_bn: "রংপুর",
-    districts: [
-      {
-        name: "Rangpur",
-        name_bn: "রংপুর",
-        thanas: [
-          { name: "Rangpur Sadar", name_bn: "রংপুর সদর" },
-          { name: "Kotwali", name_bn: "কোতোয়ালি" },
-          { name: "Mithapukur", name_bn: "মিঠাপুকুর" },
-        ],
-      },
-      {
-        name: "Dinajpur",
-        name_bn: "দিনাজপুর",
-        thanas: [
-          { name: "Dinajpur Sadar", name_bn: "দিনাজপুর সদর" },
-          { name: "Birampur", name_bn: "বিরামপুর" },
-        ],
-      },
-    ],
+    districts: ["Dinajpur", "Gaibandha", "Kurigram", "Lalmonirhat", "Nilphamari", "Panchagarh", "Rangpur", "Thakurgaon"]
   },
   {
     name: "Mymensingh",
-    name_bn: "ময়মনসিংহ",
-    districts: [
-      {
-        name: "Mymensingh",
-        name_bn: "ময়মনসিংহ",
-        thanas: [
-          { name: "Mymensingh Sadar", name_bn: "ময়মনসিংহ সদর" },
-          { name: "Kotwali", name_bn: "কোতোয়ালি" },
-          { name: "Trishal", name_bn: "ত্রিশাল" },
-        ],
-      },
-      {
-        name: "Jamalpur",
-        name_bn: "জামালপুর",
-        thanas: [
-          { name: "Jamalpur Sadar", name_bn: "জামালপুর সদর" },
-          { name: "Islampur", name_bn: "ইসলামপুর" },
-        ],
-      },
-    ],
-  },
+    districts: ["Jamalpur", "Mymensingh", "Netrokona", "Sherpur"]
+  }
 ];
 
-// Helper function to check if district is in Dhaka division
-export const isDhakaDistrict = (districtName: string): boolean => {
-  const dhakaDistricts = ["Dhaka", "Gazipur", "Narayanganj", "Manikganj", "Munshiganj", "Narsingdi", "Tangail"];
-  return dhakaDistricts.includes(districtName);
+// Districts with their thanas (parsed from CSV)
+export const districtThanas: Record<string, string[]> = {
+  // Dhaka Division
+  "Dhaka": [
+    "Demra", "Dhaka Cantt.", "Dhamrai", "Dhanmondi", "Gulshan", "Jatrabari", "Joypara",
+    "Keraniganj", "Khilgaon", "Khilkhet", "Lalbag", "Mirpur", "Mohammadpur", "Motijheel",
+    "Nawabganj", "New market", "Palton", "Ramna", "Sabujbag", "Savar", "Sutrapur", "Tejgaon",
+    "Tejgaon Industrial Area", "Uttara"
+  ],
+  "Faridpur": [
+    "Alfadanga", "Bhanga", "Boalmari", "Charbhadrasan", "Faridpur Sadar", "Madukhali",
+    "Nagarkanda", "Sadarpur"
+  ],
+  "Gazipur": [
+    "Gazipur Sadar", "Kaliakaar", "Kaliganj", "Kapashia", "Monnunagar", "Sreepur"
+  ],
+  "Gopalganj": [
+    "Gopalganj Sadar", "Kashiani", "Kotalipara", "Maksudpur", "Tungipara"
+  ],
+  "Kishoreganj": [
+    "Bajitpur", "Bhairob", "Hossenpur", "Itna", "Karimganj", "Katiadi", "Kishoreganj Sadar",
+    "Kuliarchar", "Mithamoin", "Nikli", "Ostagram", "Pakundia", "Tarial"
+  ],
+  "Madaripur": [
+    "Barhamganj", "kalkini", "Madaripur Sadar", "Rajoir"
+  ],
+  "Manikganj": [
+    "Doulatpur", "Gheor", "Lechhraganj", "Manikganj Sadar", "Saturia", "Shibloya", "Singari"
+  ],
+  "Munshiganj": [
+    "Gajaria", "Lohajong", "Munshiganj Sadar", "Sirajdikhan", "Srinagar", "Tangibari"
+  ],
+  "Narayanganj": [
+    "Araihazar", "Baidder Bazar", "Bandar", "Fatullah", "Narayanganj Sadar", "Rupganj", "Siddirganj"
+  ],
+  "Narsingdi": [
+    "Belabo", "Monohordi", "Narshingdi Sadar", "Palash", "Raypura", "Shibpur"
+  ],
+  "Rajbari": [
+    "Baliakandi", "Pangsha", "Rajbari Sadar"
+  ],
+  "Shariatpur": [
+    "Bhedorganj", "Damudhya", "Gosairhat", "Jajira", "Naria", "Shariatpur Sadar"
+  ],
+  "Tangail": [
+    "Basail", "Bhuapur", "Delduar", "Ghatail", "Gopalpur", "Kalihati", "Kashkaolia",
+    "Madhupur", "Mirzapur", "Nagarpur", "Sakhipur", "Tangail Sadar"
+  ],
+  
+  // Chattogram Division
+  "Bandarban": [
+    "Alikadam", "Bandarban Sadar", "Naikhong", "Roanchhari", "Ruma", "Thanchi"
+  ],
+  "Brahmanbaria": [
+    "Akhaura", "Banchharampur", "Brahamanbaria Sadar", "Kasba", "Nabinagar", "Nasirnagar", "Sarail"
+  ],
+  "Chandpur": [
+    "Chandpur Sadar", "Faridganj", "Hajiganj", "Hayemchar", "Kachua", "Matlobganj", "Shahrasti"
+  ],
+  "Chattogram": [
+    "Anawara", "Boalkhali", "Chittagong Sadar", "East Joara", "Fatikchhari", "Hathazari",
+    "Lohagara", "Mirsharai", "Patiya", "Rangunia", "Raozan", "Sandwip", "Satkania", "Sitakunda"
+  ],
+  "Comilla": [
+    "Barura", "Brahmanpara", "Burichang", "Chandina", "Chouddogram", "Comilla Sadar",
+    "Daudkandi", "Debidwar", "Homna", "Lacham", "Laksam", "Meghna", "Muradnagar", "Nangalkot", "Titas"
+  ],
+  "Cox's Bazar": [
+    "Chiringga", "Coxs Bazar Sadar", "Gorakghat", "Kutubdia", "Ramu", "Teknaf", "Ukhia"
+  ],
+  "Feni": [
+    "Chhagalnaia", "Dagonbhuia", "Feni Sadar", "Pashurampur", "Sonagazi"
+  ],
+  "Khagrachhari": [
+    "Diginala", "Khagrachari Sadar", "Laxmichhari", "Mahalchhari", "Manikchhari", "Matiranga", "Panchhari", "Ramghar Head Office"
+  ],
+  "Lakshmipur": [
+    "Char Alexgander", "Lakshimpur Sadar", "Ramganj", "Raypur"
+  ],
+  "Noakhali": [
+    "Basurhat", "Begumganj", "Chatkhil", "Hatiya", "Noakhali Sadar", "Senbag"
+  ],
+  "Rangamati": [
+    "Barakal", "Bilaichhari", "Jarachhari", "Kalampati", "Kaptai", "Longachh", "Marishya", "Naniachhar", "Rajsthali", "Rangamati Sadar"
+  ],
+
+  // Rajshahi Division
+  "Bogura": [
+    "Alamdighi", "Bogura Sadar", "Dhunat", "Dupchachia", "Gabtoli", "Kahalu", "Nandigram", "Sariakandi", "Sherpur", "Shibganj", "Sonatola"
+  ],
+  "Joypurhat": [
+    "Akkelpur", "Joypurhat Sadar", "Kalai", "Khetlal", "Panchbibi"
+  ],
+  "Naogaon": [
+    "Ahsanganj", "Badalgachhi", "Dhamuirhat", "Mahadebpur", "Naogaon Sadar", "Niamatpur", "Nitpur", "Patnitala", "Prasadpur", "Raninagar", "Sapahar"
+  ],
+  "Natore": [
+    "Gopalpur UPO", "Harua", "Hatgurudaspur", "Laxman", "Natore Sadar", "Singra"
+  ],
+  "Chapai Nawabganj": [
+    "Bholahat", "Chapinawabganj Sadar", "Nachol", "Rohanpur", "Shibganj U.P.O"
+  ],
+  "Pabna": [
+    "Banwarinagar", "Bera", "Bhangura", "Chatmohar", "Debottar", "Ishwardi", "Pabna Sadar", "Sathia", "Sujanagar"
+  ],
+  "Rajshahi": [
+    "Bagha", "Bhabaniganj", "Charghat", "Durgapur", "Godagari", "Khod Mohanpur", "Lalitganj", "Putia", "Rajshahi Sadar", "Tanor"
+  ],
+  "Sirajganj": [
+    "Baiddya Jam Toil", "Belkuchi", "Dhangora", "Kazipur", "Shahjadpur", "Sirajganj Sadar", "Tarash", "Ullapara"
+  ],
+
+  // Khulna Division
+  "Bagerhat": [
+    "Bagerhat Sadar", "Chalna Ankorage", "Chitalmari", "Fakirhat", "Kachua UPO", "Mollahat", "Morelganj", "Rampal", "Rayenda"
+  ],
+  "Chuadanga": [
+    "Alamdanga", "Chuadanga Sadar", "Damurhuda", "Doulatganj"
+  ],
+  "Jashore": [
+    "Bagharpara", "Chaugachha", "Jashore Sadar", "Jhikargachha", "Keshabpur", "Monirampur", "Noapara", "Sarsa"
+  ],
+  "Jhenaidah": [
+    "Harinakundu", "Jinaidaha Sadar", "Kotchandpur", "Maheshpur", "Naldanga", "Shailakupa"
+  ],
+  "Khulna": [
+    "Alaipur", "Batiaghat", "Chalna Bazar", "Digalia", "Khulna Sadar", "Madinabad", "Paikgachha", "Phultala", "Sajiara", "Terakhada"
+  ],
+  "Kushtia": [
+    "Bheramara", "Janipur", "Kumarkhali", "Kustia Sadar", "Mirpur", "Rafayetpur"
+  ],
+  "Magura": [
+    "Arpara", "Magura Sadar", "Mohammadpur", "Shripur"
+  ],
+  "Meherpur": [
+    "Gangni", "Meherpur Sadar", "Mujib Nagar"
+  ],
+  "Narail": [
+    "Kalia", "Lohagara", "Narail Sadar"
+  ],
+  "Satkhira": [
+    "Assasuni", "Debhata", "Kalaroa", "Kaliganj", "Satkhira Sadar", "Shyamnagar", "Tala"
+  ],
+
+  // Sylhet Division
+  "Habiganj": [
+    "Ajmiriganj", "Bahubal", "Baniachang", "Chunarughat", "Habiganj Sadar", "Lakhai", "Madhabpur", "Nabiganj"
+  ],
+  "Moulvibazar": [
+    "Barlekha", "Juri", "Kamalganj", "Kulaura", "Moulvibazar Sadar", "Rajnagar", "Sreemangal"
+  ],
+  "Sunamganj": [
+    "Bishwambarpur", "Chhatak", "Derai", "Dharampasha", "Dowarabazar", "Jagannathpur", "Jamalganj", "Shalla", "Sunamganj Sadar", "Tahirpur"
+  ],
+  "Sylhet": [
+    "Balaganj", "Beanibazar", "Bishwanath", "Companiganj", "Fenchuganj", "Golabganj", "Gowainghat", "Jaintiapur", "Kanaighat", "Osmani Nagar", "Sylhet Sadar", "Zakiganj"
+  ],
+
+  // Barishal Division
+  "Barguna": [
+    "Amtali", "Bamna", "Barguna Sadar", "Betagi", "Patharghata", "Taltali"
+  ],
+  "Barishal": [
+    "Agailjhara", "Babuganj", "Bakerganj", "Banaripara", "Barishal Sadar", "Gaurnadi", "Hizla", "Mehendiganj", "Muladi", "Wazirpur"
+  ],
+  "Bhola": [
+    "Bhola Sadar", "Borhanuddin", "Char Fasson", "Daulatkhan", "Lalmohan", "Manpura", "Tazumuddin"
+  ],
+  "Jhalokati": [
+    "Jhalokati Sadar", "Kathalia", "Nalchity", "Rajapur"
+  ],
+  "Patuakhali": [
+    "Bauphal", "Dashmina", "Dumki", "Galachipa", "Kalapara", "Mirzaganj", "Patuakhali Sadar", "Rangabali"
+  ],
+  "Pirojpur": [
+    "Bhandaria", "Kawkhali", "Mathbaria", "Nazirpur", "Nesarabad", "Pirojpur Sadar", "Zianagar"
+  ],
+
+  // Rangpur Division
+  "Dinajpur": [
+    "Birampur", "Birganj", "Biral", "Bochaganj", "Chirirbandar", "Dinajpur Sadar", "Fulbari", "Ghoraghat", "Hakimpur", "Kaharol", "Khansama", "Nawabganj", "Parbatipur"
+  ],
+  "Gaibandha": [
+    "Fulchhari", "Gaibandha Sadar", "Gobindaganj", "Palashbari", "Sadullapur", "Saghata", "Sundarganj"
+  ],
+  "Kurigram": [
+    "Bhurungamari", "Char Rajibpur", "Chilmari", "Kurigram Sadar", "Nageshwari", "Phulbari", "Rajarhat", "Rowmari", "Ulipur"
+  ],
+  "Lalmonirhat": [
+    "Aditmari", "Hatibandha", "Kaliganj", "Lalmonirhat Sadar", "Patgram"
+  ],
+  "Nilphamari": [
+    "Dimla", "Domar", "Jaldhaka", "Kishoreganj", "Nilphamari Sadar", "Saidpur"
+  ],
+  "Panchagarh": [
+    "Atwari", "Boda", "Debiganj", "Panchagarh Sadar", "Tetulia"
+  ],
+  "Rangpur": [
+    "Badarganj", "Gangachara", "Kaunia", "Mithapukur", "Pirgacha", "Pirganj", "Rangpur Sadar", "Taraganj"
+  ],
+  "Thakurgaon": [
+    "Baliadangi", "Haripur", "Pirganj", "Ranisankail", "Thakurgaon Sadar"
+  ],
+
+  // Mymensingh Division
+  "Jamalpur": [
+    "Bakshiganj", "Dewanganj", "Islampur", "Jamalpur Sadar", "Madarganj", "Melandah", "Sarishabari"
+  ],
+  "Mymensingh": [
+    "Bhaluka", "Dhobaura", "Fulbaria", "Gaffargaon", "Gauripur", "Haluaghat", "Ishwarganj", "Muktagachha", "Mymensingh Sadar", "Nandail", "Phulpur", "Trishal"
+  ],
+  "Netrokona": [
+    "Atpara", "Barhatta", "Durgapur", "Kalmakanda", "Kendua", "Khaliajuri", "Madan", "Mohanganj", "Netrokona Sadar", "Purbadhala"
+  ],
+  "Sherpur": [
+    "Jhenaigati", "Nakla", "Nalitabari", "Sherpur Sadar", "Sreebardi"
+  ]
 };
 
-// Shipping cost calculation
-export const calculateShippingCost = (districtName: string): number => {
+// Get all thanas for a district
+export const getThanasByDistrict = (district: string): string[] => {
+  return districtThanas[district] || [];
+};
+
+// Get all districts for a division
+export const getDistrictsByDivision = (divisionName: string): string[] => {
+  const division = divisions.find(d => d.name === divisionName);
+  return division?.districts || [];
+};
+
+// Get division for a district
+export const getDivisionByDistrict = (districtName: string): string | null => {
+  for (const division of divisions) {
+    if (division.districts.includes(districtName)) {
+      return division.name;
+    }
+  }
+  return null;
+};
+
+// Helper function to check if district is in Dhaka division (for default shipping calc)
+export const isDhakaDistrict = (districtName: string): boolean => {
+  const dhakaDivision = divisions.find(d => d.name === "Dhaka");
+  return dhakaDivision?.districts.includes(districtName) || false;
+};
+
+// Default shipping cost calculation (can be overridden by admin settings)
+export const calculateShippingCost = (districtName: string, customRates?: Record<string, number>): number => {
+  if (customRates && customRates[districtName] !== undefined) {
+    return customRates[districtName];
+  }
   return isDhakaDistrict(districtName) ? 80 : 130;
+};
+
+// Get all division names
+export const getAllDivisions = (): string[] => {
+  return divisions.map(d => d.name);
+};
+
+// Get all district names
+export const getAllDistricts = (): string[] => {
+  return divisions.flatMap(d => d.districts);
 };

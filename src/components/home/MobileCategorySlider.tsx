@@ -26,11 +26,11 @@ const MobileCategorySlider = () => {
 
   useEffect(() => {
     const fetchCategories = async () => {
+      // Fetch ALL categories without limit
       const { data, error } = await supabase
         .from("categories")
         .select("id, name, name_bn, slug, image_url")
-        .order("display_order", { ascending: true })
-        .limit(10);
+        .order("display_order", { ascending: true });
 
       if (!error && data) {
         setCategories(data);
@@ -138,15 +138,8 @@ const MobileCategorySlider = () => {
     return icons[slug] || "🛍️";
   };
 
-  // Default categories
-  const defaultCategories: Category[] = [
-    { id: "1", name: "Jewelry", name_bn: "জুয়েলারি", slug: "jewelry", image_url: null },
-    { id: "2", name: "Bags", name_bn: "ব্যাগ", slug: "bags", image_url: null },
-    { id: "3", name: "Woven", name_bn: "বোনা", slug: "woven", image_url: null },
-    { id: "4", name: "Art", name_bn: "শিল্প", slug: "art", image_url: null },
-  ];
-
-  const displayCategories = categories.length > 0 ? categories : defaultCategories;
+  // Use fetched categories directly - no default fallback
+  const displayCategories = categories;
 
   // Calculate pagination dots
   const dotsCount = Math.ceil(displayCategories.length / 3);
