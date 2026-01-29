@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, User, ShoppingBag, Menu, X, ChevronDown, LogOut, Palette } from "lucide-react";
+import { User, ShoppingBag, Menu, ChevronDown, LogOut, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -9,11 +9,11 @@ import { useCart } from "@/hooks/useCart";
 import { supabase } from "@/integrations/supabase/client";
 import CartDrawer from "@/components/modals/CartDrawer";
 import CustomOrderModal from "@/components/modals/CustomOrderModal";
-import SearchModal from "@/components/modals/SearchModal";
 import MobileAppHeader from "@/components/mobile/MobileAppHeader";
 import MobileAppBottomNav from "@/components/mobile/MobileAppBottomNav";
 import MobileDrawer from "@/components/mobile/MobileDrawer";
 import LanguageToggle from "@/components/common/LanguageToggle";
+import InlineSearch from "@/components/search/InlineSearch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,7 +65,6 @@ const Header = () => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [customOrderOpen, setCustomOrderOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   
   const [branding, setBranding] = useState<SiteBranding>({
     logo_url: null,
@@ -266,17 +265,13 @@ const Header = () => {
                 Custom Design
               </Button>
 
+              {/* Inline Search - Desktop */}
+              <div className="hidden lg:block w-64">
+                <InlineSearch placeholder="Search..." />
+              </div>
+
               {/* Language Toggle */}
               <LanguageToggle />
-
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-foreground/80 hover:text-gold hover:bg-transparent"
-                onClick={() => setSearchOpen(true)}
-              >
-                <Search className="h-5 w-5" />
-              </Button>
               
               {/* User Menu */}
               {user ? (
@@ -351,7 +346,7 @@ const Header = () => {
 
       {/* Mobile App Header - Shows on mobile only */}
       <MobileAppHeader
-        onSearchClick={() => setSearchOpen(true)}
+        onSearchClick={() => {}}
         onCartClick={() => setCartOpen(true)}
         onMenuClick={() => setIsOpen(true)}
         branding={branding}
@@ -368,11 +363,10 @@ const Header = () => {
       {/* Modals */}
       <CartDrawer open={cartOpen} onOpenChange={setCartOpen} />
       <CustomOrderModal open={customOrderOpen} onOpenChange={setCustomOrderOpen} />
-      <SearchModal open={searchOpen} onOpenChange={setSearchOpen} />
       
       {/* Mobile Bottom Navigation - App style */}
       <MobileAppBottomNav 
-        onSearchClick={() => setSearchOpen(true)} 
+        onSearchClick={() => {}} 
         onCartClick={() => setCartOpen(true)} 
       />
     </>

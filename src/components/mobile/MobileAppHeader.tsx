@@ -1,4 +1,5 @@
-import { Search, Bell } from "lucide-react";
+import { Bell } from "lucide-react";
+import InlineSearch from "@/components/search/InlineSearch";
 
 interface MobileAppHeaderProps {
   onSearchClick: () => void;
@@ -13,23 +14,18 @@ interface MobileAppHeaderProps {
   title?: string;
 }
 
-const MobileAppHeader = ({
-  onSearchClick,
-}: MobileAppHeaderProps) => {
+const MobileAppHeader = ({}: MobileAppHeaderProps) => {
   return (
     <header className="md:hidden fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/50 safe-area-top">
       <div className="flex items-center gap-3 h-14 px-4">
-        {/* Search Bar */}
-        <button
-          onClick={onSearchClick}
-          className="flex-1 flex items-center gap-3 h-10 px-4 bg-muted rounded-full text-muted-foreground"
-        >
-          <Search className="h-4 w-4" />
-          <span className="text-sm">Search products...</span>
-        </button>
+        {/* Inline Ajax Search */}
+        <InlineSearch 
+          placeholder="Search products..." 
+          className="flex-1"
+        />
 
         {/* Notification Bell */}
-        <button className="relative w-10 h-10 flex items-center justify-center rounded-full bg-muted">
+        <button className="relative w-10 h-10 flex items-center justify-center rounded-full bg-muted flex-shrink-0">
           <Bell className="h-5 w-5 text-foreground/80" />
           <span className="absolute top-2 right-2 w-2 h-2 bg-gold rounded-full" />
         </button>
