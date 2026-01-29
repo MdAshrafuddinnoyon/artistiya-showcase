@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import heroImage from "@/assets/hero-artisan.jpg";
 
@@ -9,16 +8,11 @@ interface HeroSlide {
   id: string;
   title: string | null;
   title_highlight: string | null;
-  title_end: string | null;
-  badge_text: string | null;
   description: string | null;
+  image_url: string | null;
   button_text: string | null;
   button_link: string | null;
-  secondary_button_text: string | null;
-  secondary_button_link: string | null;
-  image_url: string | null;
-  is_active: boolean;
-  display_order: number;
+  badge_text: string | null;
 }
 
 const MobileHeroSlider = () => {
@@ -27,182 +21,146 @@ const MobileHeroSlider = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const fetchSlides = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("hero_slides")
+          .select("*")
+          .eq("is_active", true)
+          .order("display_order", { ascending: true });
+
+        if (!error && data && data.length > 0) {
+          setSlides(data);
+        }
+      } catch (error) {
+        console.error("Error fetching slides:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchSlides();
   }, []);
 
-  const fetchSlides = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("hero_slides")
-        .select("*")
-        .eq("is_active", true)
-        .order("display_order");
-
-      if (error) throw error;
-      setSlides(data || []);
-    } catch (error) {
-      console.error("Error fetching slides:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Auto-slide every 4 seconds
   useEffect(() => {
     if (slides.length <= 1) return;
-    const interval = setInterval(() => {
+    const timer = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % slides.length);
-    }, 4000);
-    return () => clearInterval(interval);
+    }, 5000);
+    return () => clearInterval(timer);
   }, [slides.length]);
 
-  // Default slide
+  if (loading) {
+    return (
+      <div className="md:hidden pt-16 px-4">
+        <div className="rounded-2xl overflow-hidden bg-gray-200 animate-pulse aspect-[16/9]" />
+      </div>
+    );
+  }
+
+  // Default slide if no slides in database
   const defaultSlide: HeroSlide = {
     id: "default",
-    title: "Discover",
-    title_highlight: "Handcrafted",
-    title_end: "Elegance",
-    badge_text: "New Collection",
-    description: "Premium artisan jewelry and accessories",
+    title: "Handcrafted",
+    title_highlight: "Elegance",
+    description: "Discover authentic artisan creations",
+    image_url: heroImage,
     button_text: "Shop Now",
     button_link: "/shop",
-    secondary_button_text: null,
-    secondary_button_link: null,
-    image_url: null,
-    is_active: true,
-    display_order: 0,
+    badge_text: "New Collection",
   };
 
   const activeSlides = slides.length > 0 ? slides : [defaultSlide];
   const currentSlide = activeSlides[currentIndex];
 
-  if (loading) {
-    return (
-      <div className="md:hidden pt-28 px-4 pb-4">
-        <div className="relative w-full aspect-[3/4] bg-muted animate-pulse rounded-2xl" />
-      </div>
-    );
-  }
-
   return (
-    <section className="md:hidden pt-28 px-4 pb-4">
-      <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden">
-        {/* Slide Images */}
+    <section className="md:hidden pt-16 px-4">
+      <div className="relative rounded-2xl overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
-            key={currentSlide.id}
-            initial={{ opacity: 0, scale: 1.05 }}
-            animate={{ opacity: 1, scale: 1 }}
+            key={currentIndex}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
-            className="absolute inset-0"
+            className="relative aspect-[16/9]"
           >
+            {/* Background Image */}
             <img
               src={currentSlide.image_url || heroImage}
-              alt="Hero"
-              className="w-full h-full object-cover"
+              alt={currentSlide.title || "Promo"}
+              className="absolute inset-0 w-full h-full object-cover"
             />
+            
             {/* Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
-          </motion.div>
-        </AnimatePresence>
-
-        {/* Content Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentSlide.id + "-content"}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-2"
-            >
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-900/80 via-purple-800/60 to-transparent" />
+            
+            {/* Content */}
+            <div className="absolute inset-0 flex flex-col justify-center p-5">
               {currentSlide.badge_text && (
-                <span className="inline-block bg-gold/20 text-gold text-[10px] px-2.5 py-0.5 rounded-full font-medium">
+                <span className="inline-block px-2 py-0.5 bg-green-400 text-green-900 text-[10px] font-semibold uppercase rounded w-fit mb-2">
                   {currentSlide.badge_text}
                 </span>
               )}
-
-              <h2 className="font-display text-xl text-foreground leading-tight">
+              
+              <h2 className="text-white text-lg font-bold leading-tight">
                 {currentSlide.title}
                 {currentSlide.title_highlight && (
-                  <span className="text-gold"> {currentSlide.title_highlight}</span>
+                  <span className="text-yellow-300"> {currentSlide.title_highlight}</span>
                 )}
               </h2>
-
+              
               {currentSlide.description && (
-                <p className="text-xs text-muted-foreground line-clamp-2">
+                <p className="text-white/80 text-xs mt-1 line-clamp-2 max-w-[60%]">
                   {currentSlide.description}
                 </p>
               )}
+            </div>
+          </motion.div>
+        </AnimatePresence>
 
-              {currentSlide.button_text && currentSlide.button_link && (
-                <Link to={currentSlide.button_link}>
-                  <Button variant="gold" size="sm" className="mt-2 h-8 text-xs">
-                    {currentSlide.button_text}
-                  </Button>
-                </Link>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-        {/* Slide Indicators */}
+        {/* Navigation Arrows */}
         {activeSlides.length > 1 && (
-          <div className="absolute top-4 right-4 flex gap-1.5">
-            {activeSlides.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentIndex(index)}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  index === currentIndex
-                    ? "w-6 bg-gold"
-                    : "w-1.5 bg-foreground/30"
-                }`}
-              />
-            ))}
-          </div>
+          <>
+            <button
+              onClick={() => setCurrentIndex((prev) => (prev - 1 + activeSlides.length) % activeSlides.length)}
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center"
+            >
+              <ChevronLeft className="h-4 w-4 text-white" />
+            </button>
+            <button
+              onClick={() => setCurrentIndex((prev) => (prev + 1) % activeSlides.length)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center"
+            >
+              <ChevronRight className="h-4 w-4 text-white" />
+            </button>
+          </>
         )}
       </div>
 
-      {/* Quick Action Cards */}
-      <div className="grid grid-cols-2 gap-2 mt-3">
-        <QuickActionCard
-          title="New Arrivals"
-          subtitle="Fresh designs"
-          href="/collections/new-arrivals"
-          bgColor="bg-gold/10"
-          textColor="text-gold"
-        />
-        <QuickActionCard
-          title="Best Sellers"
-          subtitle="Top picks"
-          href="/collections/best-sellers"
-          bgColor="bg-muted"
-          textColor="text-foreground"
-        />
-      </div>
+      {/* Slide Info Text */}
+      <p className="text-center text-gray-400 text-[10px] mt-2">
+        *Valid offers available. Check terms & conditions
+      </p>
+
+      {/* Pagination Dots */}
+      {activeSlides.length > 1 && (
+        <div className="flex justify-center gap-1.5 mt-2">
+          {activeSlides.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => setCurrentIndex(idx)}
+              className={`h-1.5 rounded-full transition-all ${
+                idx === currentIndex 
+                  ? "w-5 bg-orange-500" 
+                  : "w-1.5 bg-gray-300"
+              }`}
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 };
-
-interface QuickActionCardProps {
-  title: string;
-  subtitle: string;
-  href: string;
-  bgColor: string;
-  textColor: string;
-}
-
-const QuickActionCard = ({ title, subtitle, href, bgColor, textColor }: QuickActionCardProps) => (
-  <Link
-    to={href}
-    className={`${bgColor} rounded-xl p-3 flex flex-col justify-center active:scale-95 transition-transform`}
-  >
-    <span className={`font-display text-xs ${textColor}`}>{title}</span>
-    <span className="text-[10px] text-muted-foreground">{subtitle}</span>
-  </Link>
-);
 
 export default MobileHeroSlider;

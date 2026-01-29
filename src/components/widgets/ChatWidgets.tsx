@@ -39,7 +39,7 @@ const ChatWidgets = ({
   };
 
   return (
-    <div className="fixed bottom-32 md:bottom-6 right-4 md:right-6 z-30">
+    <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-30 md:z-40">
       <AnimatePresence>
         {isOpen && (
           <motion.div
