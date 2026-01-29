@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Eye, Truck, CheckCircle, XCircle, Clock, Search, AlertTriangle, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -16,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import BulkSelectionToolbar from "./BulkSelectionToolbar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -68,6 +70,7 @@ const AdminOrders = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -167,6 +170,67 @@ const AdminOrders = () => {
     return option?.color || "bg-muted";
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) 
+        ? prev.filter(x => x !== id) 
+        : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    setSelectedIds(filteredOrders.map(o => o.id));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedIds([]);
+  };
+
+  const handleBulkStatusChange = async (status: string) => {
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ status: status as any })
+        .in("id", selectedIds);
+
+      if (error) throw error;
+      toast.success(`${selectedIds.length} orders updated to ${status}`);
+      setSelectedIds([]);
+      fetchOrders();
+    } catch (error) {
+      console.error("Error updating orders:", error);
+      toast.error("Failed to update orders");
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!confirm(`Delete ${selectedIds.length} orders? This cannot be undone.`)) return;
+    
+    try {
+      // First delete order items
+      const { error: itemsError } = await supabase
+        .from("order_items")
+        .delete()
+        .in("order_id", selectedIds);
+
+      if (itemsError) throw itemsError;
+
+      // Then delete orders
+      const { error } = await supabase
+        .from("orders")
+        .delete()
+        .in("id", selectedIds);
+
+      if (error) throw error;
+      toast.success(`${selectedIds.length} orders deleted`);
+      setSelectedIds([]);
+      fetchOrders();
+    } catch (error) {
+      console.error("Error deleting orders:", error);
+      toast.error("Failed to delete orders");
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -215,12 +279,41 @@ const AdminOrders = () => {
         </div>
       </div>
 
+      {/* Bulk Selection Toolbar */}
+      <BulkSelectionToolbar
+        selectedIds={selectedIds}
+        totalCount={filteredOrders.length}
+        onSelectAll={handleSelectAll}
+        onDeselectAll={handleDeselectAll}
+        onBulkDelete={handleBulkDelete}
+        customActions={
+          selectedIds.length > 0 && (
+            <Select onValueChange={handleBulkStatusChange}>
+              <SelectTrigger className="w-36 h-8">
+                <SelectValue placeholder="Change Status" />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map(s => (
+                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )
+        }
+      />
+
       {/* Orders List */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-muted/50">
               <tr>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground w-10">
+                  <Checkbox 
+                    checked={selectedIds.length === filteredOrders.length && filteredOrders.length > 0}
+                    onCheckedChange={(checked) => checked ? handleSelectAll() : handleDeselectAll()}
+                  />
+                </th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Order</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Customer</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Total</th>
@@ -234,13 +327,19 @@ const AdminOrders = () => {
             <tbody>
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={9} className="text-center py-12 text-muted-foreground">
                     No orders found
                   </td>
                 </tr>
               ) : (
                 filteredOrders.map((order) => (
-                  <tr key={order.id} className="border-t border-border hover:bg-muted/30">
+                  <tr key={order.id} className={`border-t border-border hover:bg-muted/30 ${selectedIds.includes(order.id) ? 'bg-gold/5' : ''}`}>
+                    <td className="p-4">
+                      <Checkbox 
+                        checked={selectedIds.includes(order.id)}
+                        onCheckedChange={() => toggleSelect(order.id)}
+                      />
+                    </td>
                     <td className="p-4">
                       <p className="font-medium text-foreground">{order.order_number}</p>
                       {order.is_preorder && (

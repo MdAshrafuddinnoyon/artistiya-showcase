@@ -6,8 +6,8 @@ import { useWishlist } from "@/hooks/useWishlist";
 import { cn } from "@/lib/utils";
 
 interface MobileAppBottomNavProps {
-  onSearchClick: () => void;
-  onCartClick: () => void;
+  onSearchClick?: () => void;
+  onCartClick?: () => void;
 }
 
 const MobileAppBottomNav = ({ onCartClick }: MobileAppBottomNavProps) => {

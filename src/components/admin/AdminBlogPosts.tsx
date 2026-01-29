@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import BulkSelectionToolbar from "./BulkSelectionToolbar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -35,6 +37,7 @@ const AdminBlogPosts = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -176,6 +179,56 @@ const AdminBlogPosts = () => {
       post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       post.slug.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleSelectAll = () => setSelectedIds(filteredPosts.map(p => p.id));
+  const handleDeselectAll = () => setSelectedIds([]);
+
+  const handleBulkPublish = async () => {
+    try {
+      const { error } = await supabase
+        .from("blog_posts")
+        .update({ is_published: true, published_at: new Date().toISOString() })
+        .in("id", selectedIds);
+      if (error) throw error;
+      toast.success(`${selectedIds.length} posts published`);
+      setSelectedIds([]);
+      fetchPosts();
+    } catch (error) {
+      toast.error("Failed to publish posts");
+    }
+  };
+
+  const handleBulkUnpublish = async () => {
+    try {
+      const { error } = await supabase
+        .from("blog_posts")
+        .update({ is_published: false, published_at: null })
+        .in("id", selectedIds);
+      if (error) throw error;
+      toast.success(`${selectedIds.length} posts unpublished`);
+      setSelectedIds([]);
+      fetchPosts();
+    } catch (error) {
+      toast.error("Failed to unpublish posts");
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!confirm(`Delete ${selectedIds.length} posts? This cannot be undone.`)) return;
+    try {
+      const { error } = await supabase.from("blog_posts").delete().in("id", selectedIds);
+      if (error) throw error;
+      toast.success(`${selectedIds.length} posts deleted`);
+      setSelectedIds([]);
+      fetchPosts();
+    } catch (error) {
+      toast.error("Failed to delete posts");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -329,6 +382,18 @@ const AdminBlogPosts = () => {
         </div>
       </div>
 
+      {/* Bulk Selection Toolbar */}
+      <BulkSelectionToolbar
+        selectedIds={selectedIds}
+        totalCount={filteredPosts.length}
+        onSelectAll={handleSelectAll}
+        onDeselectAll={handleDeselectAll}
+        onBulkDelete={handleBulkDelete}
+        onBulkPublish={handleBulkPublish}
+        onBulkUnpublish={handleBulkUnpublish}
+        showPublish={true}
+      />
+
       {loading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
@@ -344,9 +409,20 @@ const AdminBlogPosts = () => {
           {filteredPosts.map((post) => (
             <div
               key={post.id}
-              className="bg-card border border-border rounded-lg p-4 flex items-center justify-between"
+              className={`bg-card border border-border rounded-lg p-4 flex items-center justify-between ${selectedIds.includes(post.id) ? 'ring-1 ring-gold bg-gold/5' : ''}`}
             >
               <div className="flex items-center gap-4">
+                <Checkbox 
+                  checked={selectedIds.includes(post.id)}
+                  onCheckedChange={() => toggleSelect(post.id)}
+                />
+                {post.featured_image && (
+                  <img
+                    src={post.featured_image}
+                    alt={post.title}
+                    className="w-16 h-16 object-cover rounded-lg"
+                  />
+                )}
                 {post.featured_image && (
                   <img
                     src={post.featured_image}

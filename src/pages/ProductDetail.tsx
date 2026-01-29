@@ -11,9 +11,13 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import RelatedProducts from "@/components/product/RelatedProducts";
 import WhatsAppOrderButton from "@/components/common/WhatsAppOrderButton";
+import MobileProductDetail from "@/components/mobile/MobileProductDetail";
+import MobileAppHeader from "@/components/mobile/MobileAppHeader";
+import MobileAppBottomNav from "@/components/mobile/MobileAppBottomNav";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 
 interface Product {
@@ -46,7 +50,7 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { addToCart } = useCart();
-  
+  const isMobile = useIsMobile();
   
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -152,8 +156,8 @@ const ProductDetail = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
-        <main className="pt-32 pb-24">
+        {!isMobile && <Header />}
+        <main className={isMobile ? "pt-16 pb-24" : "pt-32 pb-24"}>
           <div className="container mx-auto px-4">
             <div className="grid lg:grid-cols-2 gap-12 animate-pulse">
               <div className="aspect-square bg-muted rounded-lg" />
@@ -165,7 +169,7 @@ const ProductDetail = () => {
             </div>
           </div>
         </main>
-        <Footer />
+        {!isMobile && <Footer />}
       </div>
     );
   }
@@ -173,14 +177,15 @@ const ProductDetail = () => {
   if (!product) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
-        <main className="pt-32 pb-24 text-center">
+        {!isMobile && <Header />}
+        <main className={isMobile ? "pt-16 pb-24 text-center" : "pt-32 pb-24 text-center"}>
           <h1 className="font-display text-3xl text-foreground">Product not found</h1>
           <Link to="/shop">
             <Button variant="gold" className="mt-6">Back to Shop</Button>
           </Link>
         </main>
-        <Footer />
+        {!isMobile && <Footer />}
+        {isMobile && <MobileAppBottomNav />}
       </div>
     );
   }
@@ -188,6 +193,16 @@ const ProductDetail = () => {
   const productImages = product.images?.length > 0 
     ? product.images 
     : ["/placeholder.svg"];
+
+  // Render mobile-specific layout
+  if (isMobile) {
+    return (
+      <>
+        <MobileProductDetail product={product} />
+        <MobileAppBottomNav />
+      </>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

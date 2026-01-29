@@ -1,7 +1,7 @@
 import { useIsMobile } from "@/hooks/use-mobile";
 import MobileHeroSlider from "./MobileHeroSlider";
 import MobileCategoryPills from "./MobileCategoryPills";
-import MobileProductSection from "./MobileProductSection";
+import MobileProductSlider from "./MobileProductSlider";
 import MobileRecentlyViewed from "./MobileRecentlyViewed";
 
 const MobileHomeLayout = () => {
@@ -17,15 +17,15 @@ const MobileHomeLayout = () => {
       {/* Category Pills - Dynamic from categories table */}
       <MobileCategoryPills />
 
-      {/* Featured Products (Hot Sales) - Dynamic from products table */}
-      <MobileProductSection 
+      {/* Featured Products (Hot Sales) - Dynamic with Slider */}
+      <MobileProductSlider 
         title="Hot Sales" 
         queryType="featured" 
         showViewAll={true}
       />
 
-      {/* New Arrivals - Dynamic from products table */}
-      <MobileProductSection 
+      {/* New Arrivals - Dynamic with Slider */}
+      <MobileProductSlider 
         title="New Arrivals" 
         queryType="new_arrivals" 
         showViewAll={true}
@@ -34,8 +34,8 @@ const MobileHomeLayout = () => {
       {/* Recently Viewed / Featured Grid - Dynamic */}
       <MobileRecentlyViewed />
 
-      {/* All Products Section */}
-      <MobileProductSection 
+      {/* All Products Section with Slider */}
+      <MobileProductSlider 
         title="Explore More" 
         queryType="all" 
         showViewAll={true}
