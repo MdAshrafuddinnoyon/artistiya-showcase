@@ -73,6 +73,8 @@ import AdminFAQs from "@/components/admin/AdminFAQs";
 import AdminFooterLinks from "@/components/admin/AdminFooterLinks";
 import AdminCustomers from "@/components/admin/AdminCustomers";
 import AdminAnnouncementBar from "@/components/admin/AdminAnnouncementBar";
+import AdminGoogleIntegrations from "@/components/admin/AdminGoogleIntegrations";
+import AdminEmailSettings from "@/components/admin/AdminEmailSettings";
 
 // Menu sections for organized navigation
 const menuSections = [
@@ -138,8 +140,10 @@ const menuSections = [
       { id: "delivery", name: "Delivery Providers", icon: Truck },
       { id: "delivery-zones", name: "Delivery Zones", icon: Truck },
       { id: "currency", name: "Currency", icon: DollarSign },
+      { id: "email-settings", name: "Email Settings", icon: Mail },
       { id: "email-templates", name: "Email Templates", icon: Mail },
       { id: "invoice", name: "Invoice", icon: Receipt },
+      { id: "integrations", name: "Integrations", icon: Globe },
       { id: "marketing", name: "Marketing", icon: Megaphone },
       { id: "settings", name: "General", icon: Settings },
     ],
@@ -265,8 +269,12 @@ const Admin = () => {
         return <AdminUpsellOffers />;
       case "checkout":
         return <AdminCheckoutSettings />;
+      case "email-settings":
+        return <AdminEmailSettings />;
       case "email-templates":
         return <AdminEmailTemplates />;
+      case "integrations":
+        return <AdminGoogleIntegrations />;
       case "invoice":
         return <AdminInvoiceSettings />;
       case "settings":

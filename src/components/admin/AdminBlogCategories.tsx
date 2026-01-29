@@ -1,9 +1,17 @@
 import { useState, useEffect } from "react";
-import { Plus, Edit, Trash2, GripVertical } from "lucide-react";
+import { Plus, Edit, Trash2, GripVertical, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import BulkSelectionToolbar from "./BulkSelectionToolbar";
 
 interface BlogCategory {
   id: string;
@@ -22,6 +31,7 @@ interface BlogCategory {
   description: string | null;
   display_order: number;
   is_active: boolean;
+  parent_id: string | null;
 }
 
 const AdminBlogCategories = () => {
@@ -29,6 +39,7 @@ const AdminBlogCategories = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<BlogCategory | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -36,6 +47,7 @@ const AdminBlogCategories = () => {
     slug: "",
     description: "",
     is_active: true,
+    parent_id: "",
   });
 
   useEffect(() => {
@@ -71,9 +83,13 @@ const AdminBlogCategories = () => {
 
     try {
       const categoryData = {
-        ...formData,
+        name: formData.name,
+        name_bn: formData.name_bn || null,
         slug: formData.slug || generateSlug(formData.name),
+        description: formData.description || null,
+        is_active: formData.is_active,
         display_order: editingCategory ? editingCategory.display_order : categories.length,
+        parent_id: formData.parent_id || null,
       };
 
       if (editingCategory) {
@@ -108,6 +124,7 @@ const AdminBlogCategories = () => {
       slug: category.slug,
       description: category.description || "",
       is_active: category.is_active,
+      parent_id: category.parent_id || "",
     });
     setDialogOpen(true);
   };
@@ -126,6 +143,30 @@ const AdminBlogCategories = () => {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (!confirm(`Delete ${selectedIds.length} categories?`)) return;
+
+    try {
+      const { error } = await supabase
+        .from("blog_categories")
+        .delete()
+        .in("id", selectedIds);
+
+      if (error) throw error;
+      toast.success(`Deleted ${selectedIds.length} categories`);
+      setSelectedIds([]);
+      fetchCategories();
+    } catch (error) {
+      toast.error("Failed to delete categories");
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
   const resetForm = () => {
     setEditingCategory(null);
     setFormData({
@@ -134,7 +175,60 @@ const AdminBlogCategories = () => {
       slug: "",
       description: "",
       is_active: true,
+      parent_id: "",
     });
+  };
+
+  // Build tree structure
+  const parentCategories = categories.filter((c) => !c.parent_id);
+  const getChildren = (parentId: string) => categories.filter((c) => c.parent_id === parentId);
+
+  const renderCategory = (category: BlogCategory, level: number = 0) => {
+    const children = getChildren(category.id);
+
+    return (
+      <div key={category.id}>
+        <div
+          className={`bg-card border border-border rounded-lg p-4 flex items-center justify-between ${level > 0 ? "ml-8" : ""}`}
+        >
+          <div className="flex items-center gap-4">
+            <Checkbox
+              checked={selectedIds.includes(category.id)}
+              onCheckedChange={() => toggleSelect(category.id)}
+            />
+            <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
+            <div>
+              <div className="flex items-center gap-2">
+                {level > 0 && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                <h3 className="font-medium text-foreground">{category.name}</h3>
+                {category.name_bn && (
+                  <span className="text-sm text-muted-foreground font-bengali">({category.name_bn})</span>
+                )}
+                {!category.is_active && (
+                  <span className="text-xs bg-muted px-2 py-0.5 rounded">Inactive</span>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">/{category.slug}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => handleEdit(category)}>
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-destructive"
+              onClick={() => handleDelete(category.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        {children.map((child) => renderCategory(child, level + 1))}
+      </div>
+    );
   };
 
   return (
@@ -142,7 +236,7 @@ const AdminBlogCategories = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-display text-foreground">Blog Categories</h2>
-          <p className="text-sm text-muted-foreground">Organize your blog posts</p>
+          <p className="text-sm text-muted-foreground">Organize your blog posts with categories and subcategories</p>
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -184,6 +278,7 @@ const AdminBlogCategories = () => {
                     id="name_bn"
                     value={formData.name_bn}
                     onChange={(e) => setFormData({ ...formData, name_bn: e.target.value })}
+                    className="font-bengali"
                   />
                 </div>
               </div>
@@ -196,6 +291,28 @@ const AdminBlogCategories = () => {
                   onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
                   required
                 />
+              </div>
+
+              <div>
+                <Label htmlFor="parent_id">Parent Category</Label>
+                <Select
+                  value={formData.parent_id}
+                  onValueChange={(value) => setFormData({ ...formData, parent_id: value === "none" ? "" : value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="None (Top Level)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None (Top Level)</SelectItem>
+                    {categories
+                      .filter((c) => c.id !== editingCategory?.id && !c.parent_id)
+                      .map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
@@ -228,6 +345,15 @@ const AdminBlogCategories = () => {
         </Dialog>
       </div>
 
+      {/* Bulk Selection Toolbar */}
+      <BulkSelectionToolbar
+        selectedIds={selectedIds}
+        totalCount={categories.length}
+        onSelectAll={() => setSelectedIds(categories.map((c) => c.id))}
+        onDeselectAll={() => setSelectedIds([])}
+        onBulkDelete={handleBulkDelete}
+      />
+
       {loading ? (
         <div className="space-y-2">
           {[...Array(3)].map((_, i) => (
@@ -240,42 +366,7 @@ const AdminBlogCategories = () => {
         </div>
       ) : (
         <div className="space-y-2">
-          {categories.map((category) => (
-            <div
-              key={category.id}
-              className="bg-card border border-border rounded-lg p-4 flex items-center justify-between"
-            >
-              <div className="flex items-center gap-4">
-                <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-medium text-foreground">{category.name}</h3>
-                    {category.name_bn && (
-                      <span className="text-sm text-muted-foreground">({category.name_bn})</span>
-                    )}
-                    {!category.is_active && (
-                      <span className="text-xs bg-muted px-2 py-0.5 rounded">Inactive</span>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">/{category.slug}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" onClick={() => handleEdit(category)}>
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-destructive"
-                  onClick={() => handleDelete(category.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
+          {parentCategories.map((category) => renderCategory(category))}
         </div>
       )}
     </div>
