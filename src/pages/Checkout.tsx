@@ -13,10 +13,12 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import WhatsAppOrderButton from "@/components/common/WhatsAppOrderButton";
 import CheckoutOffersSidebar from "@/components/checkout/CheckoutOffersSidebar";
+import MobileCheckout from "@/components/mobile/MobileCheckout";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { useLanguage } from "@/hooks/useLanguage";
 import { usePayment } from "@/hooks/usePayment";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { divisions, calculateShippingCost, isDhakaDistrict } from "@/data/bangladeshLocations";
@@ -26,6 +28,7 @@ const Checkout = () => {
   const { items, subtotal, clearCart } = useCart();
   const { t, language } = useLanguage();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { initiateBkashPayment, initiateNagadPayment, redirectToPayment, loading: paymentLoading } = usePayment();
   
   const [loading, setLoading] = useState(false);
@@ -34,6 +37,11 @@ const Checkout = () => {
   const [paymentMode, setPaymentMode] = useState<"auto" | "manual">("auto");
   const [bkashAvailable, setBkashAvailable] = useState(false);
   const [nagadAvailable, setNagadAvailable] = useState(false);
+
+  // Render mobile checkout
+  if (isMobile) {
+    return <MobileCheckout />;
+  }
   
   const [selectedDivision, setSelectedDivision] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");

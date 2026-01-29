@@ -17,11 +17,12 @@ interface Product {
 
 interface WhatsAppOrderButtonProps {
   product: Product;
+  quantity?: number;
   className?: string;
   variant?: "full" | "icon";
 }
 
-const WhatsAppOrderButton = ({ product, className = "", variant = "full" }: WhatsAppOrderButtonProps) => {
+const WhatsAppOrderButton = ({ product, quantity = 1, className = "", variant = "full" }: WhatsAppOrderButtonProps) => {
   const [whatsappNumber, setWhatsappNumber] = useState("8801XXXXXXXXX");
 
   useEffect(() => {
@@ -41,10 +42,12 @@ const WhatsAppOrderButton = ({ product, className = "", variant = "full" }: What
   }, []);
 
   const handleWhatsAppOrder = () => {
+    const total = product.price * quantity;
     const message = encodeURIComponent(
       `হ্যালো! আমি এই প্রোডাক্টটি অর্ডার করতে চাই:\n\n` +
       `📦 ${product.name}\n` +
-      `💰 মূল্য: ৳${product.price.toLocaleString()}\n` +
+      `📊 পরিমাণ: ${quantity}\n` +
+      `💰 মূল্য: ৳${total.toLocaleString()}\n` +
       `🔗 লিংক: ${window.location.origin}/product/${product.slug}\n\n` +
       `অনুগ্রহ করে ডেলিভারি সম্পর্কে তথ্য দিন।`
     );
