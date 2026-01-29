@@ -10,6 +10,7 @@ import {
   Menu,
   LogOut,
   ChevronRight,
+  ChevronDown,
   Home,
   FileText,
   Mail,
@@ -24,8 +25,17 @@ import {
   FolderOpen,
   Instagram,
   Gift,
+  Star,
+  AlertTriangle,
+  Palette,
+  Globe,
+  Layers,
+  ShoppingBag,
+  MessageSquare,
+  Sliders,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 
@@ -54,32 +64,70 @@ import AdminMediaManager from "@/components/admin/AdminMediaManager";
 import AdminContentPages from "@/components/admin/AdminContentPages";
 import AdminInstagramPosts from "@/components/admin/AdminInstagramPosts";
 import AdminUpsellOffers from "@/components/admin/AdminUpsellOffers";
+import AdminTestimonials from "@/components/admin/AdminTestimonials";
 
-const menuItems = [
-  { id: "dashboard", name: "Dashboard", icon: LayoutDashboard },
-  { id: "orders", name: "Orders", icon: ShoppingCart },
-  { id: "products", name: "Products", icon: Package },
-  { id: "categories", name: "Categories", icon: FolderTree },
-  { id: "media", name: "Media Manager", icon: FolderOpen },
-  { id: "blog", name: "Blog Posts", icon: FileText },
-  { id: "youtube", name: "YouTube", icon: Youtube },
-  { id: "leads", name: "Leads", icon: Users },
-  { id: "hero-slider", name: "Hero Slider", icon: Image },
-  { id: "homepage", name: "Homepage CMS", icon: Image },
-  { id: "instagram", name: "Instagram Posts", icon: Instagram },
-  { id: "category-settings", name: "Category Display", icon: FolderTree },
-  { id: "content-pages", name: "Content Pages", icon: FileText },
-  { id: "branding", name: "Site Branding", icon: Home },
-  { id: "menu-manager", name: "Menu Manager", icon: Menu },
-  { id: "upsells", name: "Upsell Offers", icon: Gift },
-  { id: "checkout", name: "Checkout Settings", icon: ShoppingCart },
-  { id: "payments", name: "Payments", icon: CreditCard },
-  { id: "delivery", name: "Delivery", icon: Truck },
-  { id: "currency", name: "Currency", icon: DollarSign },
-  { id: "marketing", name: "Marketing", icon: Megaphone },
-  { id: "email-templates", name: "Email Templates", icon: Mail },
-  { id: "invoice", name: "Invoice Settings", icon: Receipt },
-  { id: "settings", name: "Settings", icon: Settings },
+// Menu sections for organized navigation
+const menuSections = [
+  {
+    title: "Overview",
+    items: [
+      { id: "dashboard", name: "Dashboard", icon: LayoutDashboard },
+    ],
+  },
+  {
+    title: "Sales & Orders",
+    items: [
+      { id: "orders", name: "Orders", icon: ShoppingCart, badge: "new" },
+      { id: "leads", name: "Leads", icon: Users },
+      { id: "upsells", name: "Upsell Offers", icon: Gift },
+    ],
+  },
+  {
+    title: "Catalog",
+    items: [
+      { id: "products", name: "Products", icon: Package },
+      { id: "categories", name: "Categories", icon: FolderTree },
+    ],
+  },
+  {
+    title: "Content",
+    items: [
+      { id: "blog", name: "Blog Posts", icon: FileText },
+      { id: "content-pages", name: "Pages (About, Terms)", icon: Globe },
+      { id: "media", name: "Media Library", icon: FolderOpen },
+    ],
+  },
+  {
+    title: "Homepage",
+    items: [
+      { id: "hero-slider", name: "Hero Slider", icon: Image },
+      { id: "homepage", name: "Sections CMS", icon: Layers },
+      { id: "category-settings", name: "Category Display", icon: FolderTree },
+      { id: "instagram", name: "Instagram Feed", icon: Instagram },
+      { id: "youtube", name: "YouTube Videos", icon: Youtube },
+      { id: "testimonials", name: "Testimonials", icon: Star },
+    ],
+  },
+  {
+    title: "Appearance",
+    items: [
+      { id: "branding", name: "Site Branding", icon: Palette },
+      { id: "menu-manager", name: "Navigation Menu", icon: Menu },
+    ],
+  },
+  {
+    title: "Settings",
+    items: [
+      { id: "checkout", name: "Checkout", icon: ShoppingBag },
+      { id: "payments", name: "Payments", icon: CreditCard },
+      { id: "delivery", name: "Delivery", icon: Truck },
+      { id: "currency", name: "Currency", icon: DollarSign },
+      { id: "email-templates", name: "Email Templates", icon: Mail },
+      { id: "invoice", name: "Invoice", icon: Receipt },
+      { id: "marketing", name: "Marketing", icon: Megaphone },
+      { id: "settings", name: "General", icon: Settings },
+    ],
+  },
 ];
 
 const Admin = () => {
@@ -88,6 +136,7 @@ const Admin = () => {
   const { isAdmin, isLoading } = useAdmin();
   const [activeSection, setActiveSection] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [expandedSections, setExpandedSections] = useState<string[]>(["Overview", "Sales & Orders"]);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -104,6 +153,12 @@ const Admin = () => {
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
+  };
+
+  const toggleSection = (title: string) => {
+    setExpandedSections((prev) =>
+      prev.includes(title) ? prev.filter((s) => s !== title) : [...prev, title]
+    );
   };
 
   if (isLoading) {
@@ -169,6 +224,8 @@ const Admin = () => {
         return <AdminHomepageCMS />;
       case "instagram":
         return <AdminInstagramPosts />;
+      case "testimonials":
+        return <AdminTestimonials />;
       case "content-pages":
         return <AdminContentPages />;
       case "upsells":
@@ -186,12 +243,17 @@ const Admin = () => {
     }
   };
 
+  // Find active item name
+  const activeItem = menuSections
+    .flatMap((s) => s.items)
+    .find((item) => item.id === activeSection);
+
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
       <aside
         className={`${
-          sidebarOpen ? "w-64" : "w-20"
+          sidebarOpen ? "w-64" : "w-16"
         } bg-card border-r border-border transition-all duration-300 flex flex-col`}
       >
         {/* Logo */}
@@ -212,25 +274,55 @@ const Admin = () => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveSection(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                activeSection === item.id
-                  ? "bg-gold/20 text-gold"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
-            >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              {sidebarOpen && <span className="text-sm">{item.name}</span>}
-            </button>
+        <nav className="flex-1 p-2 overflow-y-auto">
+          {menuSections.map((section) => (
+            <div key={section.title} className="mb-2">
+              {sidebarOpen && (
+                <button
+                  onClick={() => toggleSection(section.title)}
+                  className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                >
+                  {section.title}
+                  <ChevronDown
+                    className={`h-3 w-3 transition-transform ${
+                      expandedSections.includes(section.title) ? "" : "-rotate-90"
+                    }`}
+                  />
+                </button>
+              )}
+
+              {(expandedSections.includes(section.title) || !sidebarOpen) && (
+                <div className="space-y-0.5">
+                  {section.items.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveSection(item.id)}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                        activeSection === item.id
+                          ? "bg-gold/20 text-gold"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                      title={!sidebarOpen ? item.name : undefined}
+                    >
+                      <item.icon className="h-4 w-4 flex-shrink-0" />
+                      {sidebarOpen && (
+                        <span className="text-sm flex-1 text-left">{item.name}</span>
+                      )}
+                      {sidebarOpen && item.badge && (
+                        <Badge variant="secondary" className="text-xs h-5 px-1.5">
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-border space-y-2">
+        <div className="p-3 border-t border-border space-y-1">
           <Link to="/">
             <Button variant="outline" className="w-full justify-start" size="sm">
               <Home className="h-4 w-4 mr-2" />
@@ -252,11 +344,11 @@ const Admin = () => {
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
         {/* Top Bar */}
-        <header className="h-16 border-b border-border bg-card px-6 flex items-center justify-between">
+        <header className="h-14 border-b border-border bg-card px-6 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>Admin</span>
             <ChevronRight className="h-4 w-4" />
-            <span className="text-foreground capitalize">{activeSection.replace("-", " ")}</span>
+            <span className="text-foreground">{activeItem?.name || "Dashboard"}</span>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">{user?.email}</span>

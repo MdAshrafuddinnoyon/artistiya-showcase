@@ -1,31 +1,66 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Star, Quote } from "lucide-react";
+import { Star, Quote, ShoppingBag, User } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
-const testimonials = [
-  {
-    id: 1,
-    name: "Fatima Rahman",
-    location: "Dhaka",
-    text: "The craftsmanship is absolutely stunning. My necklace gets compliments everywhere I go. You can truly feel the love and care put into each piece.",
-    rating: 5,
-  },
-  {
-    id: 2,
-    name: "Ayesha Khan",
-    location: "Chittagong",
-    text: "I ordered a hand-painted bag as a gift for my mother. She was moved to tears by its beauty. artistiya.store has made a customer for life!",
-    rating: 5,
-  },
-  {
-    id: 3,
-    name: "Nadia Ahmed",
-    location: "Sylhet",
-    text: "The macramé wall hanging transformed my living room. It's not just decor, it's a conversation starter. Exceptional quality!",
-    rating: 5,
-  },
-];
+interface Testimonial {
+  id: string;
+  name: string;
+  location: string | null;
+  text: string;
+  rating: number;
+  customer_photo_url: string | null;
+  verified_purchase: boolean;
+}
 
 const TestimonialsSection = () => {
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTestimonials = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("testimonials")
+          .select("id, name, location, text, rating, customer_photo_url, verified_purchase")
+          .eq("is_active", true)
+          .order("display_order")
+          .limit(6);
+
+        if (error) throw error;
+        setTestimonials(data || []);
+      } catch (error) {
+        console.error("Error fetching testimonials:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTestimonials();
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="py-24 bg-charcoal">
+        <div className="container mx-auto px-4 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-card border border-border rounded-lg p-8 animate-pulse">
+                <div className="h-4 bg-muted rounded w-24 mb-6" />
+                <div className="h-20 bg-muted rounded mb-6" />
+                <div className="h-4 bg-muted rounded w-32" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (testimonials.length === 0) {
+    return null;
+  }
+
   return (
     <section className="py-24 bg-charcoal">
       <div className="container mx-auto px-4 lg:px-8">
@@ -72,13 +107,36 @@ const TestimonialsSection = () => {
               </p>
 
               {/* Author */}
-              <div className="border-t border-border pt-4">
-                <p className="font-display text-lg text-foreground">
-                  {testimonial.name}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {testimonial.location}
-                </p>
+              <div className="border-t border-border pt-4 flex items-center gap-4">
+                {testimonial.customer_photo_url ? (
+                  <img
+                    src={testimonial.customer_photo_url}
+                    alt={testimonial.name}
+                    className="w-12 h-12 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                    <User className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-display text-lg text-foreground">
+                      {testimonial.name}
+                    </p>
+                    {testimonial.verified_purchase && (
+                      <span className="inline-flex items-center gap-1 text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full">
+                        <ShoppingBag className="h-3 w-3" />
+                        Verified
+                      </span>
+                    )}
+                  </div>
+                  {testimonial.location && (
+                    <p className="text-sm text-muted-foreground">
+                      {testimonial.location}
+                    </p>
+                  )}
+                </div>
               </div>
             </motion.div>
           ))}

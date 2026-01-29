@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Eye, Truck, CheckCircle, XCircle, Clock, Search } from "lucide-react";
+import { Eye, Truck, CheckCircle, XCircle, Clock, Search, AlertTriangle, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -31,6 +31,8 @@ interface Order {
   is_preorder: boolean;
   notes: string | null;
   created_at: string;
+  fraud_score: number;
+  is_flagged: boolean;
   address: {
     full_name: string;
     phone: string;
@@ -91,10 +93,22 @@ const AdminOrders = () => {
 
       const { data, error } = await query;
 
-      if (error) throw error;
-      setOrders((data || []) as Order[]);
+      if (error) {
+        console.error("Query error:", error);
+        throw error;
+      }
+      
+      // Map data to include default values for new columns
+      const ordersWithDefaults = (data || []).map((order: any) => ({
+        ...order,
+        fraud_score: order.fraud_score || 0,
+        is_flagged: order.is_flagged || false,
+      }));
+      
+      setOrders(ordersWithDefaults as Order[]);
     } catch (error) {
       console.error("Error fetching orders:", error);
+      toast.error("Failed to fetch orders");
     } finally {
       setLoading(false);
     }
@@ -211,6 +225,7 @@ const AdminOrders = () => {
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Customer</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Total</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Payment</th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Risk</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Status</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Date</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Actions</th>
@@ -243,6 +258,24 @@ const AdminOrders = () => {
                       <span className="text-sm uppercase">{order.payment_method}</span>
                       {order.payment_transaction_id && (
                         <p className="text-xs text-muted-foreground">{order.payment_transaction_id}</p>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      {order.is_flagged ? (
+                        <div className="flex items-center gap-1 text-destructive">
+                          <AlertTriangle className="h-4 w-4" />
+                          <span className="text-xs font-medium">High Risk</span>
+                        </div>
+                      ) : order.fraud_score > 0 ? (
+                        <div className="flex items-center gap-1 text-yellow-500">
+                          <AlertTriangle className="h-4 w-4" />
+                          <span className="text-xs">{order.fraud_score}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-green-500">
+                          <Shield className="h-4 w-4" />
+                          <span className="text-xs">Safe</span>
+                        </div>
                       )}
                     </td>
                     <td className="p-4">
