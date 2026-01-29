@@ -546,6 +546,48 @@ export type Database = {
         }
         Relationships: []
       }
+      faq_items: {
+        Row: {
+          answer: string
+          answer_bn: string | null
+          category: string
+          category_bn: string | null
+          created_at: string
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          question: string
+          question_bn: string | null
+          updated_at: string
+        }
+        Insert: {
+          answer: string
+          answer_bn?: string | null
+          category: string
+          category_bn?: string | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          question: string
+          question_bn?: string | null
+          updated_at?: string
+        }
+        Update: {
+          answer?: string
+          answer_bn?: string | null
+          category?: string
+          category_bn?: string | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          question?: string
+          question_bn?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       filter_settings: {
         Row: {
           created_at: string
@@ -1504,6 +1546,51 @@ export type Database = {
           key?: string
           updated_at?: string
           value?: Json | null
+        }
+        Relationships: []
+      }
+      team_members: {
+        Row: {
+          bio: string | null
+          bio_bn: string | null
+          created_at: string
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          name_bn: string | null
+          photo_url: string | null
+          role: string
+          role_bn: string | null
+          updated_at: string
+        }
+        Insert: {
+          bio?: string | null
+          bio_bn?: string | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          name_bn?: string | null
+          photo_url?: string | null
+          role: string
+          role_bn?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bio?: string | null
+          bio_bn?: string | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          name_bn?: string | null
+          photo_url?: string | null
+          role?: string
+          role_bn?: string | null
+          updated_at?: string
         }
         Relationships: []
       }

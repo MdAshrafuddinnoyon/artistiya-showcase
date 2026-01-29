@@ -68,6 +68,8 @@ import AdminTestimonials from "@/components/admin/AdminTestimonials";
 import AdminThemeSettings from "@/components/admin/AdminThemeSettings";
 import AdminHomepageSections from "@/components/admin/AdminHomepageSections";
 import AdminDeliveryZones from "@/components/admin/AdminDeliveryZones";
+import AdminTeamMembers from "@/components/admin/AdminTeamMembers";
+import AdminFAQs from "@/components/admin/AdminFAQs";
 
 // Menu sections for organized navigation
 const menuSections = [
@@ -97,6 +99,8 @@ const menuSections = [
     items: [
       { id: "blog", name: "Blog Posts", icon: FileText },
       { id: "content-pages", name: "Pages (About, Terms)", icon: Globe },
+      { id: "team-members", name: "Team Members", icon: Users },
+      { id: "faqs", name: "FAQs", icon: MessageSquare },
       { id: "media", name: "Media Library", icon: FolderOpen },
     ],
   },
@@ -240,6 +244,10 @@ const Admin = () => {
         return <AdminTestimonials />;
       case "content-pages":
         return <AdminContentPages />;
+      case "team-members":
+        return <AdminTeamMembers />;
+      case "faqs":
+        return <AdminFAQs />;
       case "upsells":
         return <AdminUpsellOffers />;
       case "checkout":
