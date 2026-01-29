@@ -704,6 +704,42 @@ export type Database = {
         }
         Relationships: []
       }
+      homepage_sections: {
+        Row: {
+          config: Json
+          created_at: string
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          section_type: string
+          subtitle: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          section_type: string
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          section_type?: string
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       instagram_posts: {
         Row: {
           caption: string | null
@@ -1212,6 +1248,7 @@ export type Database = {
           created_at: string
           description: string | null
           dimensions: string | null
+          featured_section: string | null
           id: string
           images: string[] | null
           is_active: boolean | null
@@ -1236,6 +1273,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           dimensions?: string | null
+          featured_section?: string | null
           id?: string
           images?: string[] | null
           is_active?: boolean | null
@@ -1260,6 +1298,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           dimensions?: string | null
+          featured_section?: string | null
           id?: string
           images?: string[] | null
           is_active?: boolean | null
@@ -1500,6 +1539,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      theme_settings: {
+        Row: {
+          created_at: string
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          setting_key: string
+          setting_value?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
+        }
+        Relationships: []
       }
       upsell_offers: {
         Row: {

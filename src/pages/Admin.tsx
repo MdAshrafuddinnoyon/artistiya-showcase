@@ -65,6 +65,8 @@ import AdminContentPages from "@/components/admin/AdminContentPages";
 import AdminInstagramPosts from "@/components/admin/AdminInstagramPosts";
 import AdminUpsellOffers from "@/components/admin/AdminUpsellOffers";
 import AdminTestimonials from "@/components/admin/AdminTestimonials";
+import AdminThemeSettings from "@/components/admin/AdminThemeSettings";
+import AdminHomepageSections from "@/components/admin/AdminHomepageSections";
 
 // Menu sections for organized navigation
 const menuSections = [
@@ -102,6 +104,7 @@ const menuSections = [
     items: [
       { id: "hero-slider", name: "Hero Slider", icon: Image },
       { id: "homepage", name: "Sections CMS", icon: Layers },
+      { id: "homepage-sections", name: "Product Sections", icon: Package },
       { id: "category-settings", name: "Category Display", icon: FolderTree },
       { id: "instagram", name: "Instagram Feed", icon: Instagram },
       { id: "youtube", name: "YouTube Videos", icon: Youtube },
@@ -111,8 +114,9 @@ const menuSections = [
   {
     title: "Appearance",
     items: [
+      { id: "theme", name: "Theme Settings", icon: Palette },
       { id: "branding", name: "Site Branding", icon: Palette },
-      { id: "menu-manager", name: "Navigation Menu", icon: Menu },
+      { id: "menu-manager", name: "Mega Menu", icon: Menu },
     ],
   },
   {
@@ -216,12 +220,16 @@ const Admin = () => {
         return <AdminHeroSlider />;
       case "category-settings":
         return <AdminCategorySettings />;
+      case "theme":
+        return <AdminThemeSettings />;
       case "branding":
         return <AdminSiteBranding />;
       case "menu-manager":
         return <AdminMenuManager />;
       case "homepage":
         return <AdminHomepageCMS />;
+      case "homepage-sections":
+        return <AdminHomepageSections />;
       case "instagram":
         return <AdminInstagramPosts />;
       case "testimonials":
