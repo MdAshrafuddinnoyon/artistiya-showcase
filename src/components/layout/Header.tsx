@@ -14,6 +14,7 @@ import MobileAppBottomNav from "@/components/mobile/MobileAppBottomNav";
 import MobileDrawer from "@/components/mobile/MobileDrawer";
 import LanguageToggle from "@/components/common/LanguageToggle";
 import InlineSearch from "@/components/search/InlineSearch";
+import AnnouncementBar from "./AnnouncementBar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -121,17 +122,13 @@ const Header = () => {
 
   return (
     <>
-      {/* Desktop Header - Hidden on mobile */}
-      <header className="hidden md:block fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/50">
-        {/* Announcement Bar */}
-        {branding.header_announcement_active && (
-          <div className="bg-gold/10 border-b border-gold/20 py-2">
-            <p className="text-center text-sm text-gold tracking-wide font-body">
-              {branding.header_announcement_text}
-            </p>
-          </div>
-        )}
+      {/* Dynamic Announcement Bar - Desktop & Mobile */}
+      <div className="hidden md:block fixed top-0 left-0 right-0 z-50">
+        <AnnouncementBar />
+      </div>
 
+      {/* Desktop Header - Hidden on mobile */}
+      <header className="hidden md:block fixed top-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-b border-border/50" style={{ top: 'var(--announcement-height, 0px)' }}>
         <div className="container mx-auto px-4 lg:px-8">
           <nav className="flex items-center justify-between h-20">
             {/* Logo */}

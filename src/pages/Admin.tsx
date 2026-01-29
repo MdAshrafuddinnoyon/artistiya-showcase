@@ -71,6 +71,8 @@ import AdminDeliveryZones from "@/components/admin/AdminDeliveryZones";
 import AdminTeamMembers from "@/components/admin/AdminTeamMembers";
 import AdminFAQs from "@/components/admin/AdminFAQs";
 import AdminFooterLinks from "@/components/admin/AdminFooterLinks";
+import AdminCustomers from "@/components/admin/AdminCustomers";
+import AdminAnnouncementBar from "@/components/admin/AdminAnnouncementBar";
 
 // Menu sections for organized navigation
 const menuSections = [
@@ -85,6 +87,7 @@ const menuSections = [
     items: [
       { id: "orders", name: "Orders", icon: ShoppingCart, badge: "new" },
       { id: "leads", name: "Leads", icon: Users },
+      { id: "customers", name: "Customers", icon: Users },
       { id: "upsells", name: "Upsell Offers", icon: Gift },
     ],
   },
@@ -122,6 +125,7 @@ const menuSections = [
     items: [
       { id: "theme", name: "Theme Settings", icon: Palette },
       { id: "branding", name: "Site Branding", icon: Palette },
+      { id: "announcement", name: "Announcement Bar", icon: Megaphone },
       { id: "menu-manager", name: "Mega Menu", icon: Menu },
       { id: "footer-links", name: "Footer Links", icon: Sliders },
     ],
@@ -217,6 +221,10 @@ const Admin = () => {
         return <AdminYouTubeVideos />;
       case "leads":
         return <AdminLeads />;
+      case "customers":
+        return <AdminCustomers />;
+      case "announcement":
+        return <AdminAnnouncementBar />;
       case "marketing":
         return <AdminMarketingSettings />;
       case "payments":

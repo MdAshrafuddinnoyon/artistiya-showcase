@@ -53,6 +53,60 @@ export type Database = {
         }
         Relationships: []
       }
+      announcement_bar: {
+        Row: {
+          background_color: string | null
+          created_at: string | null
+          display_order: number | null
+          end_date: string | null
+          id: string
+          is_active: boolean | null
+          link_text: string | null
+          link_url: string | null
+          message: string
+          message_bn: string | null
+          show_on_desktop: boolean | null
+          show_on_mobile: boolean | null
+          start_date: string | null
+          text_color: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          background_color?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          link_text?: string | null
+          link_url?: string | null
+          message: string
+          message_bn?: string | null
+          show_on_desktop?: boolean | null
+          show_on_mobile?: boolean | null
+          start_date?: string | null
+          text_color?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          background_color?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          link_text?: string | null
+          link_url?: string | null
+          message?: string
+          message_bn?: string | null
+          show_on_desktop?: boolean | null
+          show_on_mobile?: boolean | null
+          start_date?: string | null
+          text_color?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       blog_categories: {
         Row: {
           created_at: string
@@ -524,6 +578,54 @@ export type Database = {
           status?: Database["public"]["Enums"]["custom_order_status"] | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      customers: {
+        Row: {
+          created_at: string | null
+          discount_percentage: number | null
+          email: string
+          full_name: string
+          id: string
+          is_premium_member: boolean | null
+          notes: string | null
+          phone: string | null
+          premium_expires_at: string | null
+          total_orders: number | null
+          total_spent: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          discount_percentage?: number | null
+          email: string
+          full_name: string
+          id?: string
+          is_premium_member?: boolean | null
+          notes?: string | null
+          phone?: string | null
+          premium_expires_at?: string | null
+          total_orders?: number | null
+          total_spent?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          discount_percentage?: number | null
+          email?: string
+          full_name?: string
+          id?: string
+          is_premium_member?: boolean | null
+          notes?: string | null
+          phone?: string | null
+          premium_expires_at?: string | null
+          total_orders?: number | null
+          total_spent?: number | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
