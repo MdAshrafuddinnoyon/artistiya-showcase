@@ -116,6 +116,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           name_bn: string | null
+          parent_id: string | null
           slug: string
         }
         Insert: {
@@ -126,6 +127,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           name_bn?: string | null
+          parent_id?: string | null
           slug: string
         }
         Update: {
@@ -136,9 +138,18 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           name_bn?: string | null
+          parent_id?: string | null
           slug?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "blog_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "blog_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       blog_posts: {
         Row: {
@@ -698,6 +709,51 @@ export type Database = {
           shipping_cost?: number
           thana?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      email_settings: {
+        Row: {
+          created_at: string | null
+          from_email: string | null
+          from_name: string | null
+          id: string
+          is_enabled: boolean | null
+          provider: string | null
+          reply_to_email: string | null
+          smtp_host: string | null
+          smtp_password: string | null
+          smtp_port: number | null
+          smtp_user: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          provider?: string | null
+          reply_to_email?: string | null
+          smtp_host?: string | null
+          smtp_password?: string | null
+          smtp_port?: number | null
+          smtp_user?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          provider?: string | null
+          reply_to_email?: string | null
+          smtp_host?: string | null
+          smtp_password?: string | null
+          smtp_port?: number | null
+          smtp_user?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1530,12 +1586,14 @@ export type Database = {
         Row: {
           allow_customization: boolean | null
           care_instructions: string | null
+          care_instructions_bn: string | null
           category_id: string | null
           compare_at_price: number | null
           created_at: string
           description: string | null
           dimensions: string | null
           featured_section: string | null
+          features: string[] | null
           id: string
           images: string[] | null
           is_active: boolean | null
@@ -1543,6 +1601,7 @@ export type Database = {
           is_new_arrival: boolean | null
           is_preorderable: boolean | null
           materials: string | null
+          materials_bn: string | null
           name: string
           name_bn: string | null
           price: number
@@ -1550,17 +1609,21 @@ export type Database = {
           slug: string
           stock_quantity: number | null
           story: string | null
+          story_bn: string | null
           updated_at: string
+          video_url: string | null
         }
         Insert: {
           allow_customization?: boolean | null
           care_instructions?: string | null
+          care_instructions_bn?: string | null
           category_id?: string | null
           compare_at_price?: number | null
           created_at?: string
           description?: string | null
           dimensions?: string | null
           featured_section?: string | null
+          features?: string[] | null
           id?: string
           images?: string[] | null
           is_active?: boolean | null
@@ -1568,6 +1631,7 @@ export type Database = {
           is_new_arrival?: boolean | null
           is_preorderable?: boolean | null
           materials?: string | null
+          materials_bn?: string | null
           name: string
           name_bn?: string | null
           price: number
@@ -1575,17 +1639,21 @@ export type Database = {
           slug: string
           stock_quantity?: number | null
           story?: string | null
+          story_bn?: string | null
           updated_at?: string
+          video_url?: string | null
         }
         Update: {
           allow_customization?: boolean | null
           care_instructions?: string | null
+          care_instructions_bn?: string | null
           category_id?: string | null
           compare_at_price?: number | null
           created_at?: string
           description?: string | null
           dimensions?: string | null
           featured_section?: string | null
+          features?: string[] | null
           id?: string
           images?: string[] | null
           is_active?: boolean | null
@@ -1593,6 +1661,7 @@ export type Database = {
           is_new_arrival?: boolean | null
           is_preorderable?: boolean | null
           materials?: string | null
+          materials_bn?: string | null
           name?: string
           name_bn?: string | null
           price?: number
@@ -1600,7 +1669,9 @@ export type Database = {
           slug?: string
           stock_quantity?: number | null
           story?: string | null
+          story_bn?: string | null
           updated_at?: string
+          video_url?: string | null
         }
         Relationships: [
           {
@@ -1731,6 +1802,33 @@ export type Database = {
           social_facebook?: string | null
           social_instagram?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      site_integrations: {
+        Row: {
+          created_at: string | null
+          id: string
+          integration_key: string
+          is_active: boolean | null
+          settings: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          integration_key: string
+          is_active?: boolean | null
+          settings?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          integration_key?: string
+          is_active?: boolean | null
+          settings?: Json | null
+          updated_at?: string | null
         }
         Relationships: []
       }

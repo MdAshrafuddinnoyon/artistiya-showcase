@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Search, Image } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Image, Upload, Eye, EyeOff, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -21,7 +22,9 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import ProductImageUpload from "./ProductImageUpload";
+import EnhancedProductForm from "./EnhancedProductForm";
+import BulkProductUpload from "./BulkProductUpload";
+import BulkSelectionToolbar from "./BulkSelectionToolbar";
 
 interface Product {
   id: string;
@@ -31,14 +34,26 @@ interface Product {
   price: number;
   compare_at_price: number | null;
   description: string | null;
+  story: string | null;
+  materials: string | null;
+  care_instructions: string | null;
+  dimensions: string | null;
+  production_time: string | null;
   images: string[] | null;
   stock_quantity: number;
   is_active: boolean;
   is_featured: boolean;
   is_new_arrival: boolean;
   is_preorderable: boolean;
+  allow_customization: boolean;
   category_id: string | null;
+  featured_section: string | null;
   category: { name: string } | null;
+  features?: string[];
+  video_url?: string;
+  story_bn?: string;
+  materials_bn?: string;
+  care_instructions_bn?: string;
 }
 
 interface Category {
@@ -52,7 +67,9 @@ const AdminProducts = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -61,13 +78,25 @@ const AdminProducts = () => {
     price: "",
     compare_at_price: "",
     description: "",
+    story: "",
+    story_bn: "",
+    materials: "",
+    materials_bn: "",
+    care_instructions: "",
+    care_instructions_bn: "",
+    dimensions: "",
+    production_time: "",
     stock_quantity: "0",
     is_active: true,
     is_featured: false,
     is_new_arrival: true,
     is_preorderable: false,
+    allow_customization: false,
     category_id: "",
+    featured_section: "",
     images: [] as string[],
+    features: [] as string[],
+    video_url: "",
   });
 
   const fetchProducts = async () => {
@@ -98,6 +127,20 @@ const AdminProducts = () => {
   useEffect(() => {
     fetchProducts();
     fetchCategories();
+
+    // Real-time subscription
+    const channel = supabase
+      .channel("products_changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "products" },
+        () => fetchProducts()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const generateSlug = (name: string) => {
@@ -117,13 +160,25 @@ const AdminProducts = () => {
       price: parseFloat(formData.price),
       compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
       description: formData.description || null,
+      story: formData.story || null,
+      story_bn: formData.story_bn || null,
+      materials: formData.materials || null,
+      materials_bn: formData.materials_bn || null,
+      care_instructions: formData.care_instructions || null,
+      care_instructions_bn: formData.care_instructions_bn || null,
+      dimensions: formData.dimensions || null,
+      production_time: formData.production_time || null,
       stock_quantity: parseInt(formData.stock_quantity),
       is_active: formData.is_active,
       is_featured: formData.is_featured,
       is_new_arrival: formData.is_new_arrival,
       is_preorderable: formData.is_preorderable,
+      allow_customization: formData.allow_customization,
       category_id: formData.category_id || null,
+      featured_section: formData.featured_section || null,
       images: formData.images,
+      features: formData.features,
+      video_url: formData.video_url || null,
     };
 
     try {
@@ -160,13 +215,25 @@ const AdminProducts = () => {
       price: product.price.toString(),
       compare_at_price: product.compare_at_price?.toString() || "",
       description: product.description || "",
+      story: product.story || "",
+      story_bn: product.story_bn || "",
+      materials: product.materials || "",
+      materials_bn: product.materials_bn || "",
+      care_instructions: product.care_instructions || "",
+      care_instructions_bn: product.care_instructions_bn || "",
+      dimensions: product.dimensions || "",
+      production_time: product.production_time || "",
       stock_quantity: product.stock_quantity.toString(),
       is_active: product.is_active,
       is_featured: product.is_featured,
       is_new_arrival: product.is_new_arrival,
       is_preorderable: product.is_preorderable,
+      allow_customization: product.allow_customization || false,
       category_id: product.category_id || "",
+      featured_section: product.featured_section || "",
       images: product.images || [],
+      features: product.features || [],
+      video_url: product.video_url || "",
     });
     setDialogOpen(true);
   };
@@ -186,6 +253,91 @@ const AdminProducts = () => {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (!confirm(`Delete ${selectedIds.length} products?`)) return;
+
+    try {
+      const { error } = await supabase
+        .from("products")
+        .delete()
+        .in("id", selectedIds);
+
+      if (error) throw error;
+      toast.success(`Deleted ${selectedIds.length} products`);
+      setSelectedIds([]);
+      fetchProducts();
+    } catch (error) {
+      console.error("Error bulk deleting:", error);
+      toast.error("Failed to delete products");
+    }
+  };
+
+  const handleBulkPublish = async () => {
+    try {
+      const { error } = await supabase
+        .from("products")
+        .update({ is_active: true })
+        .in("id", selectedIds);
+
+      if (error) throw error;
+      toast.success(`Published ${selectedIds.length} products`);
+      setSelectedIds([]);
+      fetchProducts();
+    } catch (error) {
+      toast.error("Failed to publish products");
+    }
+  };
+
+  const handleBulkUnpublish = async () => {
+    try {
+      const { error } = await supabase
+        .from("products")
+        .update({ is_active: false })
+        .in("id", selectedIds);
+
+      if (error) throw error;
+      toast.success(`Unpublished ${selectedIds.length} products`);
+      setSelectedIds([]);
+      fetchProducts();
+    } catch (error) {
+      toast.error("Failed to unpublish products");
+    }
+  };
+
+  const handleBulkExport = () => {
+    const exportData = products
+      .filter((p) => selectedIds.includes(p.id))
+      .map((p) => ({
+        name: p.name,
+        name_bn: p.name_bn,
+        slug: p.slug,
+        price: p.price,
+        compare_at_price: p.compare_at_price,
+        description: p.description,
+        stock_quantity: p.stock_quantity,
+        category: p.category?.name,
+        is_active: p.is_active,
+        is_featured: p.is_featured,
+      }));
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `products_export_${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success("Products exported");
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
   const resetForm = () => {
     setEditingProduct(null);
     setFormData({
@@ -195,13 +347,25 @@ const AdminProducts = () => {
       price: "",
       compare_at_price: "",
       description: "",
+      story: "",
+      story_bn: "",
+      materials: "",
+      materials_bn: "",
+      care_instructions: "",
+      care_instructions_bn: "",
+      dimensions: "",
+      production_time: "",
       stock_quantity: "0",
       is_active: true,
       is_featured: false,
       is_new_arrival: true,
       is_preorderable: false,
+      allow_customization: false,
       category_id: "",
+      featured_section: "",
       images: [],
+      features: [],
+      video_url: "",
     });
   };
 
@@ -215,7 +379,7 @@ const AdminProducts = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
         <h1 className="font-display text-2xl text-foreground">Products</h1>
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -225,6 +389,30 @@ const AdminProducts = () => {
               className="pl-10 w-64"
             />
           </div>
+
+          {/* Bulk Upload */}
+          <Dialog open={bulkUploadOpen} onOpenChange={setBulkUploadOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Upload className="h-4 w-4 mr-2" />
+                Bulk Upload
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Bulk Product Upload</DialogTitle>
+              </DialogHeader>
+              <BulkProductUpload
+                onComplete={() => {
+                  setBulkUploadOpen(false);
+                  fetchProducts();
+                }}
+                onCancel={() => setBulkUploadOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+
+          {/* Add Product */}
           <Dialog open={dialogOpen} onOpenChange={(open) => {
             setDialogOpen(open);
             if (!open) resetForm();
@@ -235,162 +423,38 @@ const AdminProducts = () => {
                 Add Product
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {editingProduct ? "Edit Product" : "Add New Product"}
                 </DialogTitle>
               </DialogHeader>
 
-              <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="name">Name (English) *</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => {
-                        setFormData({ 
-                          ...formData, 
-                          name: e.target.value,
-                          slug: generateSlug(e.target.value)
-                        });
-                      }}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="name_bn">Name (Bengali)</Label>
-                    <Input
-                      id="name_bn"
-                      value={formData.name_bn}
-                      onChange={(e) => setFormData({ ...formData, name_bn: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="slug">Slug</Label>
-                  <Input
-                    id="slug"
-                    value={formData.slug}
-                    onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                  />
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="price">Price (৳) *</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="compare_at_price">Compare Price</Label>
-                    <Input
-                      id="compare_at_price"
-                      type="number"
-                      value={formData.compare_at_price}
-                      onChange={(e) => setFormData({ ...formData, compare_at_price: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="stock">Stock</Label>
-                    <Input
-                      id="stock"
-                      type="number"
-                      value={formData.stock_quantity}
-                      onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="category">Category</Label>
-                  <Select
-                    value={formData.category_id}
-                    onValueChange={(value) => setFormData({ ...formData, category_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
-                  />
-                </div>
-
-                <ProductImageUpload
-                  images={formData.images}
-                  onImagesChange={(images) => setFormData({ ...formData, images })}
-                />
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                    <Label htmlFor="is_active">Active</Label>
-                    <Switch
-                      id="is_active"
-                      checked={formData.is_active}
-                      onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                    <Label htmlFor="is_featured">Featured</Label>
-                    <Switch
-                      id="is_featured"
-                      checked={formData.is_featured}
-                      onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                    <Label htmlFor="is_new_arrival">New Arrival</Label>
-                    <Switch
-                      id="is_new_arrival"
-                      checked={formData.is_new_arrival}
-                      onCheckedChange={(checked) => setFormData({ ...formData, is_new_arrival: checked })}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                    <Label htmlFor="is_preorderable">Pre-orderable</Label>
-                    <Switch
-                      id="is_preorderable"
-                      checked={formData.is_preorderable}
-                      onCheckedChange={(checked) => setFormData({ ...formData, is_preorderable: checked })}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <Button type="submit" variant="gold" className="flex-1">
-                    {editingProduct ? "Update Product" : "Create Product"}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                </div>
-              </form>
+              <EnhancedProductForm
+                formData={formData}
+                setFormData={setFormData}
+                categories={categories}
+                isEditing={!!editingProduct}
+                onSubmit={handleSubmit}
+                onCancel={() => setDialogOpen(false)}
+              />
             </DialogContent>
           </Dialog>
         </div>
       </div>
+
+      {/* Bulk Selection Toolbar */}
+      <BulkSelectionToolbar
+        selectedIds={selectedIds}
+        totalCount={filteredProducts.length}
+        onSelectAll={() => setSelectedIds(filteredProducts.map((p) => p.id))}
+        onDeselectAll={() => setSelectedIds([])}
+        onBulkDelete={handleBulkDelete}
+        onBulkPublish={handleBulkPublish}
+        onBulkUnpublish={handleBulkUnpublish}
+        onBulkExport={handleBulkExport}
+        showPublish={true}
+      />
 
       {/* Products Table */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
@@ -398,6 +462,18 @@ const AdminProducts = () => {
           <table className="w-full">
             <thead className="bg-muted/50">
               <tr>
+                <th className="w-10 p-4">
+                  <Checkbox
+                    checked={selectedIds.length === filteredProducts.length && filteredProducts.length > 0}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedIds(filteredProducts.map((p) => p.id));
+                      } else {
+                        setSelectedIds([]);
+                      }
+                    }}
+                  />
+                </th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Product</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Category</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Price</th>
@@ -410,20 +486,26 @@ const AdminProducts = () => {
               {loading ? (
                 [...Array(5)].map((_, i) => (
                   <tr key={i} className="border-t border-border">
-                    <td colSpan={6} className="p-4">
+                    <td colSpan={7} className="p-4">
                       <div className="h-12 bg-muted rounded animate-pulse" />
                     </td>
                   </tr>
                 ))
               ) : filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
                     No products found
                   </td>
                 </tr>
               ) : (
                 filteredProducts.map((product) => (
                   <tr key={product.id} className="border-t border-border hover:bg-muted/30">
+                    <td className="p-4">
+                      <Checkbox
+                        checked={selectedIds.includes(product.id)}
+                        onCheckedChange={() => toggleSelect(product.id)}
+                      />
+                    </td>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div className="h-12 w-12 rounded-lg bg-muted overflow-hidden">
