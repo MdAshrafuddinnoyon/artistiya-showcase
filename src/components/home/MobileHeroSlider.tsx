@@ -78,13 +78,15 @@ const MobileHeroSlider = () => {
 
   if (loading) {
     return (
-      <div className="relative w-full aspect-[4/5] bg-muted animate-pulse rounded-2xl mx-4" />
+      <div className="md:hidden pt-28 px-4 pb-4">
+        <div className="relative w-full aspect-[3/4] bg-muted animate-pulse rounded-2xl" />
+      </div>
     );
   }
 
   return (
-    <section className="md:hidden pt-[120px] px-4 pb-4">
-      <div className="relative w-full aspect-[4/5] rounded-2xl overflow-hidden">
+    <section className="md:hidden pt-28 px-4 pb-4">
+      <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden">
         {/* Slide Images */}
         <AnimatePresence mode="wait">
           <motion.div
@@ -106,39 +108,38 @@ const MobileHeroSlider = () => {
         </AnimatePresence>
 
         {/* Content Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-5">
+        <div className="absolute bottom-0 left-0 right-0 p-4">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentSlide.id + "-content"}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.4 }}
-              className="space-y-3"
+              transition={{ duration: 0.3 }}
+              className="space-y-2"
             >
               {currentSlide.badge_text && (
-                <span className="inline-block bg-gold/20 text-gold text-xs px-3 py-1 rounded-full font-medium">
+                <span className="inline-block bg-gold/20 text-gold text-[10px] px-2.5 py-0.5 rounded-full font-medium">
                   {currentSlide.badge_text}
                 </span>
               )}
 
-              <h2 className="font-display text-2xl text-foreground leading-tight">
+              <h2 className="font-display text-xl text-foreground leading-tight">
                 {currentSlide.title}
                 {currentSlide.title_highlight && (
                   <span className="text-gold"> {currentSlide.title_highlight}</span>
                 )}
-                {currentSlide.title_end && ` ${currentSlide.title_end}`}
               </h2>
 
               {currentSlide.description && (
-                <p className="text-sm text-muted-foreground line-clamp-2">
+                <p className="text-xs text-muted-foreground line-clamp-2">
                   {currentSlide.description}
                 </p>
               )}
 
               {currentSlide.button_text && currentSlide.button_link && (
                 <Link to={currentSlide.button_link}>
-                  <Button variant="gold" size="sm" className="mt-2">
+                  <Button variant="gold" size="sm" className="mt-2 h-8 text-xs">
                     {currentSlide.button_text}
                   </Button>
                 </Link>
@@ -166,7 +167,7 @@ const MobileHeroSlider = () => {
       </div>
 
       {/* Quick Action Cards */}
-      <div className="grid grid-cols-2 gap-3 mt-4">
+      <div className="grid grid-cols-2 gap-2 mt-3">
         <QuickActionCard
           title="New Arrivals"
           subtitle="Fresh designs"
@@ -197,10 +198,10 @@ interface QuickActionCardProps {
 const QuickActionCard = ({ title, subtitle, href, bgColor, textColor }: QuickActionCardProps) => (
   <Link
     to={href}
-    className={`${bgColor} rounded-xl p-4 flex flex-col justify-center active:scale-95 transition-transform`}
+    className={`${bgColor} rounded-xl p-3 flex flex-col justify-center active:scale-95 transition-transform`}
   >
-    <span className={`font-display text-sm ${textColor}`}>{title}</span>
-    <span className="text-xs text-muted-foreground">{subtitle}</span>
+    <span className={`font-display text-xs ${textColor}`}>{title}</span>
+    <span className="text-[10px] text-muted-foreground">{subtitle}</span>
   </Link>
 );
 
