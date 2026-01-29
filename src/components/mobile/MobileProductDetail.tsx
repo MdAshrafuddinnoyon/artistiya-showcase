@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ChevronLeft, Heart, Share2, Star, Minus, Plus, 
@@ -45,6 +45,7 @@ interface MobileProductDetailProps {
 
 const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: MobileProductDetailProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
   
@@ -155,7 +156,20 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
       <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-background/90 to-transparent">
         <div className="flex items-center justify-between p-4">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              // Smart back navigation: go to category page if product has a category
+              if (product.category?.slug) {
+                navigate(`/shop/${product.category.slug}`);
+              } else {
+                // Fallback: check if we came from a shop category page
+                const referrer = location.state?.from;
+                if (referrer && referrer.startsWith('/shop/')) {
+                  navigate(referrer);
+                } else {
+                  navigate('/shop');
+                }
+              }
+            }}
             className="w-10 h-10 bg-background/80 backdrop-blur-sm border border-border rounded-full flex items-center justify-center shadow-lg"
           >
             <ChevronLeft className="h-5 w-5 text-foreground" />

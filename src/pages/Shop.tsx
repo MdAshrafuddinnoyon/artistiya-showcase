@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Select,
   SelectContent,
@@ -58,6 +59,7 @@ const Shop = () => {
   const { t, language } = useLanguage();
   const { isInWishlist, toggleWishlist } = useWishlist();
   const { addToCart } = useCart();
+  const isMobile = useIsMobile();
   
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -289,29 +291,31 @@ const Shop = () => {
             </h1>
           </motion.div>
 
-          {/* Search Bar */}
-          <div className="mb-8">
-            <div className="relative max-w-2xl mx-auto">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search products..."
-                className="pl-12 pr-12 h-14 text-lg rounded-full border-border bg-card"
-              />
-              {searchLoading && (
-                <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 animate-spin text-gold" />
-              )}
-              {searchQuery && !searchLoading && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded-full"
-                >
-                  <X className="h-4 w-4 text-muted-foreground" />
-                </button>
-              )}
+          {/* Search Bar - Hidden on mobile since header has search */}
+          {!isMobile && (
+            <div className="mb-8">
+              <div className="relative max-w-2xl mx-auto">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search products..."
+                  className="pl-12 pr-12 h-14 text-lg rounded-full border-border bg-card"
+                />
+                {searchLoading && (
+                  <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 animate-spin text-gold" />
+                )}
+                {searchQuery && !searchLoading && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded-full"
+                  >
+                    <X className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="flex gap-8">
             {/* Desktop Sidebar */}
