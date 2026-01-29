@@ -67,6 +67,7 @@ import AdminUpsellOffers from "@/components/admin/AdminUpsellOffers";
 import AdminTestimonials from "@/components/admin/AdminTestimonials";
 import AdminThemeSettings from "@/components/admin/AdminThemeSettings";
 import AdminHomepageSections from "@/components/admin/AdminHomepageSections";
+import AdminDeliveryZones from "@/components/admin/AdminDeliveryZones";
 
 // Menu sections for organized navigation
 const menuSections = [
@@ -124,7 +125,8 @@ const menuSections = [
     items: [
       { id: "checkout", name: "Checkout", icon: ShoppingBag },
       { id: "payments", name: "Payments", icon: CreditCard },
-      { id: "delivery", name: "Delivery", icon: Truck },
+      { id: "delivery", name: "Delivery Providers", icon: Truck },
+      { id: "delivery-zones", name: "Delivery Zones", icon: Truck },
       { id: "currency", name: "Currency", icon: DollarSign },
       { id: "email-templates", name: "Email Templates", icon: Mail },
       { id: "invoice", name: "Invoice", icon: Receipt },
@@ -214,6 +216,8 @@ const Admin = () => {
         return <AdminPaymentProviders />;
       case "delivery":
         return <AdminDeliveryProviders />;
+      case "delivery-zones":
+        return <AdminDeliveryZones />;
       case "currency":
         return <AdminCurrencySettings />;
       case "hero-slider":

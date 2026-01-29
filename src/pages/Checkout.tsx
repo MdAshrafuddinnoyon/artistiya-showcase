@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { MapPin, Phone, CreditCard, Truck, Loader2, CheckCircle2, MessageCircle, User, ExternalLink } from "lucide-react";
+import { MapPin, Phone, CreditCard, Truck, Loader2, CheckCircle2, MessageCircle, User, ExternalLink, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { divisions, calculateShippingCost, isDhakaDistrict, getDistrictsByDivision, getThanasByDistrict } from "@/data/bangladeshLocations";
+import { useGeolocation, useShippingCost } from "@/hooks/useGeolocation";
 
 const Checkout = () => {
   const { user } = useAuth();

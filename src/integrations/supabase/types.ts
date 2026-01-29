@@ -480,6 +480,42 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_zones: {
+        Row: {
+          created_at: string
+          district: string
+          division: string
+          estimated_days: string | null
+          id: string
+          is_active: boolean | null
+          shipping_cost: number
+          thana: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          district: string
+          division: string
+          estimated_days?: string | null
+          id?: string
+          is_active?: boolean | null
+          shipping_cost?: number
+          thana?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          district?: string
+          division?: string
+          estimated_days?: string | null
+          id?: string
+          is_active?: boolean | null
+          shipping_cost?: number
+          thana?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_templates: {
         Row: {
           created_at: string
