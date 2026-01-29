@@ -782,11 +782,19 @@ export type Database = {
           description: string | null
           display_order: number | null
           id: string
+          image_link_url: string | null
           image_url: string | null
           is_active: boolean | null
+          overlay_enabled: boolean | null
           overlay_opacity: number | null
+          overlay_position: string | null
           secondary_button_link: string | null
           secondary_button_text: string | null
+          show_badge: boolean | null
+          show_description: boolean | null
+          show_primary_button: boolean | null
+          show_secondary_button: boolean | null
+          show_title: boolean | null
           text_alignment: string | null
           title: string | null
           title_end: string | null
@@ -802,11 +810,19 @@ export type Database = {
           description?: string | null
           display_order?: number | null
           id?: string
+          image_link_url?: string | null
           image_url?: string | null
           is_active?: boolean | null
+          overlay_enabled?: boolean | null
           overlay_opacity?: number | null
+          overlay_position?: string | null
           secondary_button_link?: string | null
           secondary_button_text?: string | null
+          show_badge?: boolean | null
+          show_description?: boolean | null
+          show_primary_button?: boolean | null
+          show_secondary_button?: boolean | null
+          show_title?: boolean | null
           text_alignment?: string | null
           title?: string | null
           title_end?: string | null
@@ -822,11 +838,19 @@ export type Database = {
           description?: string | null
           display_order?: number | null
           id?: string
+          image_link_url?: string | null
           image_url?: string | null
           is_active?: boolean | null
+          overlay_enabled?: boolean | null
           overlay_opacity?: number | null
+          overlay_position?: string | null
           secondary_button_link?: string | null
           secondary_button_text?: string | null
+          show_badge?: boolean | null
+          show_description?: boolean | null
+          show_primary_button?: boolean | null
+          show_secondary_button?: boolean | null
+          show_title?: boolean | null
           text_alignment?: string | null
           title?: string | null
           title_end?: string | null

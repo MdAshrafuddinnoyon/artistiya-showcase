@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import { Plus, Trash2, Save, Image, Eye, EyeOff, GripVertical, Upload } from "lucide-react";
+import { Plus, Trash2, Save, Image, Eye, EyeOff, GripVertical, Upload, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -23,6 +25,16 @@ interface HeroSlide {
   image_url: string | null;
   is_active: boolean;
   display_order: number;
+  // New fields for banner-only mode
+  show_title: boolean;
+  show_description: boolean;
+  show_badge: boolean;
+  show_primary_button: boolean;
+  show_secondary_button: boolean;
+  image_link_url: string | null;
+  overlay_position: string;
+  overlay_enabled: boolean;
+  overlay_opacity: number | null;
 }
 
 const AdminHeroSlider = () => {
@@ -35,6 +47,22 @@ const AdminHeroSlider = () => {
 
   useEffect(() => {
     fetchSlides();
+
+    // Real-time subscription
+    const channel = supabase
+      .channel('hero_slides_admin')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'hero_slides' },
+        () => {
+          fetchSlides();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchSlides = async () => {
@@ -64,6 +92,14 @@ const AdminHeroSlider = () => {
         button_text: "Shop Now",
         button_link: "/shop",
         display_order: slides.length,
+        show_title: true,
+        show_description: true,
+        show_badge: true,
+        show_primary_button: true,
+        show_secondary_button: true,
+        overlay_enabled: true,
+        overlay_position: "left",
+        overlay_opacity: 50,
       });
 
       if (error) throw error;
@@ -166,14 +202,14 @@ const AdminHeroSlider = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="font-display text-xl text-foreground">Hero Slider Management</h2>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={addSlide}>
+          <Button variant="outline" onClick={addSlide} size="sm">
             <Plus className="h-4 w-4 mr-2" />
             Add Slide
           </Button>
-          <Button variant="gold" onClick={saveAllSlides} disabled={saving}>
+          <Button variant="gold" onClick={saveAllSlides} disabled={saving} size="sm">
             <Save className="h-4 w-4 mr-2" />
             {saving ? "Saving..." : "Save All"}
           </Button>
@@ -196,9 +232,9 @@ const AdminHeroSlider = () => {
       <div className="space-y-6">
         {slides.map((slide, index) => (
           <Card key={slide.id} className="bg-card border-border">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-2 gap-2">
               <div className="flex items-center gap-3">
-                <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
+                <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab hidden sm:block" />
                 <CardTitle className="text-lg font-display">
                   Slide {index + 1}
                 </CardTitle>
@@ -255,96 +291,215 @@ const AdminHeroSlider = () => {
                       </div>
                     )}
                   </div>
+                  
+                  {/* Image Link URL */}
+                  <div className="mt-3">
+                    <Label className="flex items-center gap-2">
+                      <LinkIcon className="h-3 w-3" />
+                      Image Click URL
+                    </Label>
+                    <Input
+                      value={slide.image_link_url || ""}
+                      onChange={(e) => updateSlideField(slide.id, "image_link_url", e.target.value)}
+                      className="mt-1.5"
+                      placeholder="e.g. /shop/sale or https://..."
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      ইমেজে ক্লিক করলে এই লিংকে যাবে (ব্যানার-অনলি মোডে কার্যকর)
+                    </p>
+                  </div>
                 </div>
 
                 {/* Text Fields */}
                 <div className="lg:col-span-2 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label>Badge Text</Label>
-                      <Input
-                        value={slide.badge_text || ""}
-                        onChange={(e) => updateSlideField(slide.id, "badge_text", e.target.value)}
-                        className="mt-1.5"
-                        placeholder="e.g. Premium Collection"
-                      />
-                    </div>
-                    <div>
-                      <Label>Title (Main)</Label>
-                      <Input
-                        value={slide.title || ""}
-                        onChange={(e) => updateSlideField(slide.id, "title", e.target.value)}
-                        className="mt-1.5"
-                        placeholder="e.g. Artistry Woven,"
-                      />
+                  {/* Visibility Toggles */}
+                  <div className="bg-muted/30 rounded-lg p-4 border border-border">
+                    <h4 className="text-sm font-medium text-foreground mb-3">প্রদর্শন নিয়ন্ত্রণ (Visibility Controls)</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                      <div className="flex items-center justify-between bg-background p-2 rounded-md">
+                        <Label className="text-xs">Badge</Label>
+                        <Switch
+                          checked={slide.show_badge ?? true}
+                          onCheckedChange={(checked) => updateSlideField(slide.id, "show_badge", checked)}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between bg-background p-2 rounded-md">
+                        <Label className="text-xs">Title</Label>
+                        <Switch
+                          checked={slide.show_title ?? true}
+                          onCheckedChange={(checked) => updateSlideField(slide.id, "show_title", checked)}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between bg-background p-2 rounded-md">
+                        <Label className="text-xs">Description</Label>
+                        <Switch
+                          checked={slide.show_description ?? true}
+                          onCheckedChange={(checked) => updateSlideField(slide.id, "show_description", checked)}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between bg-background p-2 rounded-md">
+                        <Label className="text-xs">Button 1</Label>
+                        <Switch
+                          checked={slide.show_primary_button ?? true}
+                          onCheckedChange={(checked) => updateSlideField(slide.id, "show_primary_button", checked)}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between bg-background p-2 rounded-md">
+                        <Label className="text-xs">Button 2</Label>
+                        <Switch
+                          checked={slide.show_secondary_button ?? true}
+                          onCheckedChange={(checked) => updateSlideField(slide.id, "show_secondary_button", checked)}
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label>Title Highlight (Gold)</Label>
-                      <Input
-                        value={slide.title_highlight || ""}
-                        onChange={(e) => updateSlideField(slide.id, "title_highlight", e.target.value)}
-                        className="mt-1.5"
-                        placeholder="e.g. Elegance"
-                      />
-                    </div>
-                    <div>
-                      <Label>Title End</Label>
-                      <Input
-                        value={slide.title_end || ""}
-                        onChange={(e) => updateSlideField(slide.id, "title_end", e.target.value)}
-                        className="mt-1.5"
-                        placeholder="e.g. Defined"
-                      />
+                  {/* Overlay Controls */}
+                  <div className="bg-muted/30 rounded-lg p-4 border border-border">
+                    <h4 className="text-sm font-medium text-foreground mb-3">ওভারলে নিয়ন্ত্রণ (Overlay Settings)</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="flex items-center justify-between bg-background p-2 rounded-md">
+                        <Label className="text-xs">Enable Overlay</Label>
+                        <Switch
+                          checked={slide.overlay_enabled ?? true}
+                          onCheckedChange={(checked) => updateSlideField(slide.id, "overlay_enabled", checked)}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Position</Label>
+                        <Select
+                          value={slide.overlay_position || "left"}
+                          onValueChange={(value) => updateSlideField(slide.id, "overlay_position", value)}
+                        >
+                          <SelectTrigger className="mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="left">Left (বামে)</SelectItem>
+                            <SelectItem value="right">Right (ডানে)</SelectItem>
+                            <SelectItem value="top">Top (উপরে)</SelectItem>
+                            <SelectItem value="bottom">Bottom (নিচে)</SelectItem>
+                            <SelectItem value="center">Center (মাঝে)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Opacity: {slide.overlay_opacity ?? 50}%</Label>
+                        <Slider
+                          value={[slide.overlay_opacity ?? 50]}
+                          onValueChange={(val) => updateSlideField(slide.id, "overlay_opacity", val[0])}
+                          min={0}
+                          max={100}
+                          step={5}
+                          className="mt-2"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div>
-                    <Label>Description</Label>
-                    <Textarea
-                      value={slide.description || ""}
-                      onChange={(e) => updateSlideField(slide.id, "description", e.target.value)}
-                      className="mt-1.5"
-                      rows={2}
-                    />
-                  </div>
+                  {/* Text Fields - only show if title/desc visible */}
+                  {(slide.show_badge || slide.show_title || slide.show_description) && (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label>Badge Text</Label>
+                          <Input
+                            value={slide.badge_text || ""}
+                            onChange={(e) => updateSlideField(slide.id, "badge_text", e.target.value)}
+                            className="mt-1.5"
+                            placeholder="e.g. Premium Collection"
+                            disabled={!slide.show_badge}
+                          />
+                        </div>
+                        <div>
+                          <Label>Title (Main)</Label>
+                          <Input
+                            value={slide.title || ""}
+                            onChange={(e) => updateSlideField(slide.id, "title", e.target.value)}
+                            className="mt-1.5"
+                            placeholder="e.g. Artistry Woven,"
+                            disabled={!slide.show_title}
+                          />
+                        </div>
+                      </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <Label>Button Text</Label>
-                      <Input
-                        value={slide.button_text || ""}
-                        onChange={(e) => updateSlideField(slide.id, "button_text", e.target.value)}
-                        className="mt-1.5"
-                      />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label>Title Highlight (Gold)</Label>
+                          <Input
+                            value={slide.title_highlight || ""}
+                            onChange={(e) => updateSlideField(slide.id, "title_highlight", e.target.value)}
+                            className="mt-1.5"
+                            placeholder="e.g. Elegance"
+                            disabled={!slide.show_title}
+                          />
+                        </div>
+                        <div>
+                          <Label>Title End</Label>
+                          <Input
+                            value={slide.title_end || ""}
+                            onChange={(e) => updateSlideField(slide.id, "title_end", e.target.value)}
+                            className="mt-1.5"
+                            placeholder="e.g. Defined"
+                            disabled={!slide.show_title}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label>Description</Label>
+                        <Textarea
+                          value={slide.description || ""}
+                          onChange={(e) => updateSlideField(slide.id, "description", e.target.value)}
+                          className="mt-1.5"
+                          rows={2}
+                          disabled={!slide.show_description}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Button Fields - only show if buttons visible */}
+                  {(slide.show_primary_button || slide.show_secondary_button) && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <Label>Button Text</Label>
+                        <Input
+                          value={slide.button_text || ""}
+                          onChange={(e) => updateSlideField(slide.id, "button_text", e.target.value)}
+                          className="mt-1.5"
+                          disabled={!slide.show_primary_button}
+                        />
+                      </div>
+                      <div>
+                        <Label>Button Link</Label>
+                        <Input
+                          value={slide.button_link || ""}
+                          onChange={(e) => updateSlideField(slide.id, "button_link", e.target.value)}
+                          className="mt-1.5"
+                          disabled={!slide.show_primary_button}
+                        />
+                      </div>
+                      <div>
+                        <Label>Secondary Button</Label>
+                        <Input
+                          value={slide.secondary_button_text || ""}
+                          onChange={(e) => updateSlideField(slide.id, "secondary_button_text", e.target.value)}
+                          className="mt-1.5"
+                          disabled={!slide.show_secondary_button}
+                        />
+                      </div>
+                      <div>
+                        <Label>Secondary Link</Label>
+                        <Input
+                          value={slide.secondary_button_link || ""}
+                          onChange={(e) => updateSlideField(slide.id, "secondary_button_link", e.target.value)}
+                          className="mt-1.5"
+                          disabled={!slide.show_secondary_button}
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <Label>Button Link</Label>
-                      <Input
-                        value={slide.button_link || ""}
-                        onChange={(e) => updateSlideField(slide.id, "button_link", e.target.value)}
-                        className="mt-1.5"
-                      />
-                    </div>
-                    <div>
-                      <Label>Secondary Button</Label>
-                      <Input
-                        value={slide.secondary_button_text || ""}
-                        onChange={(e) => updateSlideField(slide.id, "secondary_button_text", e.target.value)}
-                        className="mt-1.5"
-                      />
-                    </div>
-                    <div>
-                      <Label>Secondary Link</Label>
-                      <Input
-                        value={slide.secondary_button_link || ""}
-                        onChange={(e) => updateSlideField(slide.id, "secondary_button_link", e.target.value)}
-                        className="mt-1.5"
-                      />
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </CardContent>
