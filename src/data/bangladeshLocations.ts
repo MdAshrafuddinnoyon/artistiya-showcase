@@ -116,8 +116,9 @@ export const districtThanas: Record<string, string[]> = {
     "Chandpur Sadar", "Faridganj", "Hajiganj", "Hayemchar", "Kachua", "Matlobganj", "Shahrasti"
   ],
   "Chattogram": [
-    "Anawara", "Boalkhali", "Chittagong Sadar", "East Joara", "Fatikchhari", "Hathazari",
-    "Lohagara", "Mirsharai", "Patiya", "Rangunia", "Raozan", "Sandwip", "Satkania", "Sitakunda"
+    "Akbar Shah", "Anawara", "Boalkhali", "Chittagong Sadar", "East Joara", "Fatikchhari", 
+    "Hathazari", "Khulshi", "Lohagara", "Mirsharai", "Pahartali", "Patiya", "Rangunia", 
+    "Raozan", "Sandwip", "Satkania", "Sitakunda"
   ],
   "Comilla": [
     "Barura", "Brahmanpara", "Burichang", "Chandina", "Chouddogram", "Comilla Sadar",
