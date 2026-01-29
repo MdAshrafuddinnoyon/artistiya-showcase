@@ -7,20 +7,32 @@ import FeaturedSection from "@/components/home/FeaturedSection";
 import MakingSection from "@/components/home/MakingSection";
 import TestimonialsSection from "@/components/home/TestimonialsSection";
 import InstagramSection from "@/components/home/InstagramSection";
+import MobileHomeLayout from "@/components/home/MobileHomeLayout";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Index = () => {
+  const isMobile = useIsMobile();
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main>
-        <HeroSection />
-        <CategorySection />
-        <NewArrivalsSection />
-        <FeaturedSection />
-        <MakingSection />
-        <TestimonialsSection />
-        <InstagramSection />
-      </main>
+      
+      {/* Mobile Layout */}
+      {isMobile && <MobileHomeLayout />}
+      
+      {/* Desktop Layout */}
+      {!isMobile && (
+        <main>
+          <HeroSection />
+          <CategorySection />
+          <NewArrivalsSection />
+          <FeaturedSection />
+          <MakingSection />
+          <TestimonialsSection />
+          <InstagramSection />
+        </main>
+      )}
+      
       <Footer />
     </div>
   );
