@@ -4,7 +4,9 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsMobile } from "@/hooks/use-mobile";
 import heroImage from "@/assets/hero-artisan.jpg";
+import MobileHeroSlider from "./MobileHeroSlider";
 
 interface HeroSlide {
   id: string;
@@ -23,6 +25,7 @@ interface HeroSlide {
 }
 
 const HeroSection = () => {
+  const isMobile = useIsMobile();
   const [slides, setSlides] = useState<HeroSlide[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -88,6 +91,11 @@ const HeroSection = () => {
 
   const activeSlides = slides.length > 0 ? slides : [defaultSlide];
   const currentSlide = activeSlides[currentIndex];
+
+  // Show mobile slider for mobile devices
+  if (isMobile) {
+    return <MobileHeroSlider />;
+  }
 
   if (loading) {
     return (
