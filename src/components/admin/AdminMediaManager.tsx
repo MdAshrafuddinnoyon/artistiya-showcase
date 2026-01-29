@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Upload, Trash2, Copy, Search, Image, FileText, File, Grid, List, Loader2, ExternalLink } from "lucide-react";
+import { Upload, Trash2, Copy, Search, Image, FileText, File, Grid, List, Loader2, ExternalLink, FileVideo, FileSpreadsheet, FileCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -145,13 +145,17 @@ const AdminMediaManager = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
-  const getFileIcon = (type: string) => {
+  const getFileIcon = (type: string, name: string) => {
     if (type.startsWith("image/")) return <Image className="h-5 w-5" />;
+    if (type.startsWith("video/")) return <FileVideo className="h-5 w-5" />;
     if (type === "application/pdf") return <FileText className="h-5 w-5" />;
+    if (type === "text/csv" || name.endsWith('.csv')) return <FileSpreadsheet className="h-5 w-5" />;
+    if (name.endsWith('.ico') || name.endsWith('.svg')) return <FileCode className="h-5 w-5" />;
     return <File className="h-5 w-5" />;
   };
 
-  const isImage = (type: string) => type.startsWith("image/");
+  const isImage = (type: string, name: string) => type.startsWith("image/") || name.endsWith('.ico') || name.endsWith('.svg');
+  const isVideo = (type: string) => type.startsWith("video/");
 
   const filteredFiles = files.filter(file =>
     file.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -192,7 +196,7 @@ const AdminMediaManager = () => {
           multiple
           className="hidden"
           onChange={handleUpload}
-          accept="image/*,.pdf,.doc,.docx"
+          accept="image/*,video/*,.pdf,.doc,.docx,.csv,.ico,.svg"
         />
       </div>
 
@@ -249,15 +253,19 @@ const AdminMediaManager = () => {
               }}
             >
               <div className="aspect-square bg-muted relative">
-                {isImage(file.type) ? (
+                {isImage(file.type, file.name) ? (
                   <img
                     src={file.url}
                     alt={file.name}
                     className="w-full h-full object-cover"
                   />
+                ) : isVideo(file.type) ? (
+                  <div className="w-full h-full flex items-center justify-center bg-muted">
+                    <FileVideo className="h-8 w-8 text-muted-foreground" />
+                  </div>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    {getFileIcon(file.type)}
+                    {getFileIcon(file.type, file.name)}
                   </div>
                 )}
                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
@@ -303,11 +311,13 @@ const AdminMediaManager = () => {
                 setPreviewOpen(true);
               }}
             >
-              <div className="h-12 w-12 bg-muted rounded flex items-center justify-center overflow-hidden">
-                {isImage(file.type) ? (
+              <div className="h-12 w-12 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0">
+                {isImage(file.type, file.name) ? (
                   <img src={file.url} alt={file.name} className="h-full w-full object-cover" />
+                ) : isVideo(file.type) ? (
+                  <FileVideo className="h-5 w-5 text-muted-foreground" />
                 ) : (
-                  getFileIcon(file.type)
+                  getFileIcon(file.type, file.name)
                 )}
               </div>
               <div className="flex-1 min-w-0">
@@ -352,7 +362,7 @@ const AdminMediaManager = () => {
           </DialogHeader>
           {selectedFile && (
             <div className="space-y-4">
-              {isImage(selectedFile.type) ? (
+              {isImage(selectedFile.type, selectedFile.name) ? (
                 <div className="rounded-lg overflow-hidden bg-muted">
                   <img
                     src={selectedFile.url}
@@ -360,9 +370,25 @@ const AdminMediaManager = () => {
                     className="w-full max-h-[60vh] object-contain"
                   />
                 </div>
+              ) : isVideo(selectedFile.type) ? (
+                <div className="rounded-lg overflow-hidden bg-muted">
+                  <video
+                    src={selectedFile.url}
+                    controls
+                    className="w-full max-h-[60vh]"
+                  />
+                </div>
+              ) : selectedFile.type === 'application/pdf' ? (
+                <div className="rounded-lg overflow-hidden bg-muted">
+                  <iframe
+                    src={selectedFile.url}
+                    className="w-full h-[60vh]"
+                    title={selectedFile.name}
+                  />
+                </div>
               ) : (
                 <div className="py-12 text-center">
-                  {getFileIcon(selectedFile.type)}
+                  {getFileIcon(selectedFile.type, selectedFile.name)}
                   <p className="text-muted-foreground mt-2">Preview not available</p>
                 </div>
               )}

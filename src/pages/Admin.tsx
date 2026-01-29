@@ -26,13 +26,13 @@ import {
   Instagram,
   Gift,
   Star,
-  AlertTriangle,
   Palette,
   Globe,
   Layers,
   ShoppingBag,
   MessageSquare,
   Sliders,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -147,7 +147,8 @@ const Admin = () => {
   const { user, signOut } = useAuth();
   const { isAdmin, isLoading } = useAdmin();
   const [activeSection, setActiveSection] = useState("dashboard");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<string[]>(["Overview", "Sales & Orders"]);
 
   useEffect(() => {
@@ -274,15 +275,26 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-background flex">
+      {/* Mobile Sidebar Overlay */}
+      {mobileSidebarOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm md:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <aside
-        className={`${
-          sidebarOpen ? "w-64" : "w-16"
-        } bg-card border-r border-border transition-all duration-300 flex flex-col`}
+        className={`
+          fixed md:relative inset-y-0 left-0 z-50
+          ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+          ${sidebarOpen ? "w-64" : "md:w-16 w-64"}
+          bg-card border-r border-border transition-all duration-300 flex flex-col
+        `}
       >
         {/* Logo */}
         <div className="p-4 border-b border-border flex items-center justify-between">
-          {sidebarOpen && (
+          {(sidebarOpen || mobileSidebarOpen) && (
             <Link to="/" className="font-display text-xl">
               <span className="text-gold">artistiya</span>
               <span className="text-foreground">.store</span>
@@ -291,9 +303,16 @@ const Admin = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
+            onClick={() => {
+              if (window.innerWidth < 768) {
+                setMobileSidebarOpen(false);
+              } else {
+                setSidebarOpen(!sidebarOpen);
+              }
+            }}
           >
-            <Menu className="h-5 w-5" />
+            <X className="h-5 w-5 md:hidden" />
+            <Menu className="h-5 w-5 hidden md:block" />
           </Button>
         </div>
 
@@ -301,7 +320,7 @@ const Admin = () => {
         <nav className="flex-1 p-2 overflow-y-auto">
           {menuSections.map((section) => (
             <div key={section.title} className="mb-2">
-              {sidebarOpen && (
+              {(sidebarOpen || mobileSidebarOpen) && (
                 <button
                   onClick={() => toggleSection(section.title)}
                   className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
@@ -315,24 +334,27 @@ const Admin = () => {
                 </button>
               )}
 
-              {(expandedSections.includes(section.title) || !sidebarOpen) && (
+              {(expandedSections.includes(section.title) || (!sidebarOpen && !mobileSidebarOpen)) && (
                 <div className="space-y-0.5">
                   {section.items.map((item) => (
                     <button
                       key={item.id}
-                      onClick={() => setActiveSection(item.id)}
+                      onClick={() => {
+                        setActiveSection(item.id);
+                        setMobileSidebarOpen(false);
+                      }}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                         activeSection === item.id
                           ? "bg-gold/20 text-gold"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       }`}
-                      title={!sidebarOpen ? item.name : undefined}
+                      title={(!sidebarOpen && !mobileSidebarOpen) ? item.name : undefined}
                     >
                       <item.icon className="h-4 w-4 flex-shrink-0" />
-                      {sidebarOpen && (
+                      {(sidebarOpen || mobileSidebarOpen) && (
                         <span className="text-sm flex-1 text-left">{item.name}</span>
                       )}
-                      {sidebarOpen && item.badge && (
+                      {(sidebarOpen || mobileSidebarOpen) && item.badge && (
                         <Badge variant="secondary" className="text-xs h-5 px-1.5">
                           {item.badge}
                         </Badge>
@@ -350,7 +372,7 @@ const Admin = () => {
           <Link to="/">
             <Button variant="outline" className="w-full justify-start" size="sm">
               <Home className="h-4 w-4 mr-2" />
-              {sidebarOpen && "View Store"}
+              {(sidebarOpen || mobileSidebarOpen) && "View Store"}
             </Button>
           </Link>
           <Button
@@ -360,27 +382,40 @@ const Admin = () => {
             onClick={handleSignOut}
           >
             <LogOut className="h-4 w-4 mr-2" />
-            {sidebarOpen && "Logout"}
+            {(sidebarOpen || mobileSidebarOpen) && "Logout"}
           </Button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto min-w-0">
         {/* Top Bar */}
-        <header className="h-14 border-b border-border bg-card px-6 flex items-center justify-between sticky top-0 z-10">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>Admin</span>
-            <ChevronRight className="h-4 w-4" />
-            <span className="text-foreground">{activeItem?.name || "Dashboard"}</span>
+        <header className="h-14 border-b border-border bg-card px-4 md:px-6 flex items-center justify-between sticky top-0 z-10">
+          <div className="flex items-center gap-2">
+            {/* Mobile Menu Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={() => setMobileSidebarOpen(true)}
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span className="hidden sm:inline">Admin</span>
+              <ChevronRight className="h-4 w-4 hidden sm:block" />
+              <span className="text-foreground font-medium">{activeItem?.name || "Dashboard"}</span>
+            </div>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">{user?.email}</span>
+            <span className="text-sm text-muted-foreground hidden sm:inline truncate max-w-[150px]">
+              {user?.email}
+            </span>
           </div>
         </header>
 
         {/* Page Content */}
-        <div className="p-6">{renderContent()}</div>
+        <div className="p-4 md:p-6">{renderContent()}</div>
       </main>
     </div>
   );
