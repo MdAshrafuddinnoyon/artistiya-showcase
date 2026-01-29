@@ -10,29 +10,36 @@ const MobileHomeLayout = () => {
   if (!isMobile) return null;
 
   return (
-    <div className="md:hidden bg-white min-h-screen pb-20">
-      {/* Hero Slider */}
+    <div className="md:hidden bg-background min-h-screen pb-20">
+      {/* Hero Slider - Dynamic from hero_slides table */}
       <MobileHeroSlider />
 
-      {/* Category Pills */}
+      {/* Category Pills - Dynamic from categories table */}
       <MobileCategoryPills />
 
-      {/* Hot Sales Section */}
+      {/* Featured Products (Hot Sales) - Dynamic from products table */}
       <MobileProductSection 
-        title="Hot sales" 
+        title="Hot Sales" 
         queryType="featured" 
-        showDots={true}
+        showViewAll={true}
       />
 
-      {/* New Arrivals Section */}
+      {/* New Arrivals - Dynamic from products table */}
       <MobileProductSection 
         title="New Arrivals" 
         queryType="new_arrivals" 
-        showDots={false}
+        showViewAll={true}
       />
 
-      {/* Recently Viewed */}
+      {/* Recently Viewed / Featured Grid - Dynamic */}
       <MobileRecentlyViewed />
+
+      {/* All Products Section */}
+      <MobileProductSection 
+        title="Explore More" 
+        queryType="all" 
+        showViewAll={true}
+      />
     </div>
   );
 };
