@@ -39,7 +39,7 @@ const ChatWidgets = ({
   };
 
   return (
-    <div className="fixed bottom-24 md:bottom-6 right-4 md:right-6 z-40">
+    <div className="fixed bottom-32 md:bottom-6 right-4 md:right-6 z-30">
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -111,9 +111,9 @@ const ChatWidgets = ({
         </AnimatePresence>
       </motion.button>
 
-      {/* Pulsing ring animation when closed */}
+      {/* Subtle glow effect when closed - no blinking */}
       {!isOpen && (
-        <span className="absolute inset-0 rounded-full bg-gold/30 animate-ping" />
+        <span className="absolute inset-0 rounded-full bg-gold/20 scale-110" />
       )}
     </div>
   );

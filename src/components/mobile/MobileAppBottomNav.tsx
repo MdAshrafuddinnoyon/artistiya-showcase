@@ -28,20 +28,20 @@ const MobileAppBottomNav = ({ onSearchClick, onCartClick }: MobileAppBottomNavPr
     },
     { 
       icon: Search, 
-      label: "Explore", 
+      label: "Search", 
       action: onSearchClick 
     },
     { 
       icon: ShoppingBag, 
       label: "Cart", 
       action: onCartClick, 
-      badge: itemCount 
+      badge: itemCount > 0 ? itemCount : undefined
     },
     { 
       icon: Heart, 
       label: "Wishlist", 
       href: "/dashboard",
-      badge: wishlistCount
+      badge: wishlistCount > 0 ? wishlistCount : undefined
     },
     { 
       icon: User, 
