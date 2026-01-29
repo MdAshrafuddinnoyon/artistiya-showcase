@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -50,6 +50,11 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
+  
+  // Swipe handling for image gallery
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const imageContainerRef = useRef<HTMLDivElement>(null);
 
   const productImages = product.images?.length > 0 
     ? product.images 
@@ -94,7 +99,7 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
           url: window.location.href,
         });
       } catch (error) {
-        // User cancelled or error
+        // User cancelled
       }
     } else {
       navigator.clipboard.writeText(window.location.href);
@@ -103,6 +108,27 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
   };
 
   const isOutOfStock = product.stock_quantity === 0 && !product.is_preorderable;
+
+  // Swipe handlers for image gallery
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setIsDragging(true);
+    setStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!isDragging) return;
+    const endX = e.changedTouches[0].clientX;
+    const diff = startX - endX;
+    
+    if (Math.abs(diff) > 50) {
+      if (diff > 0 && selectedImage < productImages.length - 1) {
+        setSelectedImage(prev => prev + 1);
+      } else if (diff < 0 && selectedImage > 0) {
+        setSelectedImage(prev => prev - 1);
+      }
+    }
+    setIsDragging(false);
+  };
 
   const nextImage = () => {
     setSelectedImage(prev => 
@@ -116,14 +142,19 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
     );
   };
 
+  // Calculate discount percentage
+  const discountPercent = product.compare_at_price && product.compare_at_price > product.price
+    ? Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100)
+    : 0;
+
   return (
-    <div className="min-h-screen bg-background pb-32">
-      {/* Top Navigation */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg">
+    <div className="min-h-screen bg-background pb-36">
+      {/* Top Navigation - Floating */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-background/90 to-transparent">
         <div className="flex items-center justify-between p-4">
           <button
             onClick={() => navigate(-1)}
-            className="w-10 h-10 bg-muted rounded-full flex items-center justify-center"
+            className="w-10 h-10 bg-background/80 backdrop-blur-sm border border-border rounded-full flex items-center justify-center shadow-lg"
           >
             <ChevronLeft className="h-5 w-5 text-foreground" />
           </button>
@@ -131,10 +162,10 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
           <div className="flex items-center gap-3">
             <button
               onClick={handleWishlist}
-              className="w-10 h-10 bg-muted rounded-full flex items-center justify-center"
+              className="w-10 h-10 bg-background/80 backdrop-blur-sm border border-border rounded-full flex items-center justify-center shadow-lg"
             >
               <Heart 
-                className={`h-5 w-5 ${
+                className={`h-5 w-5 transition-colors ${
                   isInWishlist(product.id) 
                     ? "fill-gold text-gold" 
                     : "text-foreground"
@@ -143,7 +174,7 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
             </button>
             <button
               onClick={handleShare}
-              className="w-10 h-10 bg-muted rounded-full flex items-center justify-center"
+              className="w-10 h-10 bg-background/80 backdrop-blur-sm border border-border rounded-full flex items-center justify-center shadow-lg"
             >
               <Share2 className="h-5 w-5 text-foreground" />
             </button>
@@ -151,54 +182,57 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
         </div>
       </div>
 
-      {/* Product Image Slider */}
+      {/* Product Image Gallery - Swipeable */}
       <div className="pt-16">
-        <div className="relative aspect-square bg-muted overflow-hidden">
+        <div 
+          ref={imageContainerRef}
+          className="relative aspect-square bg-muted overflow-hidden"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <AnimatePresence mode="wait">
             <motion.img
               key={selectedImage}
               src={productImages[selectedImage]}
               alt={product.name}
               className="w-full h-full object-cover"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -50 }}
               transition={{ duration: 0.2 }}
+              draggable={false}
             />
           </AnimatePresence>
+
+          {/* Discount Badge */}
+          {discountPercent > 0 && (
+            <div className="absolute top-4 left-4 px-3 py-1 bg-destructive text-destructive-foreground text-sm font-bold rounded">
+              -{discountPercent}%
+            </div>
+          )}
 
           {/* Navigation Arrows */}
           {productImages.length > 1 && (
             <>
               <button
                 onClick={prevImage}
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center"
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center border border-border shadow-lg"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-5 w-5 text-foreground" />
               </button>
               <button
                 onClick={nextImage}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center"
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center border border-border shadow-lg"
               >
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-5 w-5 text-foreground" />
               </button>
             </>
           )}
 
-          {/* Pagination Dots */}
+          {/* Image Counter */}
           {productImages.length > 1 && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
-              {productImages.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedImage(idx)}
-                  className={`h-1.5 rounded-full transition-all ${
-                    selectedImage === idx 
-                      ? "w-6 bg-gold" 
-                      : "w-1.5 bg-white/50"
-                  }`}
-                />
-              ))}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1 bg-background/80 backdrop-blur-sm rounded-full text-xs font-medium">
+              {selectedImage + 1} / {productImages.length}
             </div>
           )}
         </div>
@@ -210,8 +244,10 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
               <button
                 key={idx}
                 onClick={() => setSelectedImage(idx)}
-                className={`w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-colors ${
-                  selectedImage === idx ? "border-gold" : "border-transparent"
+                className={`w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-all ${
+                  selectedImage === idx 
+                    ? "border-gold ring-2 ring-gold/30" 
+                    : "border-border hover:border-gold/50"
                 }`}
               >
                 <img src={img} alt="" className="w-full h-full object-cover" />
@@ -222,34 +258,61 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
       </div>
 
       {/* Product Info */}
-      <div className="px-4 py-4 space-y-4">
-        {/* Title & Price */}
-        <div>
-          <h1 className="font-display text-xl text-foreground leading-tight">
-            {product.name}
-          </h1>
-          
-          <div className="flex items-center gap-3 mt-2">
-            <span className="text-2xl font-bold text-gold">
-              ৳{product.price.toLocaleString()}
+      <div className="px-4 py-5 space-y-5">
+        {/* Category & Title */}
+        {product.category && (
+          <span className="text-gold text-xs font-medium uppercase tracking-wider">
+            {product.category.name}
+          </span>
+        )}
+        <h1 className="font-display text-xl text-foreground leading-tight -mt-3">
+          {product.name}
+        </h1>
+        
+        {/* Price */}
+        <div className="flex items-center gap-3">
+          <span className="text-2xl font-bold text-gold">
+            ৳{product.price.toLocaleString()}
+          </span>
+          {product.compare_at_price && product.compare_at_price > product.price && (
+            <span className="text-base text-muted-foreground line-through">
+              ৳{product.compare_at_price.toLocaleString()}
             </span>
-            {product.compare_at_price && product.compare_at_price > product.price && (
-              <span className="text-base text-muted-foreground line-through">
-                ৳{product.compare_at_price.toLocaleString()}
-              </span>
-            )}
-            <span className="text-xs text-muted-foreground">| Including taxes</span>
-          </div>
+          )}
+          <span className="text-xs text-muted-foreground">Including taxes</span>
         </div>
 
         {/* Rating */}
         {reviewCount > 0 && (
           <div className="flex items-center gap-2">
-            <Star className="h-4 w-4 fill-gold text-gold" />
+            <div className="flex">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star 
+                  key={star}
+                  className={`h-4 w-4 ${
+                    star <= avgRating 
+                      ? "fill-gold text-gold" 
+                      : "text-muted-foreground"
+                  }`} 
+                />
+              ))}
+            </div>
             <span className="font-medium text-foreground">{avgRating.toFixed(1)}</span>
-            <span className="text-sm text-muted-foreground">({reviewCount})</span>
+            <span className="text-sm text-muted-foreground">({reviewCount} reviews)</span>
           </div>
         )}
+
+        {/* Stock Status */}
+        <div className={`text-sm font-medium ${
+          isOutOfStock ? "text-destructive" : "text-green-500"
+        }`}>
+          {isOutOfStock 
+            ? "Out of Stock" 
+            : product.stock_quantity > 0 
+              ? `In Stock (${product.stock_quantity} available)`
+              : `Pre-Order • ${product.production_time || "5-7 days"}`
+          }
+        </div>
 
         {/* Description */}
         {product.description && (
@@ -259,19 +322,19 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
         )}
 
         {/* Quantity Selector */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">Quantity:</span>
-          <div className="flex items-center border border-border rounded-full">
+          <div className="flex items-center bg-muted rounded-full">
             <button
               onClick={() => setQuantity(q => Math.max(1, q - 1))}
-              className="w-9 h-9 flex items-center justify-center hover:bg-muted rounded-l-full transition-colors"
+              className="w-10 h-10 flex items-center justify-center hover:bg-border rounded-l-full transition-colors"
             >
               <Minus className="h-4 w-4" />
             </button>
-            <span className="w-10 text-center font-medium">{quantity}</span>
+            <span className="w-12 text-center font-medium">{quantity}</span>
             <button
               onClick={() => setQuantity(q => q + 1)}
-              className="w-9 h-9 flex items-center justify-center hover:bg-muted rounded-r-full transition-colors"
+              className="w-10 h-10 flex items-center justify-center hover:bg-border rounded-r-full transition-colors"
             >
               <Plus className="h-4 w-4" />
             </button>
@@ -286,37 +349,41 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
         />
       </div>
 
-      {/* Fixed Bottom Actions */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 space-y-2 z-40">
-        <Button
-          variant="outline"
-          size="lg"
-          className="w-full bg-charcoal-deep text-white border-none hover:bg-charcoal-deep/90"
-          onClick={handleAddToCart}
-          disabled={addingToCart || isOutOfStock}
-        >
-          {addingToCart ? (
-            <span className="flex items-center gap-2">
-              <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-              Adding...
-            </span>
-          ) : (
-            <>
-              <ShoppingBag className="h-5 w-5 mr-2" />
-              Add to Cart
-            </>
-          )}
-        </Button>
-        
-        <Button
-          variant="gold"
-          size="lg"
-          className="w-full"
-          onClick={handleBuyNow}
-          disabled={addingToCart || isOutOfStock}
-        >
-          Buy Now
-        </Button>
+      {/* Fixed Bottom Action Bar */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-lg border-t border-border p-4 z-40 safe-area-bottom">
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            size="lg"
+            className="flex-1 h-12 bg-muted hover:bg-muted/80 border-border text-foreground"
+            onClick={handleAddToCart}
+            disabled={addingToCart || isOutOfStock}
+          >
+            {addingToCart ? (
+              <span className="flex items-center gap-2">
+                <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              </span>
+            ) : (
+              <>
+                <ShoppingBag className="h-5 w-5 mr-2" />
+                Add to Cart
+              </>
+            )}
+          </Button>
+          
+          <Button
+            variant="gold"
+            size="lg"
+            className="flex-1 h-12"
+            onClick={handleBuyNow}
+            disabled={addingToCart || isOutOfStock}
+          >
+            {product.is_preorderable && product.stock_quantity === 0 
+              ? "Pre-Order Now" 
+              : "Buy Now"
+            }
+          </Button>
+        </div>
       </div>
     </div>
   );

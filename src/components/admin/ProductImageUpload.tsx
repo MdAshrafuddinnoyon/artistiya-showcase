@@ -1,6 +1,8 @@
 import { useState, useRef } from "react";
-import { Upload, X, Image as ImageIcon, Loader2 } from "lucide-react";
+import { Upload, X, Image as ImageIcon, Loader2, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -11,6 +13,8 @@ interface ProductImageUploadProps {
 
 const ProductImageUpload = ({ images, onImagesChange }: ProductImageUploadProps) => {
   const [uploading, setUploading] = useState(false);
+  const [urlInput, setUrlInput] = useState("");
+  const [activeTab, setActiveTab] = useState("upload");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadImage = async (file: File) => {
@@ -76,17 +80,54 @@ const ProductImageUpload = ({ images, onImagesChange }: ProductImageUploadProps)
     }
   };
 
-  const removeImage = async (urlToRemove: string) => {
-    // Extract file path from URL for deletion
+  const handleAddUrl = () => {
+    const url = urlInput.trim();
+    if (!url) {
+      toast.error("Please enter an image URL");
+      return;
+    }
+
+    // Basic URL validation
     try {
-      const url = new URL(urlToRemove);
-      const pathParts = url.pathname.split('/product-images/');
-      if (pathParts.length > 1) {
-        const filePath = pathParts[1];
-        await supabase.storage.from('product-images').remove([filePath]);
+      new URL(url);
+    } catch {
+      toast.error("Please enter a valid URL");
+      return;
+    }
+
+    // Check if URL looks like an image
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp'];
+    const hasImageExt = imageExtensions.some(ext => url.toLowerCase().includes(ext));
+    const isDataUrl = url.startsWith('data:image/');
+    
+    if (!hasImageExt && !isDataUrl && !url.includes('unsplash') && !url.includes('pexels') && !url.includes('cloudinary')) {
+      // Still allow it but warn
+      console.warn("URL may not be an image:", url);
+    }
+
+    if (images.includes(url)) {
+      toast.error("This image URL already exists");
+      return;
+    }
+
+    onImagesChange([...images, url]);
+    setUrlInput("");
+    toast.success("Image URL added");
+  };
+
+  const removeImage = async (urlToRemove: string) => {
+    // Check if it's a storage URL (from our bucket)
+    if (urlToRemove.includes('product-images')) {
+      try {
+        const url = new URL(urlToRemove);
+        const pathParts = url.pathname.split('/product-images/');
+        if (pathParts.length > 1) {
+          const filePath = pathParts[1];
+          await supabase.storage.from('product-images').remove([filePath]);
+        }
+      } catch (error) {
+        console.error("Error deleting from storage:", error);
       }
-    } catch (error) {
-      console.error("Error deleting from storage:", error);
     }
 
     onImagesChange(images.filter(img => img !== urlToRemove));
@@ -104,7 +145,7 @@ const ProductImageUpload = ({ images, onImagesChange }: ProductImageUploadProps)
       <div className="flex items-center justify-between">
         <label className="text-sm font-medium">Product Images</label>
         <span className="text-xs text-muted-foreground">
-          {images.length} image(s) • Max 5MB each
+          {images.length} image(s)
         </span>
       </div>
 
@@ -122,6 +163,9 @@ const ProductImageUpload = ({ images, onImagesChange }: ProductImageUploadProps)
                 src={url}
                 alt={`Product ${index + 1}`}
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/placeholder.svg';
+                }}
               />
               
               {/* Primary badge */}
@@ -161,40 +205,79 @@ const ProductImageUpload = ({ images, onImagesChange }: ProductImageUploadProps)
         </div>
       )}
 
-      {/* Upload Button */}
-      <div 
-        className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-          uploading ? 'border-gold bg-gold/5' : 'border-border hover:border-gold/50 cursor-pointer'
-        }`}
-        onClick={() => !uploading && fileInputRef.current?.click()}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={handleFileSelect}
-          disabled={uploading}
-        />
-        
-        {uploading ? (
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 className="h-8 w-8 text-gold animate-spin" />
-            <p className="text-sm text-muted-foreground">Uploading...</p>
+      {/* Upload / URL Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="upload" className="gap-2">
+            <Upload className="h-4 w-4" />
+            Upload
+          </TabsTrigger>
+          <TabsTrigger value="url" className="gap-2">
+            <LinkIcon className="h-4 w-4" />
+            URL
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="upload" className="mt-3">
+          <div 
+            className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+              uploading ? 'border-gold bg-gold/5' : 'border-border hover:border-gold/50 cursor-pointer'
+            }`}
+            onClick={() => !uploading && fileInputRef.current?.click()}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handleFileSelect}
+              disabled={uploading}
+            />
+            
+            {uploading ? (
+              <div className="flex flex-col items-center gap-2">
+                <Loader2 className="h-8 w-8 text-gold animate-spin" />
+                <p className="text-sm text-muted-foreground">Uploading...</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                <Upload className="h-8 w-8 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  Click to upload or drag and drop
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  PNG, JPG, WEBP up to 5MB
+                </p>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="flex flex-col items-center gap-2">
-            <Upload className="h-8 w-8 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              Click to upload or drag and drop
-            </p>
+        </TabsContent>
+
+        <TabsContent value="url" className="mt-3">
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <Input
+                placeholder="https://example.com/image.jpg"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddUrl()}
+              />
+              <Button 
+                type="button" 
+                variant="gold" 
+                onClick={handleAddUrl}
+                className="shrink-0"
+              >
+                Add
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground">
-              PNG, JPG, WEBP up to 5MB
+              Enter an external image URL. Supports Unsplash, Pexels, Cloudinary, and direct image links.
             </p>
           </div>
-        )}
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
