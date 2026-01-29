@@ -39,7 +39,7 @@ const ChatWidgets = ({
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-24 md:bottom-6 right-4 md:right-6 z-40">
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -82,7 +82,7 @@ const ChatWidgets = ({
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-colors ${
+        className={`w-12 h-12 md:w-14 md:h-14 rounded-full shadow-lg flex items-center justify-center transition-colors ${
           isOpen ? "bg-charcoal text-white" : "bg-gold text-charcoal-deep"
         }`}
       >
