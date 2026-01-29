@@ -5,6 +5,8 @@ import { Instagram, Facebook, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsMobile } from "@/hooks/use-mobile";
+import MobileAppFooter from "@/components/mobile/MobileAppFooter";
 
 interface SiteBranding {
   logo_url: string | null;
@@ -34,6 +36,7 @@ interface FooterLink {
 }
 
 const Footer = () => {
+  const isMobile = useIsMobile();
   const [branding, setBranding] = useState<SiteBranding>({
     logo_url: null,
     logo_text: "artistiya",
@@ -109,6 +112,11 @@ const Footer = () => {
   };
 
   const displayGroups = linkGroups.length > 0 ? linkGroups : defaultGroups;
+
+  // Show mobile footer for mobile devices
+  if (isMobile) {
+    return <MobileAppFooter branding={branding} />;
+  }
 
   return (
     <footer className="bg-charcoal border-t border-border">

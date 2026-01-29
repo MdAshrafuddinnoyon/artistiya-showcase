@@ -10,7 +10,9 @@ import { supabase } from "@/integrations/supabase/client";
 import CartDrawer from "@/components/modals/CartDrawer";
 import CustomOrderModal from "@/components/modals/CustomOrderModal";
 import SearchModal from "@/components/modals/SearchModal";
-import MobileBottomNav from "./MobileBottomNav";
+import MobileAppHeader from "@/components/mobile/MobileAppHeader";
+import MobileAppBottomNav from "@/components/mobile/MobileAppBottomNav";
+import MobileDrawer from "@/components/mobile/MobileDrawer";
 import LanguageToggle from "@/components/common/LanguageToggle";
 import {
   DropdownMenu,
@@ -120,10 +122,11 @@ const Header = () => {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/50">
-        {/* Announcement Bar - Hidden on mobile */}
+      {/* Desktop Header - Hidden on mobile */}
+      <header className="hidden md:block fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/50">
+        {/* Announcement Bar */}
         {branding.header_announcement_active && (
-          <div className="hidden md:block bg-gold/10 border-b border-gold/20 py-2">
+          <div className="bg-gold/10 border-b border-gold/20 py-2">
             <p className="text-center text-sm text-gold tracking-wide font-body">
               {branding.header_announcement_text}
             </p>
@@ -131,17 +134,7 @@ const Header = () => {
         )}
 
         <div className="container mx-auto px-4 lg:px-8">
-          <nav className="flex items-center justify-between h-14 md:h-20">
-            {/* Mobile Menu Button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden text-foreground hover:text-gold"
-              onClick={() => setIsOpen(!isOpen)}
-            >
-              {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </Button>
-
+          <nav className="flex items-center justify-between h-20">
             {/* Logo */}
             <Link to="/" className="flex-shrink-0">
               {branding.logo_url ? (
@@ -354,75 +347,31 @@ const Header = () => {
             </div>
           </nav>
         </div>
-
-        {/* Mobile Menu */}
-        <AnimatePresence>
-          {isOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="lg:hidden bg-card border-t border-border overflow-hidden"
-            >
-              <div className="container mx-auto px-4 py-6">
-                {/* Custom Order Button - Mobile */}
-                <Button 
-                  variant="gold" 
-                  className="w-full mb-4 flex items-center justify-center gap-2"
-                  onClick={() => {
-                    setCustomOrderOpen(true);
-                    setIsOpen(false);
-                  }}
-                >
-                  <Palette className="h-4 w-4" />
-                  Custom Design
-                </Button>
-
-                <ul className="space-y-4">
-                  {displayMenuItems.map((item) => (
-                    <li key={item.id}>
-                      <Link
-                        to={item.href}
-                        className="block text-lg font-display text-foreground hover:text-gold transition-colors"
-                        onClick={() => setIsOpen(false)}
-                      >
-                        {item.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* Mobile Auth */}
-                <div className="mt-6 pt-6 border-t border-border">
-                  {user ? (
-                    <div className="space-y-3">
-                      <p className="text-sm text-muted-foreground">{user.email}</p>
-                      <Button variant="outline" size="sm" onClick={handleSignOut} className="w-full">
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Logout
-                      </Button>
-                    </div>
-                  ) : (
-                    <Link to="/auth" onClick={() => setIsOpen(false)}>
-                      <Button variant="gold-outline" className="w-full">
-                        Login / Sign Up
-                      </Button>
-                    </Link>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </header>
+
+      {/* Mobile App Header - Shows on mobile only */}
+      <MobileAppHeader
+        onSearchClick={() => setSearchOpen(true)}
+        onCartClick={() => setCartOpen(true)}
+        onMenuClick={() => setIsOpen(true)}
+        branding={branding}
+      />
+
+      {/* Mobile Drawer */}
+      <MobileDrawer
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        onCustomOrderClick={() => setCustomOrderOpen(true)}
+        branding={branding}
+      />
 
       {/* Modals */}
       <CartDrawer open={cartOpen} onOpenChange={setCartOpen} />
       <CustomOrderModal open={customOrderOpen} onOpenChange={setCustomOrderOpen} />
       <SearchModal open={searchOpen} onOpenChange={setSearchOpen} />
       
-      {/* Mobile Bottom Navigation */}
-      <MobileBottomNav 
+      {/* Mobile Bottom Navigation - App style */}
+      <MobileAppBottomNav 
         onSearchClick={() => setSearchOpen(true)} 
         onCartClick={() => setCartOpen(true)} 
       />
