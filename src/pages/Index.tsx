@@ -7,6 +7,7 @@ import FeaturedSection from "@/components/home/FeaturedSection";
 import MakingSection from "@/components/home/MakingSection";
 import TestimonialsSection from "@/components/home/TestimonialsSection";
 import InstagramSection from "@/components/home/InstagramSection";
+import DynamicHomepageSections from "@/components/home/DynamicHomepageSections";
 import MobileHomeLayout from "@/components/home/MobileHomeLayout";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -26,6 +27,7 @@ const Index = () => {
           <HeroSection />
           <CategorySection />
           <NewArrivalsSection />
+          <DynamicHomepageSections />
           <FeaturedSection />
           <MakingSection />
           <TestimonialsSection />

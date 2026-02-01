@@ -35,6 +35,7 @@ interface HeroSlide {
   overlay_position: string;
   overlay_enabled: boolean;
   overlay_opacity: number | null;
+  image_fit: string;
 }
 
 const AdminHeroSlider = () => {
@@ -307,6 +308,25 @@ const AdminHeroSlider = () => {
                     <p className="text-xs text-muted-foreground mt-1">
                       ইমেজে ক্লিক করলে এই লিংকে যাবে (ব্যানার-অনলি মোডে কার্যকর)
                     </p>
+                  </div>
+
+                  {/* Image Fit Mode */}
+                  <div className="mt-3">
+                    <Label>Image Fit Mode (ইমেজ প্রদর্শন)</Label>
+                    <Select
+                      value={slide.image_fit || "cover"}
+                      onValueChange={(value) => updateSlideField(slide.id, "image_fit", value)}
+                    >
+                      <SelectTrigger className="mt-1.5">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cover">Cover (পুরো এরিয়া ঢেকে)</SelectItem>
+                        <SelectItem value="contain">Contain (সম্পূর্ণ ইমেজ দেখায়)</SelectItem>
+                        <SelectItem value="fill">Fill (স্ট্রেচ করে)</SelectItem>
+                        <SelectItem value="scale-down">Scale Down (ছোট করে)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
