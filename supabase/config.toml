@@ -6,6 +6,9 @@ verify_jwt = false
 [functions.generate-invoice]
 verify_jwt = false
 
+[functions.generate-delivery-slip]
+verify_jwt = false
+
 [functions.bkash-payment]
 verify_jwt = false
 

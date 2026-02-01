@@ -35,6 +35,9 @@ import {
   X,
   Award,
   ImageIcon,
+  BarChart3,
+  Building2,
+  QrCode,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -83,6 +86,9 @@ import AdminMakingSection from "@/components/admin/AdminMakingSection";
 import AdminCollections from "@/components/admin/AdminCollections";
 import AdminCertifications from "@/components/admin/AdminCertifications";
 import AdminGallery from "@/components/admin/AdminGallery";
+import AdminCRM from "@/components/admin/AdminCRM";
+import AdminDeliveryPartners from "@/components/admin/AdminDeliveryPartners";
+import AdminQRSettings from "@/components/admin/AdminQRSettings";
 
 // Menu sections for organized navigation
 const menuSections = [
@@ -96,9 +102,11 @@ const menuSections = [
     title: "Sales & Orders",
     items: [
       { id: "orders", name: "Orders", icon: ShoppingCart, badge: "new" },
+      { id: "crm", name: "CRM Dashboard", icon: BarChart3 },
       { id: "leads", name: "Leads", icon: Users },
       { id: "customers", name: "Customers", icon: Users },
       { id: "upsells", name: "Upsell Offers", icon: Gift },
+      { id: "delivery-partners", name: "Delivery Partners", icon: Building2 },
     ],
   },
   {
@@ -156,6 +164,7 @@ const menuSections = [
       { id: "email-settings", name: "Email Settings", icon: Mail },
       { id: "email-templates", name: "Email Templates", icon: Mail },
       { id: "invoice", name: "Invoice", icon: Receipt },
+      { id: "qr-settings", name: "QR Code Discount", icon: QrCode },
       { id: "integrations", name: "Integrations", icon: Globe },
       { id: "marketing", name: "Marketing", icon: Megaphone },
       { id: "settings", name: "General", icon: Settings },
@@ -250,6 +259,8 @@ const Admin = () => {
         return <AdminDashboardHome />;
       case "orders":
         return <AdminOrders />;
+      case "crm":
+        return <AdminCRM />;
       case "products":
         return <AdminProducts />;
       case "categories":
@@ -314,6 +325,8 @@ const Admin = () => {
         return <AdminFooterLinks />;
       case "upsells":
         return <AdminUpsellOffers />;
+      case "delivery-partners":
+        return <AdminDeliveryPartners />;
       case "checkout":
         return <AdminCheckoutSettings />;
       case "email-settings":
@@ -324,6 +337,8 @@ const Admin = () => {
         return <AdminGoogleIntegrations />;
       case "invoice":
         return <AdminInvoiceSettings />;
+      case "qr-settings":
+        return <AdminQRSettings />;
       case "settings":
         return <AdminSettings />;
       default:

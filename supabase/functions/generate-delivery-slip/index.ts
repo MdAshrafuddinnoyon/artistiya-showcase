@@ -10,8 +10,45 @@ interface DeliverySlipRequest {
   orderId: string;
 }
 
+// Generate QR Code as SVG
+function generateQRCode(data: string, size: number = 80): string {
+  const cells = 21;
+  const cellSize = size / cells;
+  
+  let hash = 0;
+  for (let i = 0; i < data.length; i++) {
+    hash = ((hash << 5) - hash) + data.charCodeAt(i);
+    hash = hash & hash;
+  }
+  
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`;
+  svg += `<rect width="${size}" height="${size}" fill="white"/>`;
+  
+  const drawFinder = (x: number, y: number) => {
+    svg += `<rect x="${x * cellSize}" y="${y * cellSize}" width="${7 * cellSize}" height="${7 * cellSize}" fill="black"/>`;
+    svg += `<rect x="${(x + 1) * cellSize}" y="${(y + 1) * cellSize}" width="${5 * cellSize}" height="${5 * cellSize}" fill="white"/>`;
+    svg += `<rect x="${(x + 2) * cellSize}" y="${(y + 2) * cellSize}" width="${3 * cellSize}" height="${3 * cellSize}" fill="black"/>`;
+  };
+  
+  drawFinder(0, 0);
+  drawFinder(cells - 7, 0);
+  drawFinder(0, cells - 7);
+  
+  for (let y = 0; y < cells; y++) {
+    for (let x = 0; x < cells; x++) {
+      if ((x < 8 && y < 8) || (x >= cells - 8 && y < 8) || (x < 8 && y >= cells - 8)) continue;
+      const seed = (x * 31 + y * 17 + hash) % 100;
+      if (seed < 40) {
+        svg += `<rect x="${x * cellSize}" y="${y * cellSize}" width="${cellSize}" height="${cellSize}" fill="black"/>`;
+      }
+    }
+  }
+  
+  svg += '</svg>';
+  return svg;
+}
+
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -24,7 +61,6 @@ serve(async (req) => {
     const { orderId }: DeliverySlipRequest = await req.json();
     console.log(`Generating delivery slip for order: ${orderId}`);
 
-    // Fetch order details
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .select(`
@@ -40,7 +76,6 @@ serve(async (req) => {
       throw new Error("Order not found");
     }
 
-    // Fetch invoice settings for company info
     const { data: settings } = await supabase
       .from("invoice_settings")
       .select("*")
@@ -53,13 +88,28 @@ serve(async (req) => {
       company_phone: "+880 1XXX-XXXXXX",
     };
 
+    // Get QR discount settings
+    const { data: qrSettings } = await supabase
+      .from("qr_discount_settings")
+      .select("*")
+      .limit(1)
+      .single();
+
+    const qrActive = qrSettings?.is_active ?? false;
+    const qrDiscount = qrSettings?.discount_value ?? 5;
+    const qrType = qrSettings?.discount_type ?? 'percentage';
+
+    const baseUrl = supabaseUrl.replace('.supabase.co', '.lovable.app').replace('https://', 'https://id-preview--');
+    const claimUrl = `${baseUrl}/claim-discount?orderId=${order.id}&qr=${order.qr_code_id}`;
+    
+    const qrCodeSvg = generateQRCode(claimUrl, 70);
+
     const orderDate = new Date(order.created_at).toLocaleDateString("en-GB", {
       day: "2-digit",
       month: "short",
       year: "numeric"
     });
 
-    // Generate items list
     const itemsList = order.order_items.map((item: any) => 
       `<tr>
         <td style="padding: 6px 8px; border-bottom: 1px dashed #ccc;">${item.product_name}</td>
@@ -67,7 +117,6 @@ serve(async (req) => {
       </tr>`
     ).join("");
 
-    // Calculate total items
     const totalItems = order.order_items.reduce((sum: number, item: any) => sum + item.quantity, 0);
 
     const deliverySlipHtml = `
@@ -191,8 +240,40 @@ serve(async (req) => {
       font-size: 10px;
       margin-top: 5px;
     }
+    .qr-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      padding: 8px;
+      border: 1px dashed #ccc;
+      border-radius: 4px;
+    }
+    .qr-code {
+      text-align: center;
+    }
+    .qr-code p {
+      font-size: 8px;
+      margin-top: 4px;
+      color: #666;
+    }
+    .discount-badge {
+      background: linear-gradient(135deg, #D4AF37 0%, #F5D77A 100%);
+      color: #1a1a1a;
+      padding: 8px 12px;
+      border-radius: 4px;
+      text-align: center;
+    }
+    .discount-badge .value {
+      font-size: 16px;
+      font-weight: bold;
+    }
+    .discount-badge p {
+      font-size: 8px;
+      margin: 2px 0 0 0;
+    }
     .footer {
-      margin-top: 15px;
+      margin-top: 10px;
       padding-top: 10px;
       border-top: 1px dashed #ccc;
       text-align: center;
@@ -201,11 +282,9 @@ serve(async (req) => {
     }
     .barcode-area {
       text-align: center;
-      padding: 10px;
-      margin-top: 10px;
-      border: 1px dashed #ccc;
+      padding: 8px;
       font-family: monospace;
-      font-size: 14px;
+      font-size: 12px;
       letter-spacing: 2px;
     }
   </style>
@@ -255,8 +334,22 @@ serve(async (req) => {
     ${order.payment_method === 'cod' ? '' : '<div class="label" style="color: #4ade80;">✓ PAID</div>'}
   </div>
 
-  <div class="barcode-area">
-    ${order.order_number}
+  <div class="qr-section">
+    <div class="qr-code">
+      ${qrCodeSvg}
+      <p>Scan for authenticity</p>
+    </div>
+    
+    ${qrActive ? `
+    <div class="discount-badge">
+      <div class="value">🎁 ${qrType === 'percentage' ? qrDiscount + '%' : '৳' + qrDiscount}</div>
+      <p>Scan & get discount!</p>
+    </div>
+    ` : ''}
+    
+    <div class="barcode-area">
+      ${order.order_number}
+    </div>
   </div>
 
   <div class="footer">
@@ -267,7 +360,7 @@ serve(async (req) => {
 </html>
     `;
 
-    console.log("Delivery slip generated successfully");
+    console.log("Delivery slip generated successfully with QR code");
 
     return new Response(JSON.stringify({ 
       success: true, 

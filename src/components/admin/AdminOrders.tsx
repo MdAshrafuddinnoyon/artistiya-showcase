@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Eye, Truck, CheckCircle, XCircle, Clock, Search, AlertTriangle, Shield, FileText, Printer, Download, Loader2 } from "lucide-react";
+import { Eye, Truck, CheckCircle, XCircle, Clock, Search, AlertTriangle, Shield, FileText, Printer, Download, Loader2, Calendar, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
@@ -17,6 +18,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import BulkSelectionToolbar from "./BulkSelectionToolbar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -35,6 +41,8 @@ interface Order {
   created_at: string;
   fraud_score: number;
   is_flagged: boolean;
+  delivery_partner_id: string | null;
+  tracking_number: string | null;
   address: {
     full_name: string;
     phone: string;
@@ -42,6 +50,10 @@ interface Order {
     district: string;
     thana: string;
     address_line: string;
+  } | null;
+  delivery_partner?: {
+    id: string;
+    name: string;
   } | null;
 }
 
@@ -67,10 +79,22 @@ const AdminOrders = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deliveryPartners, setDeliveryPartners] = useState<{id: string; name: string}[]>([]);
+  const [bulkDownloading, setBulkDownloading] = useState(false);
+
+  const fetchDeliveryPartners = async () => {
+    const { data } = await supabase
+      .from("delivery_partners")
+      .select("id, name")
+      .eq("is_active", true);
+    setDeliveryPartners(data || []);
+  };
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -86,12 +110,21 @@ const AdminOrders = () => {
             district,
             thana,
             address_line
-          )
+          ),
+          delivery_partner:delivery_partners (id, name)
         `)
         .order("created_at", { ascending: false });
 
       if (statusFilter !== "all") {
         query = query.eq("status", statusFilter as any);
+      }
+
+      if (dateFrom) {
+        query = query.gte("created_at", `${dateFrom}T00:00:00`);
+      }
+
+      if (dateTo) {
+        query = query.lte("created_at", `${dateTo}T23:59:59`);
       }
 
       const { data, error } = await query;
@@ -101,7 +134,6 @@ const AdminOrders = () => {
         throw error;
       }
       
-      // Map data to include default values for new columns
       const ordersWithDefaults = (data || []).map((order: any) => ({
         ...order,
         fraud_score: order.fraud_score || 0,
@@ -119,7 +151,8 @@ const AdminOrders = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [statusFilter]);
+    fetchDeliveryPartners();
+  }, [statusFilter, dateFrom, dateTo]);
 
   const fetchOrderItems = async (orderId: string) => {
     const { data, error } = await supabase
@@ -140,9 +173,17 @@ const AdminOrders = () => {
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     try {
+      const updateData: any = { status: newStatus };
+      
+      if (newStatus === "shipped") {
+        updateData.shipped_at = new Date().toISOString();
+      } else if (newStatus === "delivered") {
+        updateData.delivered_at = new Date().toISOString();
+      }
+
       const { error } = await supabase
         .from("orders")
-        .update({ status: newStatus as any })
+        .update(updateData)
         .eq("id", orderId);
 
       if (error) throw error;
@@ -156,6 +197,22 @@ const AdminOrders = () => {
     } catch (error) {
       console.error("Error updating status:", error);
       toast.error("Failed to update status");
+    }
+  };
+
+  const handlePartnerChange = async (orderId: string, partnerId: string) => {
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ delivery_partner_id: partnerId || null })
+        .eq("id", orderId);
+
+      if (error) throw error;
+      toast.success("Delivery partner updated");
+      fetchOrders();
+    } catch (error) {
+      console.error("Error updating partner:", error);
+      toast.error("Failed to update partner");
     }
   };
 
@@ -207,7 +264,6 @@ const AdminOrders = () => {
     if (!confirm(`Delete ${selectedIds.length} orders? This cannot be undone.`)) return;
     
     try {
-      // First delete order items
       const { error: itemsError } = await supabase
         .from("order_items")
         .delete()
@@ -215,7 +271,6 @@ const AdminOrders = () => {
 
       if (itemsError) throw itemsError;
 
-      // Then delete orders
       const { error } = await supabase
         .from("orders")
         .delete()
@@ -229,6 +284,80 @@ const AdminOrders = () => {
       console.error("Error deleting orders:", error);
       toast.error("Failed to delete orders");
     }
+  };
+
+  const handleBulkInvoiceDownload = async () => {
+    if (selectedIds.length === 0) {
+      toast.error("No orders selected");
+      return;
+    }
+
+    setBulkDownloading(true);
+    try {
+      for (const orderId of selectedIds) {
+        const response = await supabase.functions.invoke('generate-invoice', {
+          body: { orderId }
+        });
+
+        if (response.error) {
+          console.error(`Error generating invoice for ${orderId}:`, response.error);
+          continue;
+        }
+
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(response.data.html);
+          printWindow.document.close();
+        }
+      }
+      toast.success(`${selectedIds.length} invoices generated`);
+    } catch (error) {
+      console.error("Error generating bulk invoices:", error);
+      toast.error("Failed to generate some invoices");
+    } finally {
+      setBulkDownloading(false);
+    }
+  };
+
+  const handleBulkDeliverySlipDownload = async () => {
+    if (selectedIds.length === 0) {
+      toast.error("No orders selected");
+      return;
+    }
+
+    setBulkDownloading(true);
+    try {
+      for (const orderId of selectedIds) {
+        const response = await supabase.functions.invoke('generate-delivery-slip', {
+          body: { orderId }
+        });
+
+        if (response.error) {
+          console.error(`Error generating slip for ${orderId}:`, response.error);
+          continue;
+        }
+
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(response.data.html);
+          printWindow.document.close();
+        }
+      }
+      toast.success(`${selectedIds.length} delivery slips generated`);
+    } catch (error) {
+      console.error("Error generating bulk slips:", error);
+      toast.error("Failed to generate some delivery slips");
+    } finally {
+      setBulkDownloading(false);
+    }
+  };
+
+  // Stats calculation
+  const stats = {
+    total: filteredOrders.length,
+    pending: filteredOrders.filter(o => o.status === 'pending').length,
+    delivered: filteredOrders.filter(o => o.status === 'delivered').length,
+    cancelled: filteredOrders.filter(o => o.status === 'cancelled').length,
   };
 
   if (loading) {
@@ -251,31 +380,86 @@ const AdminOrders = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-4 justify-between">
-        <h1 className="font-display text-2xl text-foreground">Orders</h1>
-        <div className="flex gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      {/* Header */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row gap-4 justify-between">
+          <h1 className="font-display text-2xl text-foreground">Orders</h1>
+          <div className="flex flex-wrap gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search orders..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 w-48"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                {statusOptions.map((status) => (
+                  <SelectItem key={status.value} value={status.value}>
+                    {status.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Date Filters */}
+        <div className="flex flex-wrap items-center gap-3 bg-muted/50 p-3 rounded-lg">
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center gap-2">
+            <Label className="text-sm text-muted-foreground">From:</Label>
             <Input
-              placeholder="Search orders..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 w-64"
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-36 h-8"
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Filter status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              {statusOptions.map((status) => (
-                <SelectItem key={status.value} value={status.value}>
-                  {status.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Label className="text-sm text-muted-foreground">To:</Label>
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-36 h-8"
+            />
+          </div>
+          {(dateFrom || dateTo) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setDateFrom(""); setDateTo(""); }}
+            >
+              Clear
+            </Button>
+          )}
+        </div>
+
+        {/* Quick Stats */}
+        <div className="grid grid-cols-4 gap-3">
+          <div className="bg-card border border-border rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+            <p className="text-xs text-muted-foreground">Total</p>
+          </div>
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold text-yellow-500">{stats.pending}</p>
+            <p className="text-xs text-muted-foreground">Pending</p>
+          </div>
+          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold text-green-500">{stats.delivered}</p>
+            <p className="text-xs text-muted-foreground">Delivered</p>
+          </div>
+          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold text-red-500">{stats.cancelled}</p>
+            <p className="text-xs text-muted-foreground">Cancelled</p>
+          </div>
         </div>
       </div>
 
@@ -288,16 +472,36 @@ const AdminOrders = () => {
         onBulkDelete={handleBulkDelete}
         customActions={
           selectedIds.length > 0 && (
-            <Select onValueChange={handleBulkStatusChange}>
-              <SelectTrigger className="w-36 h-8">
-                <SelectValue placeholder="Change Status" />
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map(s => (
-                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Select onValueChange={handleBulkStatusChange}>
+                <SelectTrigger className="w-32 h-8">
+                  <SelectValue placeholder="Change Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map(s => (
+                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBulkInvoiceDownload}
+                disabled={bulkDownloading}
+              >
+                {bulkDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4 mr-1" />}
+                Invoices
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBulkDeliverySlipDownload}
+                disabled={bulkDownloading}
+              >
+                {bulkDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4 mr-1" />}
+                Slips
+              </Button>
+            </div>
           )
         }
       />
@@ -317,7 +521,7 @@ const AdminOrders = () => {
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Order</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Customer</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Total</th>
-                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Payment</th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Partner</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Risk</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Status</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Date</th>
@@ -352,18 +556,29 @@ const AdminOrders = () => {
                     </td>
                     <td className="p-4">
                       <p className="font-semibold text-gold">৳{order.total.toLocaleString()}</p>
+                      <span className="text-xs uppercase text-muted-foreground">{order.payment_method}</span>
                     </td>
                     <td className="p-4">
-                      <span className="text-sm uppercase">{order.payment_method}</span>
-                      {order.payment_transaction_id && (
-                        <p className="text-xs text-muted-foreground">{order.payment_transaction_id}</p>
-                      )}
+                      <Select
+                        value={order.delivery_partner_id || "none"}
+                        onValueChange={(v) => handlePartnerChange(order.id, v === "none" ? "" : v)}
+                      >
+                        <SelectTrigger className="w-28 h-8 text-xs">
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {deliveryPartners.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </td>
                     <td className="p-4">
                       {order.is_flagged ? (
                         <div className="flex items-center gap-1 text-destructive">
                           <AlertTriangle className="h-4 w-4" />
-                          <span className="text-xs font-medium">High Risk</span>
+                          <span className="text-xs font-medium">High</span>
                         </div>
                       ) : order.fraud_score > 0 ? (
                         <div className="flex items-center gap-1 text-yellow-500">
@@ -382,10 +597,10 @@ const AdminOrders = () => {
                         value={order.status}
                         onValueChange={(value) => handleStatusChange(order.id, value)}
                       >
-                        <SelectTrigger className="w-32 h-8">
+                        <SelectTrigger className="w-28 h-8">
                           <div className="flex items-center gap-2">
                             <div className={`h-2 w-2 rounded-full ${getStatusColor(order.status)}`} />
-                            <span className="capitalize text-sm">{order.status}</span>
+                            <span className="capitalize text-xs">{order.status}</span>
                           </div>
                         </SelectTrigger>
                         <SelectContent>
@@ -409,8 +624,7 @@ const AdminOrders = () => {
                         size="sm"
                         onClick={() => handleViewDetails(order)}
                       >
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
+                        <Eye className="h-4 w-4" />
                       </Button>
                     </td>
                   </tr>
@@ -535,7 +749,6 @@ const InvoiceButton = ({ orderId, orderNumber }: { orderId: string; orderNumber:
 
       if (response.error) throw new Error(response.error.message);
 
-      // Open invoice in new window for printing
       const printWindow = window.open('', '_blank');
       if (printWindow) {
         printWindow.document.write(response.data.html);
@@ -579,7 +792,6 @@ const DeliverySlipButton = ({ orderId, orderNumber }: { orderId: string; orderNu
 
       if (response.error) throw new Error(response.error.message);
 
-      // Open delivery slip in new window for printing
       const printWindow = window.open('', '_blank');
       if (printWindow) {
         printWindow.document.write(response.data.html);
