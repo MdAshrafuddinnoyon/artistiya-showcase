@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Filter, Grid, LayoutGrid, ShoppingBag, X, Heart, Search, Loader2 } from "lucide-react";
+import { Filter, Grid, LayoutGrid, ShoppingBag, X, Heart, Search, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -40,6 +40,8 @@ interface Product {
   is_new_arrival: boolean | null;
   stock_quantity: number | null;
   is_preorderable: boolean | null;
+  is_showcase: boolean | null;
+  showcase_description: string | null;
   category: {
     name: string;
     name_bn: string | null;
@@ -52,6 +54,16 @@ interface Category {
   name: string;
   name_bn: string | null;
   slug: string;
+}
+
+interface ShopSettings {
+  min_price: number;
+  max_price: number;
+  price_step: number;
+  default_sort: string;
+  products_per_page: number;
+  show_out_of_stock: boolean;
+  show_showcase_products: boolean;
 }
 
 const Shop = () => {
@@ -67,6 +79,17 @@ const Shop = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filterOpen, setFilterOpen] = useState(false);
   
+  // Shop settings from database
+  const [shopSettings, setShopSettings] = useState<ShopSettings>({
+    min_price: 0,
+    max_price: 50000,
+    price_step: 100,
+    default_sort: 'newest',
+    products_per_page: 12,
+    show_out_of_stock: true,
+    show_showcase_products: true,
+  });
+  
   // Search
   const [searchQuery, setSearchQuery] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
@@ -75,9 +98,27 @@ const Shop = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000]);
   const [showPreorderOnly, setShowPreorderOnly] = useState(false);
+  const [showShowcaseOnly, setShowShowcaseOnly] = useState(false);
   const [sortBy, setSortBy] = useState("newest");
 
-  // Fetch categories
+  // Fetch shop settings
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const { data } = await supabase
+        .from("shop_settings")
+        .select("*")
+        .single();
+      
+      if (data) {
+        setShopSettings(data as ShopSettings);
+        setPriceRange([data.min_price || 0, data.max_price || 50000]);
+        setSortBy(data.default_sort || 'newest');
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  // Fetch categories with realtime subscription
   useEffect(() => {
     const fetchCategories = async () => {
       const { data, error } = await supabase
@@ -91,6 +132,20 @@ const Shop = () => {
     };
 
     fetchCategories();
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel('categories_shop_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'categories' },
+        () => fetchCategories()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Set category from URL
@@ -113,7 +168,7 @@ const Shop = () => {
         .from("products")
         .select(`
           id, name, name_bn, slug, price, compare_at_price, images, 
-          is_new_arrival, stock_quantity, is_preorderable,
+          is_new_arrival, stock_quantity, is_preorderable, is_showcase, showcase_description,
           category:categories (name, name_bn, slug)
         `)
         .eq("is_active", true);
@@ -128,12 +183,19 @@ const Shop = () => {
         query = query.eq("category_id", selectedCategory);
       }
 
-      // Price filter
-      query = query.gte("price", priceRange[0]).lte("price", priceRange[1]);
+      // Price filter - only for non-showcase products
+      if (!showShowcaseOnly) {
+        query = query.gte("price", priceRange[0]).lte("price", priceRange[1]);
+      }
 
       // Pre-order filter
       if (showPreorderOnly) {
         query = query.eq("is_preorderable", true).eq("stock_quantity", 0);
+      }
+
+      // Showcase filter
+      if (showShowcaseOnly) {
+        query = query.eq("is_showcase", true);
       }
 
       // Sorting
@@ -161,9 +223,9 @@ const Shop = () => {
       setLoading(false);
       setSearchLoading(false);
     }
-  }, [searchQuery, selectedCategory, priceRange, showPreorderOnly, sortBy]);
+  }, [searchQuery, selectedCategory, priceRange, showPreorderOnly, showShowcaseOnly, sortBy]);
 
-  // Debounced search effect
+  // Debounced search effect with realtime subscription
   useEffect(() => {
     setLoading(true);
     const timer = setTimeout(() => {
@@ -171,6 +233,22 @@ const Shop = () => {
     }, 300);
 
     return () => clearTimeout(timer);
+  }, [searchProducts]);
+
+  // Realtime product updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('products_shop_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products' },
+        () => searchProducts()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [searchProducts]);
 
   const getCategoryName = (cat: Category | null) => {
@@ -198,46 +276,93 @@ const Shop = () => {
 
   const FilterContent = () => (
     <div className="space-y-6">
-      {/* Price Range */}
+      {/* Price Range with smooth slider */}
       <div>
-        <h3 className="font-display text-lg mb-4">Price Range</h3>
-        <Slider
-          value={priceRange}
-          min={0}
-          max={50000}
-          step={500}
-          onValueChange={(value) => setPriceRange(value as [number, number])}
-          className="mb-4"
-        />
-        <div className="flex justify-between text-sm text-muted-foreground">
-          <span>৳{priceRange[0].toLocaleString()}</span>
-          <span>৳{priceRange[1].toLocaleString()}</span>
+        <h3 className="font-display text-lg mb-4">{language === "bn" ? "মূল্য সীমা" : "Price Range"}</h3>
+        <div className="space-y-4">
+          <Slider
+            value={priceRange}
+            min={shopSettings.min_price}
+            max={shopSettings.max_price}
+            step={shopSettings.price_step}
+            onValueChange={(value) => setPriceRange(value as [number, number])}
+            className="mb-2"
+          />
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1">
+              <Input
+                type="number"
+                value={priceRange[0]}
+                onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
+                className="text-center h-9"
+                min={shopSettings.min_price}
+                max={priceRange[1]}
+              />
+            </div>
+            <span className="text-muted-foreground">—</span>
+            <div className="flex-1">
+              <Input
+                type="number"
+                value={priceRange[1]}
+                onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
+                className="text-center h-9"
+                min={priceRange[0]}
+                max={shopSettings.max_price}
+              />
+            </div>
+          </div>
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>৳{shopSettings.min_price.toLocaleString()}</span>
+            <span>৳{shopSettings.max_price.toLocaleString()}</span>
+          </div>
         </div>
       </div>
 
-      {/* Pre-order Filter */}
-      <div className="flex items-center space-x-2">
-        <Checkbox
-          id="preorder"
-          checked={showPreorderOnly}
-          onCheckedChange={(checked) => setShowPreorderOnly(checked as boolean)}
-        />
-        <label htmlFor="preorder" className="text-sm cursor-pointer">
-          Pre-order Only
-        </label>
+      {/* Quick Filters */}
+      <div className="space-y-3">
+        <h3 className="font-display text-lg mb-2">{language === "bn" ? "ফিল্টার" : "Filters"}</h3>
+        
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="preorder"
+            checked={showPreorderOnly}
+            onCheckedChange={(checked) => {
+              setShowPreorderOnly(checked as boolean);
+              if (checked) setShowShowcaseOnly(false);
+            }}
+          />
+          <label htmlFor="preorder" className="text-sm cursor-pointer">
+            {language === "bn" ? "শুধু প্রি-অর্ডার" : "Pre-order Only"}
+          </label>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="showcase"
+            checked={showShowcaseOnly}
+            onCheckedChange={(checked) => {
+              setShowShowcaseOnly(checked as boolean);
+              if (checked) setShowPreorderOnly(false);
+            }}
+          />
+          <label htmlFor="showcase" className="text-sm cursor-pointer flex items-center gap-1">
+            <Sparkles className="h-3 w-3 text-gold" />
+            {language === "bn" ? "শোকেস পণ্য" : "Showcase Products"}
+          </label>
+        </div>
       </div>
 
       {/* Categories */}
       <div>
-        <h3 className="font-display text-lg mb-4">Categories</h3>
-        <div className="space-y-2">
+        <h3 className="font-display text-lg mb-4">{language === "bn" ? "ক্যাটাগরি" : "Categories"}</h3>
+        <div className="space-y-2 max-h-48 overflow-y-auto">
           <button
             onClick={() => setSelectedCategory("all")}
             className={`block w-full text-left px-3 py-2 rounded transition-colors ${
               selectedCategory === "all" ? "bg-gold/20 text-gold" : "hover:bg-muted"
             }`}
           >
-            All Products
+            {language === "bn" ? "সব পণ্য" : "All Products"}
           </button>
           {categories.map(cat => (
             <button
@@ -259,13 +384,14 @@ const Shop = () => {
         className="w-full"
         onClick={() => {
           setSelectedCategory("all");
-          setPriceRange([0, 50000]);
+          setPriceRange([shopSettings.min_price, shopSettings.max_price]);
           setShowPreorderOnly(false);
+          setShowShowcaseOnly(false);
           setSearchQuery("");
         }}
       >
         <X className="h-4 w-4 mr-2" />
-        Clear Filters
+        {language === "bn" ? "ফিল্টার মুছুন" : "Clear Filters"}
       </Button>
     </div>
   );
@@ -400,19 +526,23 @@ const Shop = () => {
               ) : products.length === 0 ? (
                 <div className="text-center py-16">
                   <p className="text-muted-foreground text-lg">
-                    {searchQuery ? `No products found for "${searchQuery}"` : t("shop.noProducts")}
+                    {searchQuery 
+                      ? (language === "bn" ? `"${searchQuery}" এর জন্য কোনো পণ্য পাওয়া যায়নি` : `No products found for "${searchQuery}"`)
+                      : (language === "bn" ? "কোনো পণ্য পাওয়া যায়নি" : t("shop.noProducts"))
+                    }
                   </p>
                   <Button 
                     variant="gold" 
                     className="mt-4"
                     onClick={() => {
                       setSelectedCategory("all");
-                      setPriceRange([0, 50000]);
+                      setPriceRange([shopSettings.min_price, shopSettings.max_price]);
                       setShowPreorderOnly(false);
+                      setShowShowcaseOnly(false);
                       setSearchQuery("");
                     }}
                   >
-                    View All
+                    {language === "bn" ? "সব দেখুন" : "View All"}
                   </Button>
                 </div>
               ) : (
@@ -457,35 +587,50 @@ const Shop = () => {
                             
                             {/* Badges */}
                             <div className="absolute top-3 left-3 flex flex-col gap-1">
-                              {discount > 0 && (
+                              {product.is_showcase && (
+                                <span className="px-2 py-0.5 bg-gradient-to-r from-gold to-bronze text-charcoal-deep text-xs font-semibold rounded flex items-center gap-1">
+                                  <Sparkles className="h-3 w-3" />
+                                  {language === "bn" ? "শোকেস" : "Showcase"}
+                                </span>
+                              )}
+                              {discount > 0 && !product.is_showcase && (
                                 <span className="px-2 py-0.5 bg-destructive text-destructive-foreground text-xs font-semibold rounded">
                                   -{discount}%
                                 </span>
                               )}
-                              {product.is_new_arrival && (
+                              {product.is_new_arrival && !product.is_showcase && (
                                 <span className="px-2 py-0.5 bg-gold text-charcoal-deep text-xs font-semibold rounded">
                                   NEW
                                 </span>
                               )}
-                              {canPreorder && (
+                              {canPreorder && !product.is_showcase && (
                                 <span className="px-2 py-0.5 bg-bronze text-white text-xs font-semibold rounded">
-                                  Pre-Order
+                                  {language === "bn" ? "প্রি-অর্ডার" : "Pre-Order"}
                                 </span>
                               )}
                             </div>
 
                             {/* Hover Overlay */}
                             <div className="absolute inset-0 bg-charcoal-deep/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
-                              <Button 
-                                variant="gold" 
-                                size="sm"
-                                onClick={(e) => handleAddToCart(e, product.id)}
-                              >
-                                <ShoppingBag className="h-4 w-4" />
-                              </Button>
-                              <Button variant="outline" size="sm" className="bg-background/80">
-                                View
-                              </Button>
+                              {product.is_showcase ? (
+                                <Button variant="gold" size="sm">
+                                  <Sparkles className="h-4 w-4 mr-1" />
+                                  {language === "bn" ? "কাস্টম অর্ডার" : "Custom Order"}
+                                </Button>
+                              ) : (
+                                <>
+                                  <Button 
+                                    variant="gold" 
+                                    size="sm"
+                                    onClick={(e) => handleAddToCart(e, product.id)}
+                                  >
+                                    <ShoppingBag className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="outline" size="sm" className="bg-background/80">
+                                    {language === "bn" ? "দেখুন" : "View"}
+                                  </Button>
+                                </>
+                              )}
                             </div>
                           </div>
                           

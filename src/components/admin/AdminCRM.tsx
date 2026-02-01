@@ -166,6 +166,25 @@ const AdminCRM = () => {
 
   useEffect(() => {
     fetchData();
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel('crm_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        () => fetchData()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'delivery_partners' },
+        () => fetchData()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [dateFrom, dateTo, statusFilter]);
 
   const exportToCSV = (data: any[], filename: string) => {

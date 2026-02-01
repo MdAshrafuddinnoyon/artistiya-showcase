@@ -2104,12 +2104,15 @@ export type Database = {
           is_featured: boolean | null
           is_new_arrival: boolean | null
           is_preorderable: boolean | null
+          is_showcase: boolean | null
           materials: string | null
           materials_bn: string | null
           name: string
           name_bn: string | null
           price: number
           production_time: string | null
+          showcase_description: string | null
+          showcase_description_bn: string | null
           slug: string
           stock_quantity: number | null
           story: string | null
@@ -2134,12 +2137,15 @@ export type Database = {
           is_featured?: boolean | null
           is_new_arrival?: boolean | null
           is_preorderable?: boolean | null
+          is_showcase?: boolean | null
           materials?: string | null
           materials_bn?: string | null
           name: string
           name_bn?: string | null
           price: number
           production_time?: string | null
+          showcase_description?: string | null
+          showcase_description_bn?: string | null
           slug: string
           stock_quantity?: number | null
           story?: string | null
@@ -2164,12 +2170,15 @@ export type Database = {
           is_featured?: boolean | null
           is_new_arrival?: boolean | null
           is_preorderable?: boolean | null
+          is_showcase?: boolean | null
           materials?: string | null
           materials_bn?: string | null
           name?: string
           name_bn?: string | null
           price?: number
           production_time?: string | null
+          showcase_description?: string | null
+          showcase_description_bn?: string | null
           slug?: string
           stock_quantity?: number | null
           story?: string | null
@@ -2302,6 +2311,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      shop_settings: {
+        Row: {
+          created_at: string | null
+          default_sort: string | null
+          id: string
+          max_price: number | null
+          min_price: number | null
+          price_step: number | null
+          products_per_page: number | null
+          show_out_of_stock: boolean | null
+          show_showcase_products: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_sort?: string | null
+          id?: string
+          max_price?: number | null
+          min_price?: number | null
+          price_step?: number | null
+          products_per_page?: number | null
+          show_out_of_stock?: boolean | null
+          show_showcase_products?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          default_sort?: string | null
+          id?: string
+          max_price?: number | null
+          min_price?: number | null
+          price_step?: number | null
+          products_per_page?: number | null
+          show_out_of_stock?: boolean | null
+          show_showcase_products?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       site_branding: {
         Row: {
