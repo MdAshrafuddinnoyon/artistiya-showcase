@@ -130,7 +130,7 @@ const Shop = () => {
   const [showShowcaseOnly, setShowShowcaseOnly] = useState(false);
   const [sortBy, setSortBy] = useState("newest");
 
-  // Fetch shop settings
+  // Fetch shop settings with realtime subscription
   useEffect(() => {
     const fetchSettings = async () => {
       // Fetch shop settings
@@ -155,7 +155,27 @@ const Shop = () => {
         setPageSettings(pageData as any);
       }
     };
+    
     fetchSettings();
+
+    // Subscribe to realtime changes for shop_page_settings
+    const channel = supabase
+      .channel('shop_page_settings_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'shop_page_settings' },
+        () => fetchSettings()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'shop_settings' },
+        () => fetchSettings()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Fetch categories with realtime subscription
