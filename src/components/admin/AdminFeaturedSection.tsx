@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Save, Upload, ArrowLeftRight } from "lucide-react";
+import { Save, Upload, ArrowLeftRight, Image, X, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,8 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import MediaPickerModal from "./MediaPickerModal";
 
 interface FeaturedSection {
   id: string;
@@ -32,6 +34,8 @@ const AdminFeaturedSection = () => {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [newFeature, setNewFeature] = useState("");
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -136,6 +140,19 @@ const AdminFeaturedSection = () => {
     }
   };
 
+  const handleRemoveImage = () => {
+    if (section) {
+      setSection({ ...section, image_url: null });
+    }
+  };
+
+  const handleMediaSelect = (url: string) => {
+    if (section) {
+      setSection({ ...section, image_url: url });
+    }
+    setMediaPickerOpen(false);
+  };
+
   const addFeature = () => {
     if (!newFeature.trim() || !section) return;
     const features = [...(section.features || []), newFeature.trim()];
@@ -183,6 +200,7 @@ const AdminFeaturedSection = () => {
         </div>
       </div>
 
+      {/* Hidden file input */}
       <input
         type="file"
         ref={fileInputRef}
@@ -191,8 +209,34 @@ const AdminFeaturedSection = () => {
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) handleImageUpload(file);
+          e.target.value = "";
         }}
       />
+
+      {/* Media Picker Modal */}
+      <MediaPickerModal
+        open={mediaPickerOpen}
+        onClose={() => setMediaPickerOpen(false)}
+        onSelect={handleMediaSelect}
+        accept="image/*"
+        title="Select Featured Image"
+      />
+
+      {/* Image Preview Modal */}
+      <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Image Preview</DialogTitle>
+          </DialogHeader>
+          {previewImage && (
+            <img
+              src={previewImage}
+              alt="Preview"
+              className="w-full h-auto max-h-[75vh] object-contain rounded-lg"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Image & Layout */}
@@ -203,27 +247,86 @@ const AdminFeaturedSection = () => {
           <CardContent className="space-y-4">
             <div>
               <Label>Section Image</Label>
-              <div
-                className="mt-2 aspect-[4/5] rounded-lg border-2 border-dashed border-border bg-muted/50 flex items-center justify-center cursor-pointer hover:border-gold transition-colors overflow-hidden"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {uploading ? (
-                  <div className="text-center">
-                    <div className="animate-spin h-8 w-8 border-2 border-gold border-t-transparent rounded-full mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">Uploading...</p>
+              <div className="mt-2 relative">
+                {section.image_url ? (
+                  <div className="relative group aspect-[4/5] rounded-lg overflow-hidden border border-border">
+                    <img
+                      src={section.image_url}
+                      alt="Featured"
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Overlay Actions */}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        onClick={() => setPreviewImage(section.image_url)}
+                      >
+                        <Maximize2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <Upload className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        onClick={() => setMediaPickerOpen(true)}
+                      >
+                        <Image className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="destructive"
+                        onClick={handleRemoveImage}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                ) : section.image_url ? (
-                  <img
-                    src={section.image_url}
-                    alt="Featured"
-                    className="w-full h-full object-cover"
-                  />
                 ) : (
-                  <div className="text-center p-4">
-                    <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">Click to upload image</p>
+                  <div
+                    className="aspect-[4/5] rounded-lg border-2 border-dashed border-border bg-muted/50 flex flex-col items-center justify-center cursor-pointer hover:border-gold transition-colors"
+                    onClick={() => setMediaPickerOpen(true)}
+                  >
+                    {uploading ? (
+                      <div className="text-center">
+                        <div className="animate-spin h-8 w-8 border-2 border-gold border-t-transparent rounded-full mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">Uploading...</p>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                        <p className="text-sm text-muted-foreground">Click to add image</p>
+                      </>
+                    )}
                   </div>
                 )}
+              </div>
+
+              {/* Quick Actions */}
+              <div className="flex gap-2 mt-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="h-4 w-4 mr-1" />
+                  Upload
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setMediaPickerOpen(true)}
+                >
+                  <Image className="h-4 w-4 mr-1" />
+                  Library
+                </Button>
               </div>
             </div>
 
