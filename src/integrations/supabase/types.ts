@@ -475,6 +475,51 @@ export type Database = {
         }
         Relationships: []
       }
+      collections: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          description_bn: string | null
+          display_order: number | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          is_featured: boolean | null
+          name: string
+          name_bn: string | null
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          description_bn?: string | null
+          display_order?: number | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          name: string
+          name_bn?: string | null
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          description_bn?: string | null
+          display_order?: number | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          name?: string
+          name_bn?: string | null
+          slug?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       content_pages: {
         Row: {
           content: string
@@ -797,6 +842,7 @@ export type Database = {
           display_order: number | null
           id: string
           is_active: boolean | null
+          page_type: string | null
           question: string
           question_bn: string | null
           updated_at: string
@@ -810,6 +856,7 @@ export type Database = {
           display_order?: number | null
           id?: string
           is_active?: boolean | null
+          page_type?: string | null
           question: string
           question_bn?: string | null
           updated_at?: string
@@ -823,6 +870,7 @@ export type Database = {
           display_order?: number | null
           id?: string
           is_active?: boolean | null
+          page_type?: string | null
           question?: string
           question_bn?: string | null
           updated_at?: string
@@ -2041,6 +2089,7 @@ export type Database = {
           created_at: string
           customer_photo_url: string | null
           display_order: number | null
+          google_place_id: string | null
           google_review_id: string | null
           id: string
           image_url: string | null
@@ -2048,8 +2097,10 @@ export type Database = {
           location: string | null
           name: string
           order_id: string | null
+          platform: string | null
           product_id: string | null
           rating: number | null
+          review_date: string | null
           source: string | null
           text: string
           verified_purchase: boolean | null
@@ -2058,6 +2109,7 @@ export type Database = {
           created_at?: string
           customer_photo_url?: string | null
           display_order?: number | null
+          google_place_id?: string | null
           google_review_id?: string | null
           id?: string
           image_url?: string | null
@@ -2065,8 +2117,10 @@ export type Database = {
           location?: string | null
           name: string
           order_id?: string | null
+          platform?: string | null
           product_id?: string | null
           rating?: number | null
+          review_date?: string | null
           source?: string | null
           text: string
           verified_purchase?: boolean | null
@@ -2075,6 +2129,7 @@ export type Database = {
           created_at?: string
           customer_photo_url?: string | null
           display_order?: number | null
+          google_place_id?: string | null
           google_review_id?: string | null
           id?: string
           image_url?: string | null
@@ -2082,8 +2137,10 @@ export type Database = {
           location?: string | null
           name?: string
           order_id?: string | null
+          platform?: string | null
           product_id?: string | null
           rating?: number | null
+          review_date?: string | null
           source?: string | null
           text?: string
           verified_purchase?: boolean | null

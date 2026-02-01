@@ -77,6 +77,7 @@ import AdminGoogleIntegrations from "@/components/admin/AdminGoogleIntegrations"
 import AdminEmailSettings from "@/components/admin/AdminEmailSettings";
 import AdminFeaturedSection from "@/components/admin/AdminFeaturedSection";
 import AdminMakingSection from "@/components/admin/AdminMakingSection";
+import AdminCollections from "@/components/admin/AdminCollections";
 
 // Menu sections for organized navigation
 const menuSections = [
@@ -100,6 +101,7 @@ const menuSections = [
     items: [
       { id: "products", name: "Products", icon: Package },
       { id: "categories", name: "Categories", icon: FolderTree },
+      { id: "collections", name: "Collections", icon: Layers },
     ],
   },
   {
@@ -265,6 +267,8 @@ const Admin = () => {
         return <AdminInstagramPosts />;
       case "testimonials":
         return <AdminTestimonials />;
+      case "collections":
+        return <AdminCollections />;
       case "content-pages":
         return <AdminContentPages />;
       case "team-members":
