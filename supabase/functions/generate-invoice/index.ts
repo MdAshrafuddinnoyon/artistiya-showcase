@@ -12,12 +12,9 @@ interface InvoiceRequest {
 
 // Generate QR Code as SVG
 function generateQRCode(data: string, size: number = 100): string {
-  // Simple QR-like pattern generator (visual representation)
-  // For production, use a proper QR library
   const cells = 21;
   const cellSize = size / cells;
   
-  // Create a hash-based pattern
   let hash = 0;
   for (let i = 0; i < data.length; i++) {
     hash = ((hash << 5) - hash) + data.charCodeAt(i);
@@ -27,7 +24,6 @@ function generateQRCode(data: string, size: number = 100): string {
   let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`;
   svg += `<rect width="${size}" height="${size}" fill="white"/>`;
   
-  // Position detection patterns (corners)
   const drawFinder = (x: number, y: number) => {
     svg += `<rect x="${x * cellSize}" y="${y * cellSize}" width="${7 * cellSize}" height="${7 * cellSize}" fill="black"/>`;
     svg += `<rect x="${(x + 1) * cellSize}" y="${(y + 1) * cellSize}" width="${5 * cellSize}" height="${5 * cellSize}" fill="white"/>`;
@@ -38,12 +34,9 @@ function generateQRCode(data: string, size: number = 100): string {
   drawFinder(cells - 7, 0);
   drawFinder(0, cells - 7);
   
-  // Generate pseudo-random pattern based on data hash
   for (let y = 0; y < cells; y++) {
     for (let x = 0; x < cells; x++) {
-      // Skip finder patterns
       if ((x < 8 && y < 8) || (x >= cells - 8 && y < 8) || (x < 8 && y >= cells - 8)) continue;
-      
       const seed = (x * 31 + y * 17 + hash) % 100;
       if (seed < 40) {
         svg += `<rect x="${x * cellSize}" y="${y * cellSize}" width="${cellSize}" height="${cellSize}" fill="black"/>`;
@@ -108,21 +101,32 @@ serve(async (req) => {
       throw new Error("Order not found");
     }
 
+    // Get invoice settings
     const { data: settings } = await supabase
       .from("invoice_settings")
       .select("*")
       .limit(1)
       .single();
 
+    // Get site branding for logo
+    const { data: siteBranding } = await supabase
+      .from("site_branding")
+      .select("logo_url, business_name")
+      .limit(1)
+      .single();
+
     const invoiceSettings = settings || {
-      company_name: "artistiya.store",
+      company_name: siteBranding?.business_name || "artistiya.store",
       company_address: "Dhaka, Bangladesh",
       company_email: "hello@artistiya.store",
       company_phone: "+880 1XXX-XXXXXX",
-      logo_url: null,
+      logo_url: siteBranding?.logo_url || null,
       footer_note: "Thank you for your purchase!",
       terms_and_conditions: "All items are handcrafted and may have slight variations."
     };
+
+    // Use site branding logo if invoice settings logo is not set
+    const logoUrl = invoiceSettings.logo_url || siteBranding?.logo_url || null;
 
     // Get QR discount settings
     const { data: qrSettings } = await supabase
@@ -189,10 +193,25 @@ serve(async (req) => {
       padding-bottom: 20px;
       border-bottom: 2px solid #D4AF37;
     }
+    .logo-section {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .logo-section img {
+      max-height: 60px;
+      max-width: 120px;
+      object-fit: contain;
+    }
     .logo-section h1 {
       font-size: 28px;
       color: #D4AF37;
       margin: 0;
+    }
+    .company-info {
+      font-size: 13px;
+      color: #666;
+      margin-top: 5px;
     }
     .invoice-info {
       text-align: right;
@@ -315,13 +334,15 @@ serve(async (req) => {
 <body>
   <div class="header">
     <div class="logo-section">
-      ${invoiceSettings.logo_url ? `<img src="${invoiceSettings.logo_url}" alt="Logo" style="max-height: 60px;">` : ''}
-      <h1>${invoiceSettings.company_name}</h1>
-      <p style="font-size: 14px; color: #666; margin: 5px 0;">
-        ${invoiceSettings.company_address}<br>
-        ${invoiceSettings.company_email}<br>
-        ${invoiceSettings.company_phone}
-      </p>
+      ${logoUrl ? `<img src="${logoUrl}" alt="Logo" />` : ''}
+      <div>
+        <h1>${invoiceSettings.company_name}</h1>
+        <div class="company-info">
+          ${invoiceSettings.company_address}<br>
+          ${invoiceSettings.company_email}<br>
+          ${invoiceSettings.company_phone}
+        </div>
+      </div>
     </div>
     <div class="invoice-info">
       <h2>INVOICE</h2>
@@ -421,7 +442,7 @@ serve(async (req) => {
 </html>
     `;
 
-    console.log("Invoice HTML generated successfully with QR code");
+    console.log("Invoice HTML generated successfully with QR code and logo");
 
     return new Response(JSON.stringify({ 
       success: true, 

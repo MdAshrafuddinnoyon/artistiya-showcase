@@ -10,39 +10,26 @@ interface DeliverySlipRequest {
   orderId: string;
 }
 
-// Generate QR Code as SVG
-function generateQRCode(data: string, size: number = 80): string {
-  const cells = 21;
-  const cellSize = size / cells;
+// Generate Barcode as SVG
+function generateBarcode(data: string, width: number = 180, height: number = 45): string {
+  const pattern = data.split('').map((char) => {
+    const code = char.charCodeAt(0);
+    return [(code % 3) + 1, ((code >> 2) % 2) + 1];
+  }).flat();
   
-  let hash = 0;
-  for (let i = 0; i < data.length; i++) {
-    hash = ((hash << 5) - hash) + data.charCodeAt(i);
-    hash = hash & hash;
-  }
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`;
+  svg += `<rect width="${width}" height="${height}" fill="white"/>`;
   
-  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`;
-  svg += `<rect width="${size}" height="${size}" fill="white"/>`;
+  const totalUnits = pattern.reduce((a, b) => a + b, 0);
+  const unitWidth = (width - 20) / totalUnits;
+  let x = 10;
   
-  const drawFinder = (x: number, y: number) => {
-    svg += `<rect x="${x * cellSize}" y="${y * cellSize}" width="${7 * cellSize}" height="${7 * cellSize}" fill="black"/>`;
-    svg += `<rect x="${(x + 1) * cellSize}" y="${(y + 1) * cellSize}" width="${5 * cellSize}" height="${5 * cellSize}" fill="white"/>`;
-    svg += `<rect x="${(x + 2) * cellSize}" y="${(y + 2) * cellSize}" width="${3 * cellSize}" height="${3 * cellSize}" fill="black"/>`;
-  };
-  
-  drawFinder(0, 0);
-  drawFinder(cells - 7, 0);
-  drawFinder(0, cells - 7);
-  
-  for (let y = 0; y < cells; y++) {
-    for (let x = 0; x < cells; x++) {
-      if ((x < 8 && y < 8) || (x >= cells - 8 && y < 8) || (x < 8 && y >= cells - 8)) continue;
-      const seed = (x * 31 + y * 17 + hash) % 100;
-      if (seed < 40) {
-        svg += `<rect x="${x * cellSize}" y="${y * cellSize}" width="${cellSize}" height="${cellSize}" fill="black"/>`;
-      }
+  pattern.forEach((units, i) => {
+    if (i % 2 === 0) {
+      svg += `<rect x="${x}" y="5" width="${units * unitWidth}" height="${height - 10}" fill="black"/>`;
     }
-  }
+    x += units * unitWidth;
+  });
   
   svg += '</svg>';
   return svg;
@@ -76,33 +63,25 @@ serve(async (req) => {
       throw new Error("Order not found");
     }
 
+    // Get invoice settings
     const { data: settings } = await supabase
       .from("invoice_settings")
       .select("*")
       .limit(1)
       .single();
 
-    const invoiceSettings = settings || {
-      company_name: "artistiya.store",
-      company_address: "Dhaka, Bangladesh",
-      company_phone: "+880 1XXX-XXXXXX",
-    };
-
-    // Get QR discount settings
-    const { data: qrSettings } = await supabase
-      .from("qr_discount_settings")
-      .select("*")
+    // Get site branding
+    const { data: siteBranding } = await supabase
+      .from("site_branding")
+      .select("logo_url, business_name")
       .limit(1)
       .single();
 
-    const qrActive = qrSettings?.is_active ?? false;
-    const qrDiscount = qrSettings?.discount_value ?? 5;
-    const qrType = qrSettings?.discount_type ?? 'percentage';
-
-    const baseUrl = supabaseUrl.replace('.supabase.co', '.lovable.app').replace('https://', 'https://id-preview--');
-    const claimUrl = `${baseUrl}/claim-discount?orderId=${order.id}&qr=${order.qr_code_id}`;
-    
-    const qrCodeSvg = generateQRCode(claimUrl, 70);
+    const invoiceSettings = settings || {
+      company_name: siteBranding?.business_name || "artistiya.store",
+      company_address: "Dhaka, Bangladesh",
+      company_phone: "+880 1XXX-XXXXXX",
+    };
 
     const orderDate = new Date(order.created_at).toLocaleDateString("en-GB", {
       day: "2-digit",
@@ -110,14 +89,24 @@ serve(async (req) => {
       year: "numeric"
     });
 
+    const printDate = new Date().toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+
     const itemsList = order.order_items.map((item: any) => 
       `<tr>
-        <td style="padding: 6px 8px; border-bottom: 1px dashed #ccc;">${item.product_name}</td>
-        <td style="padding: 6px 8px; border-bottom: 1px dashed #ccc; text-align: center; font-weight: bold;">${item.quantity}</td>
+        <td style="padding: 8px 10px; border-bottom: 1px solid #eee; font-size: 13px;">${item.product_name}</td>
+        <td style="padding: 8px 10px; border-bottom: 1px solid #eee; text-align: center; font-weight: 700; font-size: 14px;">${item.quantity}</td>
+        <td style="padding: 8px 10px; border-bottom: 1px solid #eee; text-align: right; font-size: 13px;">৳${item.product_price.toLocaleString()}</td>
       </tr>`
     ).join("");
 
     const totalItems = order.order_items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+    const barcodeSvg = generateBarcode(order.order_number, 160, 40);
 
     const deliverySlipHtml = `
 <!DOCTYPE html>
@@ -128,198 +117,268 @@ serve(async (req) => {
   <style>
     @media print {
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      @page { size: 100mm 150mm; margin: 5mm; }
+      @page { size: 100mm 150mm; margin: 3mm; }
     }
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Segoe UI', Arial, sans-serif;
       font-size: 12px;
       line-height: 1.4;
-      color: #333;
+      color: #1a1a1a;
       width: 100mm;
+      min-height: 150mm;
       margin: 0 auto;
-      padding: 10px;
+      padding: 8px;
       background: #fff;
     }
+    
+    /* Header Section */
     .header {
       text-align: center;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #D4AF37;
+      padding: 10px 0;
+      border-bottom: 3px solid #D4AF37;
       margin-bottom: 10px;
     }
     .header h1 {
-      font-size: 18px;
-      color: #D4AF37;
-      margin: 0 0 5px 0;
+      font-size: 20px;
+      font-weight: 700;
+      color: #1a1a1a;
+      margin: 0;
+      letter-spacing: 0.5px;
     }
-    .header p {
-      margin: 2px 0;
+    .header .tagline {
       font-size: 10px;
-      color: #666;
+      color: #D4AF37;
+      margin-top: 2px;
+      letter-spacing: 1px;
     }
-    .order-info {
-      background: #f5f5f5;
-      padding: 8px;
-      border-radius: 4px;
+    
+    /* Order Info Box */
+    .order-box {
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      color: #fff;
+      padding: 12px;
+      border-radius: 8px;
       margin-bottom: 10px;
     }
-    .order-info h2 {
-      font-size: 14px;
-      margin: 0 0 5px 0;
+    .order-box .order-number {
+      font-size: 16px;
+      font-weight: 700;
       color: #D4AF37;
+      margin-bottom: 6px;
     }
-    .order-info p {
-      margin: 2px 0;
+    .order-box .meta {
+      display: flex;
+      justify-content: space-between;
       font-size: 11px;
+      color: #ccc;
     }
+    .order-box .badge {
+      display: inline-block;
+      background: #D4AF37;
+      color: #1a1a1a;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 10px;
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+    .order-box .badge.paid {
+      background: #22c55e;
+      color: #fff;
+    }
+    
+    /* Customer Section */
     .customer-section {
-      border: 1px solid #ddd;
-      padding: 10px;
-      border-radius: 4px;
+      border: 2px solid #1a1a1a;
+      border-radius: 8px;
+      padding: 12px;
       margin-bottom: 10px;
     }
-    .customer-section h3 {
-      font-size: 12px;
-      margin: 0 0 5px 0;
-      color: #D4AF37;
+    .customer-section .label {
+      font-size: 10px;
       text-transform: uppercase;
+      color: #666;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
     }
     .customer-section .name {
-      font-size: 14px;
-      font-weight: bold;
-      margin-bottom: 3px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #1a1a1a;
+      margin-bottom: 4px;
     }
     .customer-section .phone {
-      font-size: 14px;
-      font-weight: bold;
+      font-size: 15px;
+      font-weight: 700;
       color: #D4AF37;
+      margin-bottom: 6px;
     }
-    .items-section h3 {
+    .customer-section .address {
       font-size: 12px;
-      margin: 0 0 5px 0;
-      color: #D4AF37;
+      color: #444;
+      line-height: 1.5;
+    }
+    
+    /* Items Table */
+    .items-section {
+      margin-bottom: 10px;
+    }
+    .items-section .label {
+      font-size: 10px;
       text-transform: uppercase;
+      color: #666;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+      padding-left: 2px;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 10px;
+      background: #fafafa;
+      border-radius: 6px;
+      overflow: hidden;
     }
     th {
       background: #1a1a1a;
       color: #D4AF37;
-      padding: 6px 8px;
+      padding: 8px 10px;
       text-align: left;
       font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
-    th:last-child { text-align: center; }
-    .summary {
-      background: #1a1a1a;
+    th:nth-child(2) { text-align: center; }
+    th:nth-child(3) { text-align: right; }
+    
+    /* Amount Box */
+    .amount-box {
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
       color: #fff;
-      padding: 10px;
-      border-radius: 4px;
+      padding: 15px;
+      border-radius: 8px;
       text-align: center;
+      margin-bottom: 10px;
     }
-    .summary .amount {
-      font-size: 20px;
-      font-weight: bold;
-      color: #D4AF37;
-    }
-    .summary .label {
+    .amount-box .label {
       font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 1px;
+      color: #aaa;
+      margin-bottom: 4px;
     }
-    .cod-badge {
-      display: inline-block;
-      background: #D4AF37;
-      color: #000;
-      padding: 3px 8px;
-      border-radius: 3px;
-      font-weight: bold;
-      font-size: 10px;
-      margin-top: 5px;
+    .amount-box .amount {
+      font-size: 26px;
+      font-weight: 700;
+      color: #D4AF37;
     }
-    .qr-section {
+    .amount-box .status {
+      font-size: 11px;
+      color: #22c55e;
+      margin-top: 4px;
+    }
+    
+    /* Barcode Section */
+    .barcode-section {
+      text-align: center;
+      padding: 10px;
+      background: #f5f5f5;
+      border-radius: 6px;
+      margin-bottom: 10px;
+    }
+    .barcode-section p {
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      color: #666;
+      margin-top: 4px;
+      letter-spacing: 2px;
+    }
+    
+    /* Signature Section */
+    .signature-section {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      margin-top: 10px;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .signature-box {
+      flex: 1;
+      text-align: center;
       padding: 8px;
       border: 1px dashed #ccc;
-      border-radius: 4px;
+      border-radius: 6px;
     }
-    .qr-code {
-      text-align: center;
+    .signature-box .line {
+      border-bottom: 1px solid #999;
+      height: 30px;
+      margin-bottom: 4px;
     }
-    .qr-code p {
-      font-size: 8px;
-      margin-top: 4px;
+    .signature-box .label {
+      font-size: 9px;
       color: #666;
+      text-transform: uppercase;
     }
-    .discount-badge {
-      background: linear-gradient(135deg, #D4AF37 0%, #F5D77A 100%);
-      color: #1a1a1a;
-      padding: 8px 12px;
-      border-radius: 4px;
-      text-align: center;
-    }
-    .discount-badge .value {
-      font-size: 16px;
-      font-weight: bold;
-    }
-    .discount-badge p {
-      font-size: 8px;
-      margin: 2px 0 0 0;
-    }
+    
+    /* Footer */
     .footer {
-      margin-top: 10px;
-      padding-top: 10px;
-      border-top: 1px dashed #ccc;
       text-align: center;
-      font-size: 10px;
-      color: #666;
+      padding-top: 8px;
+      border-top: 1px solid #eee;
     }
-    .barcode-area {
-      text-align: center;
-      padding: 8px;
-      font-family: monospace;
-      font-size: 12px;
-      letter-spacing: 2px;
+    .footer p {
+      font-size: 10px;
+      color: #888;
+      margin: 2px 0;
+    }
+    .footer .brand {
+      font-weight: 600;
+      color: #D4AF37;
     }
   </style>
 </head>
 <body>
+  <!-- Header -->
   <div class="header">
     <h1>${invoiceSettings.company_name}</h1>
-    <p>${invoiceSettings.company_phone}</p>
+    <div class="tagline">DELIVERY SLIP</div>
   </div>
 
-  <div class="order-info">
-    <h2>📦 Order #${order.order_number}</h2>
-    <p><strong>Date:</strong> ${orderDate}</p>
-    <p><strong>Items:</strong> ${totalItems} piece(s)</p>
-    ${order.payment_method === 'cod' ? '<span class="cod-badge">💵 CASH ON DELIVERY</span>' : '<p><strong>Payment:</strong> ' + order.payment_method.toUpperCase() + ' (Paid)</p>'}
+  <!-- Order Info -->
+  <div class="order-box">
+    <div class="order-number">📦 #${order.order_number}</div>
+    <div class="meta">
+      <span>Date: ${orderDate}</span>
+      <span>Items: ${totalItems} pcs</span>
+    </div>
+    ${order.payment_method === 'cod' 
+      ? '<span class="badge">💵 CASH ON DELIVERY</span>' 
+      : '<span class="badge paid">✓ PREPAID</span>'
+    }
   </div>
 
+  <!-- Customer Info -->
   <div class="customer-section">
-    <h3>📍 Deliver To</h3>
-    <p class="name">${order.address?.full_name || 'Customer'}</p>
-    <p class="phone">📞 ${order.address?.phone || 'N/A'}</p>
-    <p>
+    <div class="label">📍 Deliver To</div>
+    <div class="name">${order.address?.full_name || 'Customer'}</div>
+    <div class="phone">📞 ${order.address?.phone || 'N/A'}</div>
+    <div class="address">
       ${order.address?.address_line || ''}<br>
       ${order.address?.thana || ''}, ${order.address?.district || ''}<br>
       ${order.address?.division || ''}
-    </p>
+    </div>
   </div>
 
+  <!-- Items List -->
   <div class="items-section">
-    <h3>📋 Items</h3>
+    <div class="label">📋 Package Contents</div>
     <table>
       <thead>
         <tr>
           <th>Product</th>
-          <th style="text-align: center;">Qty</th>
+          <th>Qty</th>
+          <th>Price</th>
         </tr>
       </thead>
       <tbody>
@@ -328,39 +387,42 @@ serve(async (req) => {
     </table>
   </div>
 
-  <div class="summary">
-    <div class="label">${order.payment_method === 'cod' ? 'Amount to Collect' : 'Order Total'}</div>
+  <!-- Amount -->
+  <div class="amount-box">
+    <div class="label">${order.payment_method === 'cod' ? 'Collect Amount' : 'Order Total'}</div>
     <div class="amount">৳${order.total.toLocaleString()}</div>
-    ${order.payment_method === 'cod' ? '' : '<div class="label" style="color: #4ade80;">✓ PAID</div>'}
+    ${order.payment_method !== 'cod' ? '<div class="status">✓ Payment Completed</div>' : ''}
   </div>
 
-  <div class="qr-section">
-    <div class="qr-code">
-      ${qrCodeSvg}
-      <p>Scan for authenticity</p>
+  <!-- Barcode -->
+  <div class="barcode-section">
+    ${barcodeSvg}
+    <p>${order.order_number}</p>
+  </div>
+
+  <!-- Signature Section -->
+  <div class="signature-section">
+    <div class="signature-box">
+      <div class="line"></div>
+      <div class="label">Receiver's Signature</div>
     </div>
-    
-    ${qrActive ? `
-    <div class="discount-badge">
-      <div class="value">🎁 ${qrType === 'percentage' ? qrDiscount + '%' : '৳' + qrDiscount}</div>
-      <p>Scan & get discount!</p>
-    </div>
-    ` : ''}
-    
-    <div class="barcode-area">
-      ${order.order_number}
+    <div class="signature-box">
+      <div class="line"></div>
+      <div class="label">Authorized By</div>
     </div>
   </div>
 
+  <!-- Footer -->
   <div class="footer">
     <p>Thank you for shopping with us!</p>
-    <p>${invoiceSettings.company_name}</p>
+    <p class="brand">${invoiceSettings.company_name}</p>
+    <p>Printed: ${printDate}</p>
   </div>
 </body>
 </html>
     `;
 
-    console.log("Delivery slip generated successfully with QR code");
+    console.log("Delivery slip generated successfully - modern design with signature area");
 
     return new Response(JSON.stringify({ 
       success: true, 
