@@ -38,6 +38,7 @@ import {
   BarChart3,
   Building2,
   QrCode,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -89,6 +90,8 @@ import AdminGallery from "@/components/admin/AdminGallery";
 import AdminCRM from "@/components/admin/AdminCRM";
 import AdminDeliveryPartners from "@/components/admin/AdminDeliveryPartners";
 import AdminQRSettings from "@/components/admin/AdminQRSettings";
+import AdminFraudSettings from "@/components/admin/AdminFraudSettings";
+import AdminProductReviews from "@/components/admin/AdminProductReviews";
 
 // Menu sections for organized navigation
 const menuSections = [
@@ -105,6 +108,8 @@ const menuSections = [
       { id: "crm", name: "CRM Dashboard", icon: BarChart3 },
       { id: "leads", name: "Leads", icon: Users },
       { id: "customers", name: "Customers", icon: Users },
+      { id: "product-reviews", name: "Product Reviews", icon: MessageSquare },
+      { id: "fraud-settings", name: "Fraud & Security", icon: Shield },
       { id: "upsells", name: "Upsell Offers", icon: Gift },
       { id: "delivery-partners", name: "Delivery Partners", icon: Building2 },
     ],
@@ -339,6 +344,10 @@ const Admin = () => {
         return <AdminInvoiceSettings />;
       case "qr-settings":
         return <AdminQRSettings />;
+      case "fraud-settings":
+        return <AdminFraudSettings />;
+      case "product-reviews":
+        return <AdminProductReviews />;
       case "settings":
         return <AdminSettings />;
       default:
