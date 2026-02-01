@@ -143,7 +143,7 @@ const CategorySection = () => {
   }
 
   return (
-    <section className="py-12 md:py-24 bg-background">
+    <section className="py-8 md:py-16 bg-background">
       <div className="container mx-auto px-4 lg:px-8">
         {/* Section Header */}
         <motion.div
@@ -151,95 +151,44 @@ const CategorySection = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-8 md:mb-16"
+          className="text-center mb-6 md:mb-10"
         >
           {settings.show_subtitle && (
-            <span className="text-gold text-xs md:text-sm tracking-[0.2em] md:tracking-[0.3em] uppercase font-body">
+            <span className="text-gold text-[10px] md:text-xs tracking-[0.15em] md:tracking-[0.2em] uppercase font-body">
               {settings.section_subtitle}
             </span>
           )}
-          <h2 className="font-display text-2xl md:text-4xl lg:text-5xl text-foreground mt-2 md:mt-4">
+          <h2 className="font-display text-xl md:text-2xl lg:text-3xl text-foreground mt-1 md:mt-2">
             {settings.section_title}
           </h2>
         </motion.div>
 
-        {/* Slider Mode */}
-        {settings.enable_slider ? (
-          <div className="relative">
-            {/* Navigation Arrows */}
-            {displayCategories.length > 1 && (
-              <>
-                <button
-                  onClick={prevSlide}
-                  className="absolute -left-2 md:-left-4 top-1/2 -translate-y-1/2 z-10 p-1.5 md:p-2 rounded-full bg-card border border-border text-foreground hover:bg-gold hover:text-background hover:border-gold transition-all"
-                >
-                  <ChevronLeft className="h-4 w-4 md:h-5 md:w-5" />
-                </button>
-                <button
-                  onClick={nextSlide}
-                  className="absolute -right-2 md:-right-4 top-1/2 -translate-y-1/2 z-10 p-1.5 md:p-2 rounded-full bg-card border border-border text-foreground hover:bg-gold hover:text-background hover:border-gold transition-all"
-                >
-                  <ChevronRight className="h-4 w-4 md:h-5 md:w-5" />
-                </button>
-              </>
-            )}
-
-            {/* Slider Content */}
-            <div className="overflow-hidden" ref={sliderRef}>
-              <motion.div
-                className="flex"
-                animate={{ x: `-${currentIndex * 100}%` }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              >
-                {displayCategories.map((category, index) => (
-                  <div key={category.id} className="w-full flex-shrink-0 px-2">
-                    <CategoryCard
-                      category={category}
-                      index={index}
-                      shapeClass={getShapeClass()}
-                      showDescription={settings.show_description}
-                      defaultImage={defaultImages[index % defaultImages.length]}
-                    />
-                  </div>
-                ))}
-              </motion.div>
-            </div>
-
-            {/* Indicators */}
-            <div className="flex justify-center gap-1.5 mt-4 md:mt-6">
-              {displayCategories.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentIndex(index)}
-                  className={`h-1.5 rounded-full transition-all ${
-                    index === currentIndex ? "w-6 bg-gold" : "w-1.5 bg-foreground/30"
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-        ) : (
-          /* Grid Mode */
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-            {displayCategories.map((category, index) => (
-              <motion.div
-                key={category.id}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-              >
-                <CategoryCard
-                  category={category}
-                  index={index}
-                  shapeClass={getShapeClass()}
-                  showDescription={settings.show_description}
-                  defaultImage={defaultImages[index % defaultImages.length]}
-                />
-              </motion.div>
-            ))}
-          </div>
-        )}
+        {/* Grid Mode - Always use grid for consistent design */}
+        <div className={`grid gap-2 md:gap-4 ${
+          displayCategories.length <= 2 
+            ? 'grid-cols-2' 
+            : displayCategories.length === 3 
+              ? 'grid-cols-3' 
+              : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+        }`}>
+          {displayCategories.map((category, index) => (
+            <motion.div
+              key={category.id}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: index * 0.08 }}
+            >
+              <CategoryCard
+                category={category}
+                index={index}
+                shapeClass={getShapeClass()}
+                showDescription={settings.show_description}
+                defaultImage={defaultImages[index % defaultImages.length]}
+              />
+            </motion.div>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -257,34 +206,34 @@ const CategoryCard = ({ category, index, shapeClass, showDescription, defaultIma
   return (
     <Link
       to={`/shop/${category.slug}`}
-      className={`group block relative aspect-square overflow-hidden ${shapeClass}`}
+      className={`group block relative aspect-[4/5] overflow-hidden ${shapeClass}`}
     >
       {/* Image */}
       <img
         src={category.image_url || defaultImage}
         alt={category.name}
-        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
       />
       
       {/* Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-charcoal-deep via-charcoal-deep/40 to-transparent opacity-70 group-hover:opacity-90 transition-opacity duration-300" />
+      <div className="absolute inset-0 bg-gradient-to-t from-charcoal-deep/90 via-charcoal-deep/30 to-transparent" />
       
       {/* Content */}
-      <div className="absolute inset-0 flex flex-col items-center justify-end p-3 md:p-6 text-center">
-        <span className="text-gold text-[10px] md:text-xs tracking-widest uppercase mb-1 md:mb-2 font-body">
+      <div className="absolute inset-0 flex flex-col items-center justify-end p-2 md:p-4 text-center">
+        <span className="text-gold text-[8px] md:text-[10px] tracking-wider uppercase mb-0.5 md:mb-1 font-body">
           Handcrafted
         </span>
-        <h3 className="font-display text-sm md:text-xl lg:text-2xl text-foreground mb-1 md:mb-2">
+        <h3 className="font-display text-xs md:text-base lg:text-lg text-foreground">
           {category.name}
         </h3>
         {showDescription && category.description && (
-          <p className="hidden md:block text-sm text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <p className="hidden md:block text-xs text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 line-clamp-2">
             {category.description}
           </p>
         )}
         
         {/* Hover line */}
-        <div className="mt-2 md:mt-4 w-0 h-0.5 bg-gold group-hover:w-8 md:group-hover:w-16 transition-all duration-500" />
+        <div className="mt-1.5 md:mt-2 w-0 h-0.5 bg-gold group-hover:w-6 md:group-hover:w-10 transition-all duration-400" />
       </div>
     </Link>
   );
