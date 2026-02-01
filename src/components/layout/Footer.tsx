@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Instagram, Facebook, Mail } from "lucide-react";
+import { Instagram, Facebook, Mail, Twitter, Youtube, Linkedin, MessageCircle, Pin, Music, Globe, Phone, Send, Camera, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,11 +12,25 @@ interface SiteBranding {
   logo_url: string | null;
   logo_text: string;
   logo_text_secondary: string;
+  show_logo_text: boolean;
   footer_description: string;
   footer_copyright: string;
+  footer_logo_size: string;
+  footer_banner_url: string | null;
+  footer_banner_link: string | null;
+  footer_banner_height: number;
+  payment_methods: string[];
   social_instagram: string;
   social_facebook: string;
   social_email: string;
+}
+
+interface SocialLink {
+  id: string;
+  platform: string;
+  url: string;
+  icon_name: string | null;
+  is_active: boolean;
 }
 
 interface FooterLinkGroup {
@@ -35,25 +49,55 @@ interface FooterLink {
   is_active: boolean;
 }
 
+const platformIcons: Record<string, any> = {
+  facebook: Facebook,
+  instagram: Instagram,
+  twitter: Twitter,
+  youtube: Youtube,
+  linkedin: Linkedin,
+  whatsapp: MessageCircle,
+  pinterest: Pin,
+  tiktok: Music,
+  telegram: Send,
+  snapchat: Camera,
+  email: Mail,
+  phone: Phone,
+  website: Globe,
+  other: ExternalLink,
+};
+
+const logoSizes: Record<string, string> = {
+  small: "h-6",
+  medium: "h-8",
+  large: "h-12",
+  xlarge: "h-16",
+};
+
 const Footer = () => {
   const isMobile = useIsMobile();
   const [branding, setBranding] = useState<SiteBranding>({
     logo_url: null,
     logo_text: "artistiya",
     logo_text_secondary: ".store",
+    show_logo_text: true,
     footer_description: "Where every piece tells a story of tradition, artistry, and elegance.",
     footer_copyright: "© 2026 artistiya.store. All rights reserved.",
+    footer_logo_size: "medium",
+    footer_banner_url: null,
+    footer_banner_link: null,
+    footer_banner_height: 80,
+    payment_methods: ["bKash", "Nagad", "Visa", "Mastercard", "COD"],
     social_instagram: "https://instagram.com",
     social_facebook: "https://facebook.com",
     social_email: "hello@artistiya.store",
   });
+  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
   const [linkGroups, setLinkGroups] = useState<FooterLinkGroup[]>([]);
   const [links, setLinks] = useState<FooterLink[]>([]);
 
   useEffect(() => {
     fetchData();
 
-    // Real-time subscription
     const channel = supabase
       .channel('footer_data')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'site_branding' }, () => {
@@ -65,6 +109,9 @@ const Footer = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'footer_links' }, () => {
         fetchData();
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'social_links' }, () => {
+        fetchData();
+      })
       .subscribe();
 
     return () => {
@@ -74,15 +121,29 @@ const Footer = () => {
 
   const fetchData = async () => {
     try {
-      const [brandingRes, groupsRes, linksRes] = await Promise.all([
+      const [brandingRes, groupsRes, linksRes, socialRes] = await Promise.all([
         supabase.from("site_branding").select("*").single(),
         supabase.from("footer_link_groups").select("*").eq("is_active", true).order("display_order"),
         supabase.from("footer_links").select("*").eq("is_active", true).order("display_order"),
+        supabase.from("social_links").select("*").eq("is_active", true).order("display_order"),
       ]);
 
-      if (brandingRes.data) setBranding(brandingRes.data);
+      if (brandingRes.data) {
+        const paymentMethodsArray = Array.isArray(brandingRes.data.payment_methods) 
+          ? brandingRes.data.payment_methods as string[]
+          : ["bKash", "Nagad", "Visa", "Mastercard", "COD"];
+        
+        setBranding({
+          ...brandingRes.data,
+          show_logo_text: brandingRes.data.show_logo_text ?? true,
+          footer_logo_size: brandingRes.data.footer_logo_size || "medium",
+          footer_banner_height: brandingRes.data.footer_banner_height || 80,
+          payment_methods: paymentMethodsArray,
+        });
+      }
       if (groupsRes.data) setLinkGroups(groupsRes.data);
       if (linksRes.data) setLinks(linksRes.data);
+      if (socialRes.data) setSocialLinks(socialRes.data);
     } catch (error) {
       console.error("Error fetching footer data:", error);
     }
@@ -92,14 +153,20 @@ const Footer = () => {
     return links.filter(l => l.group_id === groupId);
   };
 
-  // Payment gateway logos/badges
-  const paymentMethods = [
-    { name: "bKash", color: "bg-pink-600" },
-    { name: "Nagad", color: "bg-orange-500" },
-    { name: "Visa", color: "bg-blue-600" },
-    { name: "Mastercard", color: "bg-red-500" },
-    { name: "COD", color: "bg-green-600" },
-  ];
+  const getIconForPlatform = (platform: string) => {
+    return platformIcons[platform] || Globe;
+  };
+
+  const getPaymentColor = (method: string) => {
+    const colors: Record<string, string> = {
+      bKash: "bg-pink-600",
+      Nagad: "bg-orange-500",
+      Visa: "bg-blue-600",
+      Mastercard: "bg-red-500",
+      COD: "bg-green-600",
+    };
+    return colors[method] || "bg-gray-500";
+  };
 
   // Fallback links if database is empty
   const defaultGroups: FooterLinkGroup[] = [
@@ -130,6 +197,7 @@ const Footer = () => {
   };
 
   const displayGroups = linkGroups.length > 0 ? linkGroups : defaultGroups;
+  const logoSizeClass = logoSizes[branding.footer_logo_size] || "h-8";
 
   // Show mobile footer for mobile devices
   if (isMobile) {
@@ -138,6 +206,31 @@ const Footer = () => {
 
   return (
     <footer className="bg-charcoal border-t border-border">
+      {/* Footer Banner */}
+      {branding.footer_banner_url && (
+        <div className="border-b border-border">
+          <div className="container mx-auto px-4 lg:px-8">
+            {branding.footer_banner_link ? (
+              <Link to={branding.footer_banner_link}>
+                <img 
+                  src={branding.footer_banner_url} 
+                  alt="Promotional Banner"
+                  className="w-full object-cover"
+                  style={{ height: `${branding.footer_banner_height}px` }}
+                />
+              </Link>
+            ) : (
+              <img 
+                src={branding.footer_banner_url} 
+                alt="Promotional Banner"
+                className="w-full object-cover"
+                style={{ height: `${branding.footer_banner_height}px` }}
+              />
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Newsletter Section */}
       <div className="border-b border-border">
         <div className="container mx-auto px-4 lg:px-8 py-16">
@@ -172,10 +265,15 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12">
           {/* Brand Column */}
           <div className="lg:col-span-2">
-            <Link to="/" className="inline-block mb-6">
-              {branding.logo_url ? (
-                <img src={branding.logo_url} alt="Logo" className="h-8 w-auto" />
-              ) : (
+            <Link to="/" className="inline-flex items-center gap-2 mb-6">
+              {branding.logo_url && (
+                <img 
+                  src={branding.logo_url} 
+                  alt="Logo" 
+                  className={`${logoSizeClass} w-auto`}
+                />
+              )}
+              {branding.show_logo_text && (
                 <h2 className="font-display text-2xl">
                   <span className="text-gold">{branding.logo_text}</span>
                   <span className="text-foreground">{branding.logo_text_secondary}</span>
@@ -185,34 +283,55 @@ const Footer = () => {
             <p className="text-muted-foreground mb-6 max-w-sm">
               {branding.footer_description}
             </p>
-            <div className="flex gap-4">
-              {branding.social_instagram && (
-                <a
-                  href={branding.social_instagram}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-gold hover:border-gold transition-colors"
-                >
-                  <Instagram className="h-5 w-5" />
-                </a>
-              )}
-              {branding.social_facebook && (
-                <a
-                  href={branding.social_facebook}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-gold hover:border-gold transition-colors"
-                >
-                  <Facebook className="h-5 w-5" />
-                </a>
-              )}
-              {branding.social_email && (
-                <a
-                  href={`mailto:${branding.social_email}`}
-                  className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-gold hover:border-gold transition-colors"
-                >
-                  <Mail className="h-5 w-5" />
-                </a>
+            
+            {/* Dynamic Social Links */}
+            <div className="flex flex-wrap gap-3">
+              {socialLinks.length > 0 ? (
+                socialLinks.map((link) => {
+                  const IconComponent = getIconForPlatform(link.platform);
+                  return (
+                    <a
+                      key={link.id}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-gold hover:border-gold transition-colors"
+                    >
+                      <IconComponent className="h-5 w-5" />
+                    </a>
+                  );
+                })
+              ) : (
+                <>
+                  {branding.social_instagram && (
+                    <a
+                      href={branding.social_instagram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-gold hover:border-gold transition-colors"
+                    >
+                      <Instagram className="h-5 w-5" />
+                    </a>
+                  )}
+                  {branding.social_facebook && (
+                    <a
+                      href={branding.social_facebook}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-gold hover:border-gold transition-colors"
+                    >
+                      <Facebook className="h-5 w-5" />
+                    </a>
+                  )}
+                  {branding.social_email && (
+                    <a
+                      href={`mailto:${branding.social_email}`}
+                      className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-gold hover:border-gold transition-colors"
+                    >
+                      <Mail className="h-5 w-5" />
+                    </a>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -260,12 +379,12 @@ const Footer = () => {
               We Accept:
             </span>
             <div className="flex flex-wrap justify-center gap-3">
-              {paymentMethods.map((method) => (
+              {branding.payment_methods.map((method, index) => (
                 <div
-                  key={method.name}
-                  className={`${method.color} px-4 py-2 rounded-md text-white text-xs font-semibold tracking-wide`}
+                  key={index}
+                  className={`${getPaymentColor(method)} px-4 py-2 rounded-md text-white text-xs font-semibold tracking-wide`}
                 >
-                  {method.name}
+                  {method}
                 </div>
               ))}
             </div>
