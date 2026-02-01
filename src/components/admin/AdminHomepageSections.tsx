@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Plus, Trash2, Save, Upload, Eye, EyeOff, GripVertical, Layers, Package, Image, FolderTree } from "lucide-react";
+import { Plus, Trash2, Save, Upload, Eye, EyeOff, GripVertical, Layers, Package, Image, FolderTree, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,7 +50,9 @@ const AdminHomepageSections = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [uploadingFor, setUploadingFor] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [currentUploadConfig, setCurrentUploadConfig] = useState<{sectionId: string, field: string} | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -76,6 +78,46 @@ const AdminHomepageSections = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleImageUpload = async (file: File, sectionId: string, configField: string) => {
+    setUploadingFor(`${sectionId}-${configField}`);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `banner-${sectionId}-${Date.now()}.${fileExt}`;
+      const filePath = `banners/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("product-images")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("product-images")
+        .getPublicUrl(filePath);
+
+      updateSectionConfig(sectionId, { [configField]: publicUrl });
+      toast.success("Image uploaded successfully");
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      toast.error("Failed to upload image");
+    } finally {
+      setUploadingFor(null);
+    }
+  };
+
+  const triggerFileUpload = (sectionId: string, field: string) => {
+    setCurrentUploadConfig({ sectionId, field });
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && currentUploadConfig) {
+      handleImageUpload(file, currentUploadConfig.sectionId, currentUploadConfig.field);
+    }
+    e.target.value = "";
   };
 
   const addSection = async (type: string) => {
@@ -185,8 +227,85 @@ const AdminHomepageSections = () => {
     );
   }
 
+  // Render image upload zone component
+  const ImageUploadZone = ({ 
+    sectionId, 
+    configField, 
+    currentUrl, 
+    label 
+  }: { 
+    sectionId: string; 
+    configField: string; 
+    currentUrl?: string; 
+    label: string;
+  }) => {
+    const isUploading = uploadingFor === `${sectionId}-${configField}`;
+    
+    return (
+      <div className="space-y-2">
+        <Label className="text-xs">{label}</Label>
+        {currentUrl ? (
+          <div className="relative group">
+            <div className="aspect-video rounded-lg overflow-hidden border border-border">
+              <img 
+                src={currentUrl} 
+                alt={label} 
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 rounded-lg">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => triggerFileUpload(sectionId, configField)}
+              >
+                <Upload className="h-3 w-3 mr-1" />
+                Replace
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-destructive"
+                onClick={() => updateSectionConfig(sectionId, { [configField]: "" })}
+              >
+                <X className="h-3 w-3 mr-1" />
+                Remove
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div
+            onClick={() => triggerFileUpload(sectionId, configField)}
+            className="aspect-video rounded-lg border-2 border-dashed border-border bg-muted/50 flex flex-col items-center justify-center cursor-pointer hover:border-gold transition-colors"
+          >
+            {isUploading ? (
+              <>
+                <div className="animate-spin h-6 w-6 border-2 border-gold border-t-transparent rounded-full mb-2" />
+                <p className="text-xs text-muted-foreground">Uploading...</p>
+              </>
+            ) : (
+              <>
+                <Upload className="h-6 w-6 text-muted-foreground mb-2" />
+                <p className="text-xs text-muted-foreground">Click to upload</p>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
+      {/* Hidden file input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept="image/*"
+        onChange={handleFileChange}
+      />
+
       <div className="flex justify-between items-center">
         <div>
           <h2 className="font-display text-xl text-foreground flex items-center gap-2">
@@ -378,44 +497,49 @@ const AdminHomepageSections = () => {
 
                     {section.section_type === "banner" && (
                       <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="col-span-2">
-                            <Label className="text-xs">Banner Image URL</Label>
-                            <Input
-                              value={section.config.image_url || ""}
-                              onChange={(e) => updateSectionConfig(section.id, { image_url: e.target.value })}
-                              className="mt-1"
-                              placeholder="https://..."
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Banner Link</Label>
-                            <Input
-                              value={section.config.link || ""}
-                              onChange={(e) => updateSectionConfig(section.id, { link: e.target.value })}
-                              className="mt-1"
-                              placeholder="/shop"
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label className="text-xs">Button Text</Label>
-                            <Input
-                              value={section.config.button_text || ""}
-                              onChange={(e) => updateSectionConfig(section.id, { button_text: e.target.value })}
-                              className="mt-1"
-                              placeholder="e.g. Shop Now"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Button Link</Label>
-                            <Input
-                              value={section.config.button_link || ""}
-                              onChange={(e) => updateSectionConfig(section.id, { button_link: e.target.value })}
-                              className="mt-1"
-                              placeholder="/shop"
-                            />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <ImageUploadZone 
+                            sectionId={section.id}
+                            configField="image_url"
+                            currentUrl={section.config.image_url}
+                            label="Banner Image"
+                          />
+                          <div className="space-y-4">
+                            <div>
+                              <Label className="text-xs">Banner Link</Label>
+                              <Input
+                                value={section.config.link || ""}
+                                onChange={(e) => updateSectionConfig(section.id, { link: e.target.value })}
+                                className="mt-1"
+                                placeholder="/shop"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Button Text</Label>
+                              <Input
+                                value={section.config.button_text || ""}
+                                onChange={(e) => updateSectionConfig(section.id, { button_text: e.target.value })}
+                                className="mt-1"
+                                placeholder="e.g. Shop Now"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Height</Label>
+                              <Select
+                                value={section.config.height || "400px"}
+                                onValueChange={(v) => updateSectionConfig(section.id, { height: v })}
+                              >
+                                <SelectTrigger className="mt-1">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="300px">300px (Small)</SelectItem>
+                                  <SelectItem value="400px">400px (Medium)</SelectItem>
+                                  <SelectItem value="500px">500px (Large)</SelectItem>
+                                  <SelectItem value="600px">600px (Extra Large)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -486,67 +610,71 @@ const AdminHomepageSections = () => {
                     )}
 
                     {section.section_type === "dual_banner" && (
-                      <div className="space-y-4">
-                        <p className="text-xs text-muted-foreground">Banner 1 (Left)</p>
-                        <div className="grid grid-cols-3 gap-4">
-                          <div className="col-span-2">
-                            <Label className="text-xs">Image URL</Label>
-                            <Input
-                              value={section.config.banner1_image || ""}
-                              onChange={(e) => updateSectionConfig(section.id, { banner1_image: e.target.value })}
-                              className="mt-1"
-                              placeholder="https://..."
+                      <div className="space-y-6">
+                        {/* Banner 1 */}
+                        <div className="p-4 bg-muted/50 rounded-lg space-y-4">
+                          <p className="text-sm font-medium text-foreground">Banner 1 (Left)</p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <ImageUploadZone 
+                              sectionId={section.id}
+                              configField="banner1_image"
+                              currentUrl={section.config.banner1_image}
+                              label="Image"
                             />
+                            <div className="space-y-3">
+                              <div>
+                                <Label className="text-xs">Title</Label>
+                                <Input
+                                  value={section.config.banner1_title || ""}
+                                  onChange={(e) => updateSectionConfig(section.id, { banner1_title: e.target.value })}
+                                  className="mt-1"
+                                  placeholder="e.g. New Arrivals"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs">Link</Label>
+                                <Input
+                                  value={section.config.banner1_link || ""}
+                                  onChange={(e) => updateSectionConfig(section.id, { banner1_link: e.target.value })}
+                                  className="mt-1"
+                                  placeholder="/shop"
+                                />
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <Label className="text-xs">Link</Label>
-                            <Input
-                              value={section.config.banner1_link || ""}
-                              onChange={(e) => updateSectionConfig(section.id, { banner1_link: e.target.value })}
-                              className="mt-1"
-                              placeholder="/shop"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <Label className="text-xs">Title</Label>
-                          <Input
-                            value={section.config.banner1_title || ""}
-                            onChange={(e) => updateSectionConfig(section.id, { banner1_title: e.target.value })}
-                            className="mt-1"
-                            placeholder="e.g. New Arrivals"
-                          />
                         </div>
 
-                        <p className="text-xs text-muted-foreground pt-2">Banner 2 (Right)</p>
-                        <div className="grid grid-cols-3 gap-4">
-                          <div className="col-span-2">
-                            <Label className="text-xs">Image URL</Label>
-                            <Input
-                              value={section.config.banner2_image || ""}
-                              onChange={(e) => updateSectionConfig(section.id, { banner2_image: e.target.value })}
-                              className="mt-1"
-                              placeholder="https://..."
+                        {/* Banner 2 */}
+                        <div className="p-4 bg-muted/50 rounded-lg space-y-4">
+                          <p className="text-sm font-medium text-foreground">Banner 2 (Right)</p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <ImageUploadZone 
+                              sectionId={section.id}
+                              configField="banner2_image"
+                              currentUrl={section.config.banner2_image}
+                              label="Image"
                             />
+                            <div className="space-y-3">
+                              <div>
+                                <Label className="text-xs">Title</Label>
+                                <Input
+                                  value={section.config.banner2_title || ""}
+                                  onChange={(e) => updateSectionConfig(section.id, { banner2_title: e.target.value })}
+                                  className="mt-1"
+                                  placeholder="e.g. Sale Items"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs">Link</Label>
+                                <Input
+                                  value={section.config.banner2_link || ""}
+                                  onChange={(e) => updateSectionConfig(section.id, { banner2_link: e.target.value })}
+                                  className="mt-1"
+                                  placeholder="/shop"
+                                />
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <Label className="text-xs">Link</Label>
-                            <Input
-                              value={section.config.banner2_link || ""}
-                              onChange={(e) => updateSectionConfig(section.id, { banner2_link: e.target.value })}
-                              className="mt-1"
-                              placeholder="/shop"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <Label className="text-xs">Title</Label>
-                          <Input
-                            value={section.config.banner2_title || ""}
-                            onChange={(e) => updateSectionConfig(section.id, { banner2_title: e.target.value })}
-                            className="mt-1"
-                            placeholder="e.g. Sale Items"
-                          />
                         </div>
                       </div>
                     )}
