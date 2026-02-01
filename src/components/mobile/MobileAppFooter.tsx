@@ -8,6 +8,7 @@ interface MobileAppFooterProps {
     footer_description: string;
     social_instagram: string;
     social_facebook: string;
+    social_whatsapp?: string;
   };
 }
 
@@ -61,14 +62,16 @@ const MobileAppFooter = ({ branding }: MobileAppFooterProps) => {
               <Facebook className="h-4 w-4" />
             </a>
           )}
-          <a
-            href="https://wa.me/8801XXXXXXXXX"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-gold hover:bg-muted/80 transition-colors"
-          >
-            <MessageCircle className="h-4 w-4" />
-          </a>
+          {branding.social_whatsapp && (
+            <a
+              href={`https://wa.me/${branding.social_whatsapp}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-gold hover:bg-muted/80 transition-colors"
+            >
+              <MessageCircle className="h-4 w-4" />
+            </a>
+          )}
         </div>
       </div>
 

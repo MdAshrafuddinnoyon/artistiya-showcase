@@ -2305,6 +2305,15 @@ export type Database = {
       }
       site_branding: {
         Row: {
+          business_hours: string | null
+          business_hours_bn: string | null
+          contact_address: string | null
+          contact_address_bn: string | null
+          contact_page_subtitle: string | null
+          contact_page_subtitle_bn: string | null
+          contact_page_title: string | null
+          contact_page_title_bn: string | null
+          contact_phone: string | null
           created_at: string
           favicon_url: string | null
           footer_banner_height: number | null
@@ -2317,6 +2326,7 @@ export type Database = {
           footer_logo_size: string | null
           footer_right_logo_link: string | null
           footer_right_logo_url: string | null
+          google_maps_embed_url: string | null
           header_announcement_active: boolean | null
           header_announcement_text: string | null
           id: string
@@ -2330,9 +2340,19 @@ export type Database = {
           social_email: string | null
           social_facebook: string | null
           social_instagram: string | null
+          social_whatsapp: string | null
           updated_at: string
         }
         Insert: {
+          business_hours?: string | null
+          business_hours_bn?: string | null
+          contact_address?: string | null
+          contact_address_bn?: string | null
+          contact_page_subtitle?: string | null
+          contact_page_subtitle_bn?: string | null
+          contact_page_title?: string | null
+          contact_page_title_bn?: string | null
+          contact_phone?: string | null
           created_at?: string
           favicon_url?: string | null
           footer_banner_height?: number | null
@@ -2345,6 +2365,7 @@ export type Database = {
           footer_logo_size?: string | null
           footer_right_logo_link?: string | null
           footer_right_logo_url?: string | null
+          google_maps_embed_url?: string | null
           header_announcement_active?: boolean | null
           header_announcement_text?: string | null
           id?: string
@@ -2358,9 +2379,19 @@ export type Database = {
           social_email?: string | null
           social_facebook?: string | null
           social_instagram?: string | null
+          social_whatsapp?: string | null
           updated_at?: string
         }
         Update: {
+          business_hours?: string | null
+          business_hours_bn?: string | null
+          contact_address?: string | null
+          contact_address_bn?: string | null
+          contact_page_subtitle?: string | null
+          contact_page_subtitle_bn?: string | null
+          contact_page_title?: string | null
+          contact_page_title_bn?: string | null
+          contact_phone?: string | null
           created_at?: string
           favicon_url?: string | null
           footer_banner_height?: number | null
@@ -2373,6 +2404,7 @@ export type Database = {
           footer_logo_size?: string | null
           footer_right_logo_link?: string | null
           footer_right_logo_url?: string | null
+          google_maps_embed_url?: string | null
           header_announcement_active?: boolean | null
           header_announcement_text?: string | null
           id?: string
@@ -2386,6 +2418,7 @@ export type Database = {
           social_email?: string | null
           social_facebook?: string | null
           social_instagram?: string | null
+          social_whatsapp?: string | null
           updated_at?: string
         }
         Relationships: []

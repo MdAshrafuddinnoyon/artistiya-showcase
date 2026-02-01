@@ -40,6 +40,18 @@ interface SiteBranding {
   social_instagram: string;
   social_facebook: string;
   social_email: string;
+  // Contact page fields
+  contact_phone: string;
+  contact_address: string;
+  contact_address_bn: string;
+  business_hours: string;
+  business_hours_bn: string;
+  social_whatsapp: string;
+  google_maps_embed_url: string;
+  contact_page_title: string;
+  contact_page_title_bn: string;
+  contact_page_subtitle: string;
+  contact_page_subtitle_bn: string;
 }
 
 const defaultPaymentMethods = ["bKash", "Nagad", "Visa", "Mastercard", "COD"];
@@ -241,10 +253,11 @@ const AdminSiteBranding = () => {
 
       <Tabs defaultValue="logo">
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-          <TabsList className="inline-flex w-max sm:grid sm:w-full sm:grid-cols-5 bg-muted">
+          <TabsList className="inline-flex w-max sm:grid sm:w-full sm:grid-cols-6 bg-muted">
             <TabsTrigger value="logo" className="text-xs sm:text-sm">Logo & Favicon</TabsTrigger>
             <TabsTrigger value="header" className="text-xs sm:text-sm">Header</TabsTrigger>
             <TabsTrigger value="footer" className="text-xs sm:text-sm">Footer</TabsTrigger>
+            <TabsTrigger value="contact" className="text-xs sm:text-sm">Contact</TabsTrigger>
             <TabsTrigger value="social" className="text-xs sm:text-sm">Social Links</TabsTrigger>
             <TabsTrigger value="discounts" className="text-xs sm:text-sm">Discounts</TabsTrigger>
           </TabsList>
@@ -627,6 +640,163 @@ const AdminSiteBranding = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Contact Tab */}
+        <TabsContent value="contact" className="space-y-6 mt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Contact Info */}
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="text-lg font-display">Contact Information</CardTitle>
+                <CardDescription>Phone, address and business hours</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Phone Number</Label>
+                  <Input
+                    value={branding.contact_phone || ""}
+                    onChange={(e) => updateField("contact_phone", e.target.value)}
+                    placeholder="+880 1700-000-000"
+                    className="mt-1.5"
+                  />
+                </div>
+
+                <div>
+                  <Label>WhatsApp Number (without +)</Label>
+                  <Input
+                    value={branding.social_whatsapp || ""}
+                    onChange={(e) => updateField("social_whatsapp", e.target.value)}
+                    placeholder="8801700000000"
+                    className="mt-1.5"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Used in chat widget and footer
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Address (English)</Label>
+                    <Input
+                      value={branding.contact_address || ""}
+                      onChange={(e) => updateField("contact_address", e.target.value)}
+                      placeholder="Dhaka, Bangladesh"
+                      className="mt-1.5"
+                    />
+                  </div>
+                  <div>
+                    <Label>Address (বাংলা)</Label>
+                    <Input
+                      value={branding.contact_address_bn || ""}
+                      onChange={(e) => updateField("contact_address_bn", e.target.value)}
+                      placeholder="ঢাকা, বাংলাদেশ"
+                      className="mt-1.5"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Business Hours (English)</Label>
+                    <Input
+                      value={branding.business_hours || ""}
+                      onChange={(e) => updateField("business_hours", e.target.value)}
+                      placeholder="Sat - Thu: 10:00 AM - 8:00 PM"
+                      className="mt-1.5"
+                    />
+                  </div>
+                  <div>
+                    <Label>Business Hours (বাংলা)</Label>
+                    <Input
+                      value={branding.business_hours_bn || ""}
+                      onChange={(e) => updateField("business_hours_bn", e.target.value)}
+                      placeholder="শনি - বৃহঃ: সকাল ১০টা - রাত ৮টা"
+                      className="mt-1.5"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Contact Page Content */}
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="text-lg font-display">Contact Page</CardTitle>
+                <CardDescription>Title, subtitle and map embed</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Page Title (English)</Label>
+                    <Input
+                      value={branding.contact_page_title || ""}
+                      onChange={(e) => updateField("contact_page_title", e.target.value)}
+                      placeholder="Contact Us"
+                      className="mt-1.5"
+                    />
+                  </div>
+                  <div>
+                    <Label>Page Title (বাংলা)</Label>
+                    <Input
+                      value={branding.contact_page_title_bn || ""}
+                      onChange={(e) => updateField("contact_page_title_bn", e.target.value)}
+                      placeholder="যোগাযোগ করুন"
+                      className="mt-1.5"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Subtitle (English)</Label>
+                  <Textarea
+                    value={branding.contact_page_subtitle || ""}
+                    onChange={(e) => updateField("contact_page_subtitle", e.target.value)}
+                    placeholder="Have questions about our products?"
+                    rows={2}
+                    className="mt-1.5"
+                  />
+                </div>
+
+                <div>
+                  <Label>Subtitle (বাংলা)</Label>
+                  <Textarea
+                    value={branding.contact_page_subtitle_bn || ""}
+                    onChange={(e) => updateField("contact_page_subtitle_bn", e.target.value)}
+                    placeholder="আমাদের পণ্য সম্পর্কে প্রশ্ন আছে?"
+                    rows={2}
+                    className="mt-1.5"
+                  />
+                </div>
+
+                <div>
+                  <Label>Google Maps Embed URL</Label>
+                  <Input
+                    value={branding.google_maps_embed_url || ""}
+                    onChange={(e) => updateField("google_maps_embed_url", e.target.value)}
+                    placeholder="https://www.google.com/maps/embed?pb=..."
+                    className="mt-1.5"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Get embed URL from Google Maps → Share → Embed a map
+                  </p>
+                </div>
+
+                {branding.google_maps_embed_url && (
+                  <div className="rounded-lg overflow-hidden border border-border">
+                    <iframe
+                      src={branding.google_maps_embed_url}
+                      width="100%"
+                      height="150"
+                      style={{ border: 0 }}
+                      loading="lazy"
+                      title="Map Preview"
+                    />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="social" className="mt-6">

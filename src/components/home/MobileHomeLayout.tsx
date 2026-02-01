@@ -3,6 +3,7 @@ import MobileHeroSlider from "./MobileHeroSlider";
 import MobileCategorySlider from "./MobileCategorySlider";
 import MobileProductSlider from "./MobileProductSlider";
 import MobileRecentlyViewed from "./MobileRecentlyViewed";
+import MobileTestimonialsSlider from "./MobileTestimonialsSlider";
 
 const MobileHomeLayout = () => {
   const isMobile = useIsMobile();
@@ -30,6 +31,9 @@ const MobileHomeLayout = () => {
         queryType="new_arrivals" 
         showViewAll={true}
       />
+
+      {/* Testimonials Slider - Dynamic */}
+      <MobileTestimonialsSlider />
 
       {/* Recently Viewed / Featured Grid - Dynamic */}
       <MobileRecentlyViewed />

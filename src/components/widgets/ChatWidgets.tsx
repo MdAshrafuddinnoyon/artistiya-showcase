@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MessageCircle, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 
 // WhatsApp icon component
 const WhatsAppIcon = () => (
@@ -22,10 +23,33 @@ interface ChatWidgetsProps {
 }
 
 const ChatWidgets = ({ 
-  whatsappNumber = "8801XXXXXXXXX", // Replace with actual number
+  whatsappNumber: propWhatsappNumber, 
   facebookPageId = "" 
 }: ChatWidgetsProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [whatsappNumber, setWhatsappNumber] = useState(propWhatsappNumber || "8801700000000");
+
+  useEffect(() => {
+    // Fetch WhatsApp number from site_branding
+    const fetchWhatsAppNumber = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("site_branding")
+          .select("social_whatsapp")
+          .single();
+
+        if (!error && data?.social_whatsapp) {
+          setWhatsappNumber(data.social_whatsapp);
+        }
+      } catch (error) {
+        console.error("Error fetching WhatsApp number:", error);
+      }
+    };
+
+    if (!propWhatsappNumber) {
+      fetchWhatsAppNumber();
+    }
+  }, [propWhatsappNumber]);
 
   const openWhatsApp = () => {
     const message = encodeURIComponent("হ্যালো! আমি artistiya.store থেকে পণ্য সম্পর্কে জানতে চাই।");
