@@ -42,7 +42,14 @@ const TeamMemberPage = () => {
         .single();
 
       if (error) throw error;
-      return data as TeamMember;
+      return {
+        ...data,
+        email: data.email || null,
+        phone: data.phone || null,
+        facebook_url: data.facebook_url || null,
+        linkedin_url: data.linkedin_url || null,
+        twitter_url: data.twitter_url || null,
+      } as TeamMember;
     },
     enabled: !!id,
   });
