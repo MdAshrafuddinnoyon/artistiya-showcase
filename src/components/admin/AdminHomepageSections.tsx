@@ -484,41 +484,51 @@ const AdminHomepageSections = () => {
 
                     {/* Section Type Specific Config */}
                     {section.section_type === "category" && (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label className="text-xs">Category</Label>
-                          <Select
-                            value={section.config.category_id || ""}
-                            onValueChange={(v) => updateSectionConfig(section.id, { category_id: v })}
-                          >
-                            <SelectTrigger className="mt-1">
-                              <SelectValue placeholder="Select category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {categories.map((cat) => (
-                                <SelectItem key={cat.id} value={cat.id}>
-                                  {cat.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label className="text-xs">Products to Show</Label>
-                          <Select
-                            value={String(section.config.limit || 8)}
-                            onValueChange={(v) => updateSectionConfig(section.id, { limit: parseInt(v) })}
-                          >
-                            <SelectTrigger className="mt-1">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="4">4 Products</SelectItem>
-                              <SelectItem value="6">6 Products</SelectItem>
-                              <SelectItem value="8">8 Products</SelectItem>
-                              <SelectItem value="12">12 Products</SelectItem>
-                            </SelectContent>
-                          </Select>
+                      <div className="space-y-4">
+                        {!section.config.category_id && (
+                          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                            <p className="text-amber-600 dark:text-amber-400 text-sm flex items-center gap-2">
+                              <span>⚠️</span>
+                              <span>No category selected. This section won't appear on homepage until you select a category.</span>
+                            </p>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-xs">Category</Label>
+                            <Select
+                              value={section.config.category_id || ""}
+                              onValueChange={(v) => updateSectionConfig(section.id, { category_id: v })}
+                            >
+                              <SelectTrigger className="mt-1">
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {categories.map((cat) => (
+                                  <SelectItem key={cat.id} value={cat.id}>
+                                    {cat.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-xs">Products to Show</Label>
+                            <Select
+                              value={String(section.config.limit || 8)}
+                              onValueChange={(v) => updateSectionConfig(section.id, { limit: parseInt(v) })}
+                            >
+                              <SelectTrigger className="mt-1">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="4">4 Products</SelectItem>
+                                <SelectItem value="6">6 Products</SelectItem>
+                                <SelectItem value="8">8 Products</SelectItem>
+                                <SelectItem value="12">12 Products</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -526,6 +536,14 @@ const AdminHomepageSections = () => {
                     {section.section_type === "products" && (
                       <div>
                         <Label className="text-xs mb-2 block">Select Products</Label>
+                        {(section.config.product_ids || []).length === 0 && (
+                          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mb-3">
+                            <p className="text-amber-600 dark:text-amber-400 text-sm flex items-center gap-2">
+                              <span>⚠️</span>
+                              <span>No products selected. This section won't appear on homepage until you select products.</span>
+                            </p>
+                          </div>
+                        )}
                         <div className="grid grid-cols-3 md:grid-cols-6 gap-2 max-h-48 overflow-y-auto p-2 bg-muted rounded-lg">
                           {products.map((product) => {
                             const isSelected = (section.config.product_ids || []).includes(product.id);
@@ -608,65 +626,81 @@ const AdminHomepageSections = () => {
                     )}
 
                     {section.section_type === "best_selling" && (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label className="text-xs">Products to Show</Label>
-                          <Select
-                            value={String(section.config.limit || 8)}
-                            onValueChange={(v) => updateSectionConfig(section.id, { limit: parseInt(v) })}
-                          >
-                            <SelectTrigger className="mt-1">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="4">4 Products</SelectItem>
-                              <SelectItem value="6">6 Products</SelectItem>
-                              <SelectItem value="8">8 Products</SelectItem>
-                              <SelectItem value="12">12 Products</SelectItem>
-                            </SelectContent>
-                          </Select>
+                      <div className="space-y-4">
+                        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                          <p className="text-blue-600 dark:text-blue-400 text-sm flex items-center gap-2">
+                            <span>💡</span>
+                            <span>This section shows products marked as "Featured" in the Products section. Make sure you have featured products!</span>
+                          </p>
                         </div>
-                        <div className="flex items-center gap-2 mt-6">
-                          <input
-                            type="checkbox"
-                            checked={section.config.show_badge ?? true}
-                            onChange={(e) => updateSectionConfig(section.id, { show_badge: e.target.checked })}
-                            className="rounded"
-                          />
-                          <Label className="text-xs">Show "Best Seller" Badge</Label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-xs">Products to Show</Label>
+                            <Select
+                              value={String(section.config.limit || 8)}
+                              onValueChange={(v) => updateSectionConfig(section.id, { limit: parseInt(v) })}
+                            >
+                              <SelectTrigger className="mt-1">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="4">4 Products</SelectItem>
+                                <SelectItem value="6">6 Products</SelectItem>
+                                <SelectItem value="8">8 Products</SelectItem>
+                                <SelectItem value="12">12 Products</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex items-center gap-2 mt-6">
+                            <input
+                              type="checkbox"
+                              checked={section.config.show_badge ?? true}
+                              onChange={(e) => updateSectionConfig(section.id, { show_badge: e.target.checked })}
+                              className="rounded"
+                            />
+                            <Label className="text-xs">Show "Best Seller" Badge</Label>
+                          </div>
                         </div>
                       </div>
                     )}
 
                     {section.section_type === "discount" && (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label className="text-xs">Products to Show</Label>
-                          <Select
-                            value={String(section.config.limit || 8)}
-                            onValueChange={(v) => updateSectionConfig(section.id, { limit: parseInt(v) })}
-                          >
-                            <SelectTrigger className="mt-1">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="4">4 Products</SelectItem>
-                              <SelectItem value="6">6 Products</SelectItem>
-                              <SelectItem value="8">8 Products</SelectItem>
-                              <SelectItem value="12">12 Products</SelectItem>
-                            </SelectContent>
-                          </Select>
+                      <div className="space-y-4">
+                        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                          <p className="text-blue-600 dark:text-blue-400 text-sm flex items-center gap-2">
+                            <span>💡</span>
+                            <span>This section shows products with "Compare at Price" set higher than regular price. Set discounts in Products section!</span>
+                          </p>
                         </div>
-                        <div>
-                          <Label className="text-xs">Minimum Discount %</Label>
-                          <Input
-                            type="number"
-                            value={section.config.min_discount || 10}
-                            onChange={(e) => updateSectionConfig(section.id, { min_discount: parseInt(e.target.value) })}
-                            className="mt-1"
-                            min={0}
-                            max={100}
-                          />
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-xs">Products to Show</Label>
+                            <Select
+                              value={String(section.config.limit || 8)}
+                              onValueChange={(v) => updateSectionConfig(section.id, { limit: parseInt(v) })}
+                            >
+                              <SelectTrigger className="mt-1">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="4">4 Products</SelectItem>
+                                <SelectItem value="6">6 Products</SelectItem>
+                                <SelectItem value="8">8 Products</SelectItem>
+                                <SelectItem value="12">12 Products</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-xs">Minimum Discount %</Label>
+                            <Input
+                              type="number"
+                              value={section.config.min_discount || 10}
+                              onChange={(e) => updateSectionConfig(section.id, { min_discount: parseInt(e.target.value) })}
+                              className="mt-1"
+                              min={0}
+                              max={100}
+                            />
+                          </div>
                         </div>
                       </div>
                     )}
