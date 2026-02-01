@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Default images
 import categoryJewelry from "@/assets/category-jewelry.jpg";
@@ -55,6 +56,12 @@ const CategorySection = () => {
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const sliderRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
+
+  // Touch handling for swipe
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+  const isDragging = useRef(false);
 
   useEffect(() => {
     fetchData();
@@ -92,26 +99,53 @@ const CategorySection = () => {
   };
 
   const displayCategories = categories.slice(0, settings.items_to_show);
+  const itemsPerView = isMobile ? settings.columns_mobile : settings.columns_desktop;
+  const totalSlides = Math.max(1, Math.ceil(displayCategories.length / itemsPerView));
 
   const nextSlide = useCallback(() => {
-    if (displayCategories.length > 1) {
-      setCurrentIndex((prev) => (prev + 1) % displayCategories.length);
-    }
-  }, [displayCategories.length]);
+    setCurrentIndex((prev) => (prev + 1) % totalSlides);
+  }, [totalSlides]);
 
   const prevSlide = useCallback(() => {
-    if (displayCategories.length > 1) {
-      setCurrentIndex((prev) => (prev - 1 + displayCategories.length) % displayCategories.length);
-    }
-  }, [displayCategories.length]);
+    setCurrentIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
+  }, [totalSlides]);
+
+  const goToSlide = (index: number) => {
+    setCurrentIndex(index);
+  };
 
   // Auto-slide
   useEffect(() => {
-    if (!settings.enable_slider || !settings.auto_slide || displayCategories.length <= 1) return;
+    if (!settings.enable_slider || !settings.auto_slide || totalSlides <= 1) return;
 
     const interval = setInterval(nextSlide, settings.slide_interval);
     return () => clearInterval(interval);
-  }, [settings.enable_slider, settings.auto_slide, settings.slide_interval, displayCategories.length, nextSlide]);
+  }, [settings.enable_slider, settings.auto_slide, settings.slide_interval, totalSlides, nextSlide]);
+
+  // Touch handlers for swipe
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    isDragging.current = true;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging.current) return;
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!isDragging.current) return;
+    isDragging.current = false;
+    
+    const diff = touchStartX.current - touchEndX.current;
+    const threshold = 50;
+
+    if (diff > threshold) {
+      nextSlide();
+    } else if (diff < -threshold) {
+      prevSlide();
+    }
+  };
 
   const getShapeClass = () => {
     switch (settings.card_shape) {
@@ -142,6 +176,118 @@ const CategorySection = () => {
     );
   }
 
+  // Slider Mode
+  if (settings.enable_slider && displayCategories.length > itemsPerView) {
+    return (
+      <section className="py-8 md:py-16 bg-background">
+        <div className="container mx-auto px-4 lg:px-8">
+          {/* Section Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-6 md:mb-10"
+          >
+            {settings.show_subtitle && (
+              <span className="text-gold text-[10px] md:text-xs tracking-[0.15em] md:tracking-[0.2em] uppercase font-body">
+                {settings.section_subtitle}
+              </span>
+            )}
+            <h2 className="font-display text-xl md:text-2xl lg:text-3xl text-foreground mt-1 md:mt-2">
+              {settings.section_title}
+            </h2>
+          </motion.div>
+
+          {/* Slider Container */}
+          <div className="relative">
+            {/* Navigation Arrows - Desktop */}
+            {!isMobile && totalSlides > 1 && (
+              <>
+                <button
+                  onClick={prevSlide}
+                  className="absolute -left-4 md:-left-6 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-12 md:h-12 bg-card/90 backdrop-blur-sm border border-border rounded-full flex items-center justify-center text-foreground hover:bg-gold hover:text-charcoal-deep hover:border-gold transition-all duration-300 shadow-lg"
+                  aria-label="Previous"
+                >
+                  <ChevronLeft className="h-5 w-5 md:h-6 md:w-6" />
+                </button>
+                <button
+                  onClick={nextSlide}
+                  className="absolute -right-4 md:-right-6 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-12 md:h-12 bg-card/90 backdrop-blur-sm border border-border rounded-full flex items-center justify-center text-foreground hover:bg-gold hover:text-charcoal-deep hover:border-gold transition-all duration-300 shadow-lg"
+                  aria-label="Next"
+                >
+                  <ChevronRight className="h-5 w-5 md:h-6 md:w-6" />
+                </button>
+              </>
+            )}
+
+            {/* Slider Content */}
+            <div 
+              ref={sliderRef}
+              className="overflow-hidden"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              <motion.div
+                className="flex"
+                animate={{ x: `-${currentIndex * 100}%` }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              >
+                {Array.from({ length: totalSlides }).map((_, slideIndex) => (
+                  <div
+                    key={slideIndex}
+                    className="flex-shrink-0 w-full"
+                    style={{ width: "100%" }}
+                  >
+                    <div 
+                      className="grid gap-2 md:gap-4"
+                      style={{
+                        gridTemplateColumns: `repeat(${itemsPerView}, 1fr)`
+                      }}
+                    >
+                      {displayCategories
+                        .slice(slideIndex * itemsPerView, (slideIndex + 1) * itemsPerView)
+                        .map((category, index) => (
+                          <CategoryCard
+                            key={category.id}
+                            category={category}
+                            index={index}
+                            shapeClass={getShapeClass()}
+                            showDescription={settings.show_description}
+                            defaultImage={defaultImages[(slideIndex * itemsPerView + index) % defaultImages.length]}
+                          />
+                        ))}
+                    </div>
+                  </div>
+                ))}
+              </motion.div>
+            </div>
+
+            {/* Pagination Dots */}
+            {totalSlides > 1 && (
+              <div className="flex justify-center gap-2 mt-4 md:mt-6">
+                {Array.from({ length: totalSlides }).map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => goToSlide(index)}
+                    className={`transition-all duration-300 rounded-full ${
+                      currentIndex === index
+                        ? "w-6 md:w-8 h-2 bg-gold"
+                        : "w-2 h-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                    }`}
+                    aria-label={`Go to slide ${index + 1}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Grid Mode
   return (
     <section className="py-8 md:py-16 bg-background">
       <div className="container mx-auto px-4 lg:px-8">
@@ -163,14 +309,15 @@ const CategorySection = () => {
           </h2>
         </motion.div>
 
-        {/* Grid Mode - Always use grid for consistent design */}
-        <div className={`grid gap-2 md:gap-4 ${
-          displayCategories.length <= 2 
-            ? 'grid-cols-2' 
-            : displayCategories.length === 3 
-              ? 'grid-cols-3' 
-              : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
-        }`}>
+        {/* Grid */}
+        <div 
+          className="grid gap-2 md:gap-4"
+          style={{
+            gridTemplateColumns: isMobile 
+              ? `repeat(${settings.columns_mobile}, 1fr)` 
+              : `repeat(${settings.columns_desktop}, 1fr)`
+          }}
+        >
           {displayCategories.map((category, index) => (
             <motion.div
               key={category.id}
