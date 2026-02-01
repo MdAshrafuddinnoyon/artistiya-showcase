@@ -19,6 +19,10 @@ interface SiteBranding {
   footer_banner_url: string | null;
   footer_banner_link: string | null;
   footer_banner_height: number;
+  footer_left_logo_url: string | null;
+  footer_left_logo_link: string | null;
+  footer_right_logo_url: string | null;
+  footer_right_logo_link: string | null;
   payment_methods: string[];
   social_instagram: string;
   social_facebook: string;
@@ -86,6 +90,10 @@ const Footer = () => {
     footer_banner_url: null,
     footer_banner_link: null,
     footer_banner_height: 80,
+    footer_left_logo_url: null,
+    footer_left_logo_link: null,
+    footer_right_logo_url: null,
+    footer_right_logo_link: null,
     payment_methods: ["bKash", "Nagad", "Visa", "Mastercard", "COD"],
     social_instagram: "https://instagram.com",
     social_facebook: "https://facebook.com",
@@ -138,6 +146,10 @@ const Footer = () => {
           show_logo_text: brandingRes.data.show_logo_text ?? true,
           footer_logo_size: brandingRes.data.footer_logo_size || "medium",
           footer_banner_height: brandingRes.data.footer_banner_height || 80,
+          footer_left_logo_url: brandingRes.data.footer_left_logo_url || null,
+          footer_left_logo_link: brandingRes.data.footer_left_logo_link || null,
+          footer_right_logo_url: brandingRes.data.footer_right_logo_url || null,
+          footer_right_logo_link: brandingRes.data.footer_right_logo_link || null,
           payment_methods: paymentMethodsArray,
         });
       }
@@ -392,6 +404,57 @@ const Footer = () => {
         </div>
       </div>
 
+      {/* Authorization Logos */}
+      {(branding.footer_left_logo_url || branding.footer_right_logo_url) && (
+        <div className="border-t border-border py-6">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="flex items-center justify-between gap-8">
+              {/* Left Logo */}
+              <div className="flex-1 flex justify-start">
+                {branding.footer_left_logo_url && (
+                  branding.footer_left_logo_link ? (
+                    <a href={branding.footer_left_logo_link} target="_blank" rel="noopener noreferrer">
+                      <img 
+                        src={branding.footer_left_logo_url} 
+                        alt="Authorization" 
+                        className="h-12 md:h-16 w-auto object-contain"
+                      />
+                    </a>
+                  ) : (
+                    <img 
+                      src={branding.footer_left_logo_url} 
+                      alt="Authorization" 
+                      className="h-12 md:h-16 w-auto object-contain"
+                    />
+                  )
+                )}
+              </div>
+
+              {/* Right Logo */}
+              <div className="flex-1 flex justify-end">
+                {branding.footer_right_logo_url && (
+                  branding.footer_right_logo_link ? (
+                    <a href={branding.footer_right_logo_link} target="_blank" rel="noopener noreferrer">
+                      <img 
+                        src={branding.footer_right_logo_url} 
+                        alt="Signature" 
+                        className="h-12 md:h-16 w-auto object-contain"
+                      />
+                    </a>
+                  ) : (
+                    <img 
+                      src={branding.footer_right_logo_url} 
+                      alt="Signature" 
+                      className="h-12 md:h-16 w-auto object-contain"
+                    />
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Bottom Bar */}
       <div className="border-t border-border">
         <div className="container mx-auto px-4 lg:px-8 py-6">
@@ -406,6 +469,10 @@ const Footer = () => {
               <span>•</span>
               <Link to="/privacy" className="hover:text-gold transition-colors">
                 Privacy Policy
+              </Link>
+              <span>•</span>
+              <Link to="/gallery" className="hover:text-gold transition-colors">
+                Gallery
               </Link>
             </div>
           </div>
