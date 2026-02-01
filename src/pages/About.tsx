@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { supabase } from "@/integrations/supabase/client";
@@ -180,38 +181,39 @@ const About = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {teamMembers.map((member, index) => (
-                  <motion.div
-                    key={member.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 * index }}
-                    className="bg-card border border-border rounded-xl p-6 text-center hover:border-gold/50 transition-colors"
-                  >
-                    {member.photo_url ? (
-                      <img
-                        src={member.photo_url}
-                        alt={language === "bn" && member.name_bn ? member.name_bn : member.name}
-                        className="w-24 h-24 rounded-full object-cover mx-auto mb-4 border-2 border-gold/30"
-                      />
-                    ) : (
-                      <div className="w-24 h-24 rounded-full bg-gold/20 flex items-center justify-center mx-auto mb-4 border-2 border-gold/30">
-                        <span className="text-2xl font-display text-gold">
-                          {member.name.charAt(0)}
-                        </span>
-                      </div>
-                    )}
-                    <h3 className={`font-display text-lg text-foreground ${language === "bn" ? "font-bengali" : ""}`}>
-                      {language === "bn" && member.name_bn ? member.name_bn : member.name}
-                    </h3>
-                    <p className={`text-gold text-sm mt-1 ${language === "bn" ? "font-bengali" : ""}`}>
-                      {language === "bn" && member.role_bn ? member.role_bn : member.role}
-                    </p>
-                    {(language === "bn" ? member.bio_bn : member.bio) && (
-                      <p className={`text-muted-foreground text-sm mt-3 ${language === "bn" ? "font-bengali" : ""}`}>
-                        {language === "bn" && member.bio_bn ? member.bio_bn : member.bio}
+                  <Link to={`/team/${member.id}`} key={member.id}>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 * index }}
+                      className="bg-card border border-border rounded-xl p-6 text-center hover:border-gold/50 hover:shadow-lg transition-all cursor-pointer group"
+                    >
+                      {member.photo_url ? (
+                        <img
+                          src={member.photo_url}
+                          alt={language === "bn" && member.name_bn ? member.name_bn : member.name}
+                          className="w-24 h-24 rounded-full object-cover mx-auto mb-4 border-2 border-gold/30 group-hover:border-gold transition-colors"
+                        />
+                      ) : (
+                        <div className="w-24 h-24 rounded-full bg-gold/20 flex items-center justify-center mx-auto mb-4 border-2 border-gold/30 group-hover:border-gold transition-colors">
+                          <span className="text-2xl font-display text-gold">
+                            {member.name.charAt(0)}
+                          </span>
+                        </div>
+                      )}
+                      <h3 className={`font-display text-lg text-foreground group-hover:text-gold transition-colors ${language === "bn" ? "font-bengali" : ""}`}>
+                        {language === "bn" && member.name_bn ? member.name_bn : member.name}
+                      </h3>
+                      <p className={`text-gold text-sm mt-1 ${language === "bn" ? "font-bengali" : ""}`}>
+                        {language === "bn" && member.role_bn ? member.role_bn : member.role}
                       </p>
-                    )}
-                  </motion.div>
+                      {(language === "bn" ? member.bio_bn : member.bio) && (
+                        <p className={`text-muted-foreground text-sm mt-3 line-clamp-2 ${language === "bn" ? "font-bengali" : ""}`}>
+                          {language === "bn" && member.bio_bn ? member.bio_bn : member.bio}
+                        </p>
+                      )}
+                    </motion.div>
+                  </Link>
                 ))}
               </div>
             </motion.div>

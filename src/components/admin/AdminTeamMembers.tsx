@@ -52,7 +52,14 @@ const AdminTeamMembers = () => {
         .select("*")
         .order("display_order");
       if (error) throw error;
-      return data as TeamMember[];
+      return (data || []).map(m => ({
+        ...m,
+        email: m.email || null,
+        phone: m.phone || null,
+        facebook_url: m.facebook_url || null,
+        linkedin_url: m.linkedin_url || null,
+        twitter_url: m.twitter_url || null,
+      })) as TeamMember[];
     },
   });
 
