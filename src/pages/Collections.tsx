@@ -62,7 +62,7 @@ const Collections = () => {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch categories
+  // Fetch categories with realtime subscription
   useEffect(() => {
     const fetchCategories = async () => {
       const { data: cats, error } = await supabase
@@ -87,6 +87,25 @@ const Collections = () => {
     };
 
     fetchCategories();
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel('collections_categories_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'categories' },
+        () => fetchCategories()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products' },
+        () => fetchCategories()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Handle slug-based category selection

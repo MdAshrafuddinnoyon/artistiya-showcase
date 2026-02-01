@@ -152,6 +152,25 @@ const AdminOrders = () => {
   useEffect(() => {
     fetchOrders();
     fetchDeliveryPartners();
+
+    // Subscribe to realtime changes
+    const ordersChannel = supabase
+      .channel('orders_admin_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        () => fetchOrders()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'order_items' },
+        () => fetchOrders()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ordersChannel);
+    };
   }, [statusFilter, dateFrom, dateTo]);
 
   const fetchOrderItems = async (orderId: string) => {

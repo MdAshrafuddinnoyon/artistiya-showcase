@@ -47,6 +47,9 @@ interface ProductFormData {
   is_new_arrival: boolean;
   is_preorderable: boolean;
   allow_customization: boolean;
+  is_showcase: boolean;
+  showcase_description: string;
+  showcase_description_bn: string;
   category_id: string;
   featured_section: string;
   images: string[];
@@ -247,9 +250,13 @@ const EnhancedProductForm = ({
               { id: "is_new_arrival", label: "New Arrival" },
               { id: "is_preorderable", label: "Pre-orderable" },
               { id: "allow_customization", label: "Allow Customization" },
+              { id: "is_showcase", label: "Showcase Only (No Sale)" },
             ].map((toggle) => (
               <div key={toggle.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <Label htmlFor={toggle.id}>{toggle.label}</Label>
+                <Label htmlFor={toggle.id} className={toggle.id === "is_showcase" ? "text-gold" : ""}>
+                  {toggle.id === "is_showcase" && <Sparkles className="h-3 w-3 inline mr-1" />}
+                  {toggle.label}
+                </Label>
                 <Switch
                   id={toggle.id}
                   checked={formData[toggle.id as keyof ProductFormData] as boolean}
@@ -260,6 +267,39 @@ const EnhancedProductForm = ({
               </div>
             ))}
           </div>
+
+          {/* Showcase Description */}
+          {formData.is_showcase && (
+            <div className="p-4 bg-gold/10 border border-gold/30 rounded-lg space-y-4">
+              <div className="flex items-center gap-2 text-gold">
+                <Sparkles className="h-4 w-4" />
+                <span className="font-medium">Showcase Product Settings</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                This product will be displayed for showcase purposes only. Customers can request a custom order for similar items.
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Showcase Description (English)</Label>
+                  <Textarea
+                    value={formData.showcase_description || ""}
+                    onChange={(e) => setFormData({ ...formData, showcase_description: e.target.value })}
+                    placeholder="Describe the custom order options..."
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <Label>Showcase Description (Bengali)</Label>
+                  <Textarea
+                    value={formData.showcase_description_bn || ""}
+                    onChange={(e) => setFormData({ ...formData, showcase_description_bn: e.target.value })}
+                    className="font-bengali"
+                    rows={2}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </TabsContent>
 
         {/* Media Tab */}
