@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Plus, Trash2, Save, GripVertical, Eye, EyeOff, ChevronDown, ChevronUp } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Plus, Trash2, Save, GripVertical, Eye, EyeOff, ChevronDown, ChevronUp, Upload, Library, X, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import MediaPickerModal from "./MediaPickerModal";
 
 interface MenuItem {
   id: string;
@@ -61,6 +62,11 @@ const AdminMenuManager = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const [mediaPickerTarget, setMediaPickerTarget] = useState<{ type: string; id: string; field: string } | null>(null);
+  const [uploading, setUploading] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [currentUploadTarget, setCurrentUploadTarget] = useState<{ type: string; id: string; field: string } | null>(null);
 
   useEffect(() => {
     fetchAllData();
@@ -90,6 +96,67 @@ const AdminMenuManager = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleImageUpload = async (file: File, type: string, id: string, field: string) => {
+    setUploading(`${type}-${id}-${field}`);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `menu-${type}-${id}-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("media")
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("media")
+        .getPublicUrl(fileName);
+
+      if (type === "menu") {
+        updateMenuItem(id, field as keyof MenuItem, publicUrl);
+      } else if (type === "sub") {
+        updateSubItem(id, field as keyof MenuSubItem, publicUrl);
+      }
+
+      toast.success("Image uploaded successfully");
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      toast.error("Failed to upload image");
+    } finally {
+      setUploading(null);
+    }
+  };
+
+  const openMediaPicker = (type: string, id: string, field: string) => {
+    setMediaPickerTarget({ type, id, field });
+    setMediaPickerOpen(true);
+  };
+
+  const handleMediaSelect = (url: string) => {
+    if (mediaPickerTarget) {
+      if (mediaPickerTarget.type === "menu") {
+        updateMenuItem(mediaPickerTarget.id, mediaPickerTarget.field as keyof MenuItem, url);
+      } else if (mediaPickerTarget.type === "sub") {
+        updateSubItem(mediaPickerTarget.id, mediaPickerTarget.field as keyof MenuSubItem, url);
+      }
+    }
+    setMediaPickerOpen(false);
+    setMediaPickerTarget(null);
+  };
+
+  const triggerFileUpload = (type: string, id: string, field: string) => {
+    setCurrentUploadTarget({ type, id, field });
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && currentUploadTarget) {
+      handleImageUpload(file, currentUploadTarget.type, currentUploadTarget.id, currentUploadTarget.field);
+    }
+    e.target.value = "";
   };
 
   const addMenuItem = async () => {
@@ -215,22 +282,18 @@ const AdminMenuManager = () => {
   const saveAll = async () => {
     setSaving(true);
     try {
-      // Save menu items
       for (const item of menuItems) {
         await supabase.from("menu_items").update(item).eq("id", item.id);
       }
       
-      // Save sub items
       for (const item of subItems) {
         await supabase.from("menu_sub_items").update(item).eq("id", item.id);
       }
       
-      // Save footer groups
       for (const group of footerGroups) {
         await supabase.from("footer_link_groups").update(group).eq("id", group.id);
       }
       
-      // Save footer links
       for (const link of footerLinks) {
         await supabase.from("footer_links").update(link).eq("id", link.id);
       }
@@ -250,12 +313,107 @@ const AdminMenuManager = () => {
     );
   };
 
+  // Image Upload Zone Component
+  const ImageUploadZone = ({ 
+    type, 
+    id, 
+    field, 
+    currentUrl, 
+    label,
+    aspectRatio = "video"
+  }: { 
+    type: string;
+    id: string;
+    field: string;
+    currentUrl?: string | null;
+    label: string;
+    aspectRatio?: "video" | "square";
+  }) => {
+    const isUploading = uploading === `${type}-${id}-${field}`;
+    const aspectClass = aspectRatio === "square" ? "aspect-square" : "aspect-video";
+    
+    return (
+      <div className="space-y-2">
+        <Label className="text-xs">{label}</Label>
+        {currentUrl ? (
+          <div className="relative group">
+            <div className={`${aspectClass} rounded-lg overflow-hidden border border-border bg-muted`}>
+              <img 
+                src={currentUrl} 
+                alt={label} 
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="absolute inset-0 bg-background/90 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 rounded-lg">
+              <Button size="sm" variant="outline" onClick={() => triggerFileUpload(type, id, field)}>
+                <Upload className="h-3 w-3 mr-1" /> Upload
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => openMediaPicker(type, id, field)}>
+                <Library className="h-3 w-3 mr-1" /> Library
+              </Button>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="text-destructive"
+                onClick={() => {
+                  if (type === "menu") updateMenuItem(id, field as keyof MenuItem, "");
+                  else if (type === "sub") updateSubItem(id, field as keyof MenuSubItem, "");
+                }}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className={`${aspectClass} rounded-lg border-2 border-dashed border-border bg-muted/50 flex flex-col items-center justify-center`}>
+            {isUploading ? (
+              <div className="text-center">
+                <div className="animate-spin h-6 w-6 border-2 border-gold border-t-transparent rounded-full mx-auto mb-2" />
+                <p className="text-xs text-muted-foreground">Uploading...</p>
+              </div>
+            ) : (
+              <div className="text-center">
+                <ImageIcon className="h-6 w-6 text-muted-foreground/50 mx-auto mb-2" />
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => triggerFileUpload(type, id, field)}>
+                    <Upload className="h-3 w-3 mr-1" /> Upload
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => openMediaPicker(type, id, field)}>
+                    <Library className="h-3 w-3 mr-1" /> Library
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (loading) {
     return <div className="h-96 bg-muted rounded-xl animate-pulse" />;
   }
 
   return (
     <div className="space-y-6">
+      {/* Hidden file input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept="image/*"
+        onChange={handleFileChange}
+      />
+
+      {/* Media Picker Modal */}
+      <MediaPickerModal
+        open={mediaPickerOpen}
+        onClose={() => setMediaPickerOpen(false)}
+        onSelect={handleMediaSelect}
+        accept="image/*"
+        title="Select Image"
+      />
+
       <div className="flex justify-between items-center">
         <h2 className="font-display text-xl text-foreground">Menu Management</h2>
         <Button variant="gold" onClick={saveAll} disabled={saving}>
@@ -387,6 +545,16 @@ const AdminMenuManager = () => {
                                     onChange={(e) => updateSubItem(subItem.id, "items", e.target.value.split(", "))}
                                     placeholder="Sub-items (comma separated)"
                                   />
+                                  
+                                  {/* Category Image */}
+                                  <ImageUploadZone
+                                    type="sub"
+                                    id={subItem.id}
+                                    field="image_url"
+                                    currentUrl={subItem.image_url}
+                                    label="Category Icon/Image"
+                                    aspectRatio="square"
+                                  />
                                 </div>
                               ))}
                           </div>
@@ -394,37 +562,42 @@ const AdminMenuManager = () => {
                           {/* Banner Settings */}
                           <div className="border-t border-border pt-4 mt-4">
                             <Label className="text-sm font-medium mb-4 block">Mega Menu Banner</Label>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <Label className="text-xs">Banner Title</Label>
-                                <Input
-                                  value={item.banner_title || ""}
-                                  onChange={(e) => updateMenuItem(item.id, "banner_title", e.target.value)}
-                                  className="mt-1"
-                                />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-4">
+                                <div>
+                                  <Label className="text-xs">Banner Title</Label>
+                                  <Input
+                                    value={item.banner_title || ""}
+                                    onChange={(e) => updateMenuItem(item.id, "banner_title", e.target.value)}
+                                    className="mt-1"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs">Banner Subtitle</Label>
+                                  <Input
+                                    value={item.banner_subtitle || ""}
+                                    onChange={(e) => updateMenuItem(item.id, "banner_subtitle", e.target.value)}
+                                    className="mt-1"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs">Banner Link</Label>
+                                  <Input
+                                    value={item.banner_link || ""}
+                                    onChange={(e) => updateMenuItem(item.id, "banner_link", e.target.value)}
+                                    className="mt-1"
+                                    placeholder="/collections/new"
+                                  />
+                                </div>
                               </div>
                               <div>
-                                <Label className="text-xs">Banner Subtitle</Label>
-                                <Input
-                                  value={item.banner_subtitle || ""}
-                                  onChange={(e) => updateMenuItem(item.id, "banner_subtitle", e.target.value)}
-                                  className="mt-1"
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-xs">Banner Link</Label>
-                                <Input
-                                  value={item.banner_link || ""}
-                                  onChange={(e) => updateMenuItem(item.id, "banner_link", e.target.value)}
-                                  className="mt-1"
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-xs">Banner Image URL</Label>
-                                <Input
-                                  value={item.banner_image_url || ""}
-                                  onChange={(e) => updateMenuItem(item.id, "banner_image_url", e.target.value)}
-                                  className="mt-1"
+                                <ImageUploadZone
+                                  type="menu"
+                                  id={item.id}
+                                  field="banner_image_url"
+                                  currentUrl={item.banner_image_url}
+                                  label="Banner Image"
+                                  aspectRatio="video"
                                 />
                               </div>
                             </div>
