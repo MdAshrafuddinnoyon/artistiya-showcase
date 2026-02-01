@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Plus, Trash2, Save, Upload, Eye, EyeOff, GripVertical, Layers, Package, Image, FolderTree, X } from "lucide-react";
+import { Plus, Trash2, Save, Upload, Eye, EyeOff, GripVertical, Layers, Package, Image as ImageIcon, FolderTree, X, Library, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import MediaPickerModal from "./MediaPickerModal";
 
 interface HomepageSection {
   id: string;
@@ -39,8 +40,8 @@ const sectionTypes = [
   { value: "category", label: "Category Products", icon: FolderTree, description: "Products from a category" },
   { value: "best_selling", label: "Best Selling", icon: Package, description: "Top selling products" },
   { value: "discount", label: "Discount Products", icon: Package, description: "Products on sale" },
-  { value: "banner", label: "Promotional Banner", icon: Image, description: "Full-width banner" },
-  { value: "dual_banner", label: "Dual Banner", icon: Image, description: "Two side-by-side banners" },
+  { value: "banner", label: "Promotional Banner", icon: ImageIcon, description: "Full-width banner" },
+  { value: "dual_banner", label: "Dual Banner", icon: ImageIcon, description: "Two side-by-side banners" },
   { value: "featured", label: "Featured Collection", icon: Layers, description: "Highlight a collection" },
 ];
 
@@ -53,6 +54,9 @@ const AdminHomepageSections = () => {
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentUploadConfig, setCurrentUploadConfig] = useState<{sectionId: string, field: string} | null>(null);
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const [mediaPickerTarget, setMediaPickerTarget] = useState<{sectionId: string, field: string} | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -227,7 +231,20 @@ const AdminHomepageSections = () => {
     );
   }
 
-  // Render image upload zone component
+  const openMediaPicker = (sectionId: string, field: string) => {
+    setMediaPickerTarget({ sectionId, field });
+    setMediaPickerOpen(true);
+  };
+
+  const handleMediaSelect = (url: string) => {
+    if (mediaPickerTarget) {
+      updateSectionConfig(mediaPickerTarget.sectionId, { [mediaPickerTarget.field]: url });
+    }
+    setMediaPickerOpen(false);
+    setMediaPickerTarget(null);
+  };
+
+  // Enhanced Image Upload Zone with Media Picker and Preview
   const ImageUploadZone = ({ 
     sectionId, 
     configField, 
@@ -246,48 +263,93 @@ const AdminHomepageSections = () => {
         <Label className="text-xs">{label}</Label>
         {currentUrl ? (
           <div className="relative group">
-            <div className="aspect-video rounded-lg overflow-hidden border border-border">
+            <div className="aspect-video rounded-lg overflow-hidden border border-border bg-muted">
               <img 
                 src={currentUrl} 
                 alt={label} 
                 className="w-full h-full object-cover"
               />
             </div>
-            <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 rounded-lg">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => triggerFileUpload(sectionId, configField)}
-              >
-                <Upload className="h-3 w-3 mr-1" />
-                Replace
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-destructive"
-                onClick={() => updateSectionConfig(sectionId, { [configField]: "" })}
-              >
-                <X className="h-3 w-3 mr-1" />
-                Remove
-              </Button>
+            {/* Hover Controls */}
+            <div className="absolute inset-0 bg-background/90 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => triggerFileUpload(sectionId, configField)}
+                >
+                  <Upload className="h-3 w-3 mr-1" />
+                  Upload
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => openMediaPicker(sectionId, configField)}
+                >
+                  <Library className="h-3 w-3 mr-1" />
+                  Library
+                </Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setPreviewImage(currentUrl)}
+                >
+                  <ZoomIn className="h-3 w-3 mr-1" />
+                  Preview
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => updateSectionConfig(sectionId, { [configField]: "" })}
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Remove
+                </Button>
+              </div>
             </div>
           </div>
         ) : (
-          <div
-            onClick={() => triggerFileUpload(sectionId, configField)}
-            className="aspect-video rounded-lg border-2 border-dashed border-border bg-muted/50 flex flex-col items-center justify-center cursor-pointer hover:border-gold transition-colors"
-          >
+          <div className="aspect-video rounded-lg border-2 border-dashed border-border bg-muted/50">
             {isUploading ? (
-              <>
+              <div className="h-full flex flex-col items-center justify-center">
                 <div className="animate-spin h-6 w-6 border-2 border-gold border-t-transparent rounded-full mb-2" />
                 <p className="text-xs text-muted-foreground">Uploading...</p>
-              </>
+              </div>
             ) : (
-              <>
-                <Upload className="h-6 w-6 text-muted-foreground mb-2" />
-                <p className="text-xs text-muted-foreground">Click to upload</p>
-              </>
+              <div className="h-full flex flex-col items-center justify-center gap-3">
+                <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => triggerFileUpload(sectionId, configField)}
+                  >
+                    <Upload className="h-3 w-3 mr-1" />
+                    Upload
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openMediaPicker(sectionId, configField)}
+                  >
+                    <Library className="h-3 w-3 mr-1" />
+                    Library
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground">or paste image URL below</p>
+                <Input
+                  placeholder="https://..."
+                  className="max-w-[200px] h-7 text-xs"
+                  onBlur={(e) => {
+                    if (e.target.value) {
+                      updateSectionConfig(sectionId, { [configField]: e.target.value });
+                    }
+                  }}
+                />
+              </div>
             )}
           </div>
         )}
@@ -683,6 +745,41 @@ const AdminHomepageSections = () => {
               </CardContent>
             </Card>
           ))}
+        </div>
+      )}
+      {/* Media Picker Modal */}
+      <MediaPickerModal
+        open={mediaPickerOpen}
+        onClose={() => {
+          setMediaPickerOpen(false);
+          setMediaPickerTarget(null);
+        }}
+        onSelect={handleMediaSelect}
+        accept="image/*"
+        title="Select Banner Image"
+      />
+
+      {/* Image Preview Modal */}
+      {previewImage && (
+        <div 
+          className="fixed inset-0 bg-background/95 z-50 flex items-center justify-center p-4"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh]">
+            <img 
+              src={previewImage} 
+              alt="Preview" 
+              className="max-w-full max-h-[90vh] object-contain rounded-lg"
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-2 bg-background/80"
+              onClick={() => setPreviewImage(null)}
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
       )}
     </div>
