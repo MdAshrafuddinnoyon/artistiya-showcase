@@ -1,13 +1,14 @@
-import { useState, useEffect, useRef } from "react";
-import { Plus, Trash2, Save, Upload, Eye, EyeOff, GripVertical, ExternalLink, Instagram } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Trash2, Save, Eye, EyeOff, GripVertical, Instagram } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import ImageUploadZone from "./ImageUploadZone";
 
 interface InstagramPost {
   id: string;
@@ -22,9 +23,6 @@ const AdminInstagramPosts = () => {
   const [posts, setPosts] = useState<InstagramPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPosts();
@@ -110,32 +108,6 @@ const AdminInstagramPosts = () => {
     }
   };
 
-  const handleImageUpload = async (postId: string, file: File) => {
-    setUploading(postId);
-    try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `instagram-${postId}-${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("media")
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("media")
-        .getPublicUrl(fileName);
-
-      updatePostField(postId, "image_url", publicUrl);
-      toast.success("Image uploaded");
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast.error("Failed to upload image");
-    } finally {
-      setUploading(null);
-    }
-  };
-
   if (loading) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -170,19 +142,6 @@ const AdminInstagramPosts = () => {
         </div>
       </div>
 
-      <input
-        type="file"
-        ref={fileInputRef}
-        className="hidden"
-        accept="image/*"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file && selectedPostId) {
-            handleImageUpload(selectedPostId, file);
-          }
-        }}
-      />
-
       {posts.length === 0 ? (
         <Card className="p-12 text-center">
           <Instagram className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -196,32 +155,19 @@ const AdminInstagramPosts = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {posts.map((post, index) => (
             <Card key={post.id} className="overflow-hidden">
-              <div
-                className="aspect-square relative cursor-pointer group"
-                onClick={() => {
-                  setSelectedPostId(post.id);
-                  fileInputRef.current?.click();
-                }}
-              >
-                {uploading === post.id ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                    <div className="animate-spin h-8 w-8 border-2 border-gold border-t-transparent rounded-full" />
-                  </div>
-                ) : (
-                  <>
-                    <img
-                      src={post.image_url}
-                      alt={post.caption || "Instagram post"}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Upload className="h-8 w-8 text-white" />
-                    </div>
-                  </>
-                )}
+              <div className="p-4">
+                <ImageUploadZone
+                  value={post.image_url}
+                  onChange={(url) => updatePostField(post.id, "image_url", url)}
+                  onRemove={() => updatePostField(post.id, "image_url", "")}
+                  aspectRatio="square"
+                  bucket="media"
+                  folder="instagram"
+                  showUrlInput={false}
+                />
               </div>
 
-              <CardContent className="p-4 space-y-3">
+              <CardContent className="p-4 pt-0 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />

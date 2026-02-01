@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { Save, Upload } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import ImageUploadZone from "./ImageUploadZone";
 
 interface MakingSection {
   id: string;
@@ -33,8 +34,6 @@ const AdminMakingSection = () => {
   const [section, setSection] = useState<MakingSection | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchSection();
@@ -111,35 +110,6 @@ const AdminMakingSection = () => {
     }
   };
 
-  const handleImageUpload = async (file: File) => {
-    if (!section) return;
-    setUploading(true);
-
-    try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `making-${section.id}-${Date.now()}.${fileExt}`;
-      const filePath = `making/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("product-images")
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("product-images")
-        .getPublicUrl(filePath);
-
-      setSection({ ...section, background_image_url: publicUrl });
-      toast.success("Image uploaded successfully");
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      toast.error("Failed to upload image");
-    } finally {
-      setUploading(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="space-y-4">
@@ -174,17 +144,6 @@ const AdminMakingSection = () => {
         </div>
       </div>
 
-      <input
-        type="file"
-        ref={fileInputRef}
-        className="hidden"
-        accept="image/*"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) handleImageUpload(file);
-        }}
-      />
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Background Image */}
         <Card>
@@ -192,28 +151,14 @@ const AdminMakingSection = () => {
             <CardTitle className="text-base">Background Image</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div
-              className="aspect-video rounded-lg border-2 border-dashed border-border bg-muted/50 flex items-center justify-center cursor-pointer hover:border-gold transition-colors overflow-hidden"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {uploading ? (
-                <div className="text-center">
-                  <div className="animate-spin h-8 w-8 border-2 border-gold border-t-transparent rounded-full mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">Uploading...</p>
-                </div>
-              ) : section.background_image_url ? (
-                <img
-                  src={section.background_image_url}
-                  alt="Background"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="text-center p-4">
-                  <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">Click to upload background</p>
-                </div>
-              )}
-            </div>
+            <ImageUploadZone
+              value={section.background_image_url}
+              onChange={(url) => setSection({ ...section, background_image_url: url })}
+              onRemove={() => setSection({ ...section, background_image_url: "" })}
+              bucket="product-images"
+              folder="making"
+              aspectRatio="video"
+            />
 
             <div>
               <Label>Overlay Opacity: {section.overlay_opacity ?? 85}%</Label>
