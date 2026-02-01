@@ -31,30 +31,29 @@ const WhatsAppOrderButton = ({ product, quantity = 1, className = "", variant = 
 
   useEffect(() => {
     const fetchSettings = async () => {
-      // First try to get from whatsapp setting
-      const { data: whatsappData } = await supabase
+      // Get from site_branding
+      const { data: brandingData } = await supabase
+        .from("site_branding")
+        .select("social_whatsapp")
+        .single();
+
+      if (brandingData?.social_whatsapp) {
+        setWhatsappNumber(brandingData.social_whatsapp);
+        return;
+      }
+
+      // Fallback: try site_settings
+      const { data: settingsData } = await supabase
         .from("site_settings")
         .select("value")
         .eq("key", "whatsapp")
         .single();
 
-      if (whatsappData?.value && typeof whatsappData.value === 'object' && 'number' in whatsappData.value) {
-        const value = whatsappData.value as { number: string };
+      if (settingsData?.value && typeof settingsData.value === 'object' && 'number' in settingsData.value) {
+        const value = settingsData.value as { number: string };
         if (value.number) {
           setWhatsappNumber(value.number);
-          return;
         }
-      }
-
-      // Fallback to legacy whatsapp_number key
-      const { data } = await supabase
-        .from("site_settings")
-        .select("value")
-        .eq("key", "whatsapp_number")
-        .single();
-
-      if (data?.value) {
-        setWhatsappNumber(String(data.value));
       }
     };
 
