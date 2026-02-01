@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -79,14 +80,20 @@ const Auth = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { signIn, signUp, user } = useAuth();
+  const { isAdmin, isLoading: isAdminLoading } = useAdmin();
   const navigate = useNavigate();
   const { num1, num2, operator, answer, regenerate } = useMathCaptcha();
 
+  // Role-based redirect: Admin -> /admin, Customer -> /
   useEffect(() => {
-    if (user) {
-      navigate("/");
+    if (user && !isAdminLoading) {
+      if (isAdmin) {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
     }
-  }, [user, navigate]);
+  }, [user, isAdmin, isAdminLoading, navigate]);
 
   const validateForm = () => {
     try {
