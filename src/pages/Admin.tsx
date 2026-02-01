@@ -92,6 +92,7 @@ import AdminDeliveryPartners from "@/components/admin/AdminDeliveryPartners";
 import AdminQRSettings from "@/components/admin/AdminQRSettings";
 import AdminFraudSettings from "@/components/admin/AdminFraudSettings";
 import AdminProductReviews from "@/components/admin/AdminProductReviews";
+import AdminShopSettings from "@/components/admin/AdminShopSettings";
 
 // Menu sections for organized navigation
 const menuSections = [
@@ -161,6 +162,7 @@ const menuSections = [
   {
     title: "Settings",
     items: [
+      { id: "shop-settings", name: "Shop Page", icon: ShoppingBag },
       { id: "checkout", name: "Checkout", icon: ShoppingBag },
       { id: "payments", name: "Payments", icon: CreditCard },
       { id: "delivery", name: "Delivery Providers", icon: Truck },
@@ -348,6 +350,8 @@ const Admin = () => {
         return <AdminFraudSettings />;
       case "product-reviews":
         return <AdminProductReviews />;
+      case "shop-settings":
+        return <AdminShopSettings />;
       case "settings":
         return <AdminSettings />;
       default:

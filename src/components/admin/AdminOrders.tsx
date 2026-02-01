@@ -24,6 +24,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import BulkSelectionToolbar from "./BulkSelectionToolbar";
+import OrderExportTools from "./OrderExportTools";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -426,6 +427,12 @@ const AdminOrders = () => {
                 ))}
               </SelectContent>
             </Select>
+            <OrderExportTools 
+              selectedIds={selectedIds}
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+              statusFilter={statusFilter}
+            />
           </div>
         </div>
 

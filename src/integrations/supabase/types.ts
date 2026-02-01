@@ -2447,6 +2447,63 @@ export type Database = {
           },
         ]
       }
+      shop_page_settings: {
+        Row: {
+          created_at: string
+          hero_background_image: string | null
+          hero_overlay_opacity: number | null
+          hero_subtitle: string | null
+          hero_subtitle_bn: string | null
+          hero_title: string | null
+          hero_title_bn: string | null
+          id: string
+          sales_banner_enabled: boolean | null
+          sales_banner_end_date: string | null
+          sales_banner_image: string | null
+          sales_banner_link: string | null
+          sales_banner_start_date: string | null
+          sales_banner_title: string | null
+          sales_banner_title_bn: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          hero_background_image?: string | null
+          hero_overlay_opacity?: number | null
+          hero_subtitle?: string | null
+          hero_subtitle_bn?: string | null
+          hero_title?: string | null
+          hero_title_bn?: string | null
+          id?: string
+          sales_banner_enabled?: boolean | null
+          sales_banner_end_date?: string | null
+          sales_banner_image?: string | null
+          sales_banner_link?: string | null
+          sales_banner_start_date?: string | null
+          sales_banner_title?: string | null
+          sales_banner_title_bn?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          hero_background_image?: string | null
+          hero_overlay_opacity?: number | null
+          hero_subtitle?: string | null
+          hero_subtitle_bn?: string | null
+          hero_title?: string | null
+          hero_title_bn?: string | null
+          id?: string
+          sales_banner_enabled?: boolean | null
+          sales_banner_end_date?: string | null
+          sales_banner_image?: string | null
+          sales_banner_link?: string | null
+          sales_banner_start_date?: string | null
+          sales_banner_title?: string | null
+          sales_banner_title_bn?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       shop_settings: {
         Row: {
           created_at: string | null

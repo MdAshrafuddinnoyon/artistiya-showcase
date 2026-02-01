@@ -98,9 +98,14 @@ const CategorySection = () => {
     }
   };
 
-  const displayCategories = categories.slice(0, settings.items_to_show);
+  // When slider is enabled, show all items up to items_to_show, otherwise limit to columns count
+  const displayCategories = settings.enable_slider 
+    ? categories.slice(0, Math.max(settings.items_to_show, categories.length))
+    : categories.slice(0, settings.items_to_show);
   const itemsPerView = isMobile ? settings.columns_mobile : settings.columns_desktop;
-  const totalSlides = Math.max(1, Math.ceil(displayCategories.length / itemsPerView));
+  const totalSlides = settings.enable_slider 
+    ? Math.max(1, Math.ceil(displayCategories.length / itemsPerView))
+    : 1;
 
   const nextSlide = useCallback(() => {
     setCurrentIndex((prev) => (prev + 1) % totalSlides);

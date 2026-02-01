@@ -66,6 +66,20 @@ interface ShopSettings {
   show_showcase_products: boolean;
 }
 
+interface ShopPageSettings {
+  hero_background_image: string | null;
+  hero_title: string;
+  hero_title_bn: string | null;
+  hero_subtitle: string;
+  hero_subtitle_bn: string | null;
+  hero_overlay_opacity: number;
+  sales_banner_enabled: boolean;
+  sales_banner_image: string | null;
+  sales_banner_title: string | null;
+  sales_banner_title_bn: string | null;
+  sales_banner_link: string | null;
+}
+
 const Shop = () => {
   const { category: categorySlug } = useParams();
   const { t, language } = useLanguage();
@@ -89,6 +103,21 @@ const Shop = () => {
     show_out_of_stock: true,
     show_showcase_products: true,
   });
+
+  // Shop page appearance settings
+  const [pageSettings, setPageSettings] = useState<ShopPageSettings>({
+    hero_background_image: null,
+    hero_title: "Shop",
+    hero_title_bn: null,
+    hero_subtitle: "Explore Our Collection",
+    hero_subtitle_bn: null,
+    hero_overlay_opacity: 0.5,
+    sales_banner_enabled: false,
+    sales_banner_image: null,
+    sales_banner_title: null,
+    sales_banner_title_bn: null,
+    sales_banner_link: null,
+  });
   
   // Search
   const [searchQuery, setSearchQuery] = useState("");
@@ -104,15 +133,26 @@ const Shop = () => {
   // Fetch shop settings
   useEffect(() => {
     const fetchSettings = async () => {
-      const { data } = await supabase
+      // Fetch shop settings
+      const { data: shopData } = await supabase
         .from("shop_settings")
         .select("*")
         .single();
       
-      if (data) {
-        setShopSettings(data as ShopSettings);
-        setPriceRange([data.min_price || 0, data.max_price || 50000]);
-        setSortBy(data.default_sort || 'newest');
+      if (shopData) {
+        setShopSettings(shopData as ShopSettings);
+        setPriceRange([shopData.min_price || 0, shopData.max_price || 50000]);
+        setSortBy(shopData.default_sort || 'newest');
+      }
+
+      // Fetch page appearance settings
+      const { data: pageData } = await supabase
+        .from("shop_page_settings")
+        .select("*")
+        .single();
+      
+      if (pageData) {
+        setPageSettings(pageData as any);
       }
     };
     fetchSettings();
@@ -396,26 +436,59 @@ const Shop = () => {
     </div>
   );
 
+  const getPageTitle = () => {
+    if (activeCategory) return getCategoryName(activeCategory);
+    return language === "bn" && pageSettings.hero_title_bn ? pageSettings.hero_title_bn : pageSettings.hero_title;
+  };
+
+  const getPageSubtitle = () => {
+    return language === "bn" && pageSettings.hero_subtitle_bn ? pageSettings.hero_subtitle_bn : pageSettings.hero_subtitle;
+  };
+
+  const getSalesBannerTitle = () => {
+    return language === "bn" && pageSettings.sales_banner_title_bn ? pageSettings.sales_banner_title_bn : pageSettings.sales_banner_title;
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="pt-32 pb-24">
+      <main className="pt-24 pb-24">
+        {/* Hero Section with Background */}
+        <div 
+          className="relative py-16 md:py-24 mb-8"
+          style={{
+            backgroundImage: pageSettings.hero_background_image ? `url(${pageSettings.hero_background_image})` : undefined,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        >
+          {/* Overlay */}
+          {pageSettings.hero_background_image && (
+            <div 
+              className="absolute inset-0 bg-background"
+              style={{ opacity: pageSettings.hero_overlay_opacity }}
+            />
+          )}
+          
+          <div className="container mx-auto px-4 lg:px-8 relative z-10">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="text-center"
+            >
+              <span className="text-gold text-sm tracking-[0.3em] uppercase font-body">
+                {getPageSubtitle()}
+              </span>
+              <h1 className="font-display text-5xl md:text-6xl text-foreground mt-4">
+                {getPageTitle()}
+              </h1>
+            </motion.div>
+          </div>
+        </div>
+
         <div className="container mx-auto px-4 lg:px-8">
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-12"
-          >
-            <span className="text-gold text-sm tracking-[0.3em] uppercase font-body">
-              Explore Our Collection
-            </span>
-            <h1 className="font-display text-5xl md:text-6xl text-foreground mt-4">
-              {activeCategory ? getCategoryName(activeCategory) : t("shop.title")}
-            </h1>
-          </motion.div>
 
           {/* Search Bar - Hidden on mobile since header has search */}
           {!isMobile && (
@@ -446,7 +519,26 @@ const Shop = () => {
           <div className="flex gap-8">
             {/* Desktop Sidebar */}
             <aside className="hidden lg:block w-64 flex-shrink-0">
-              <div className="sticky top-32">
+              <div className="sticky top-32 space-y-4">
+                {/* Sales Banner */}
+                {pageSettings.sales_banner_enabled && pageSettings.sales_banner_image && (
+                  <a 
+                    href={pageSettings.sales_banner_link || "#"} 
+                    className="block rounded-xl overflow-hidden relative group"
+                  >
+                    <img 
+                      src={pageSettings.sales_banner_image} 
+                      alt={getSalesBannerTitle() || "Sales"} 
+                      className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                    {pageSettings.sales_banner_title && (
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end p-4">
+                        <span className="text-white font-display text-lg">{getSalesBannerTitle()}</span>
+                      </div>
+                    )}
+                  </a>
+                )}
+                
                 <FilterContent />
               </div>
             </aside>

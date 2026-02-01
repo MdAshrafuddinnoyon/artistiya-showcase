@@ -181,15 +181,26 @@ const AdminTestimonials = () => {
 
   const saveGoogleSettings = async () => {
     try {
+      // First get the existing record id
+      const { data: existingData, error: fetchError } = await supabase
+        .from("site_branding")
+        .select("id")
+        .limit(1)
+        .single();
+
+      if (fetchError || !existingData) {
+        throw new Error("No site branding record found");
+      }
+
       const { error } = await supabase
         .from("site_branding")
         .update({
-          google_place_id: googleSettings.google_place_id,
-          google_api_key: googleSettings.google_api_key,
+          google_place_id: googleSettings.google_place_id || null,
+          google_api_key: googleSettings.google_api_key || null,
           auto_sync_google_reviews: googleSettings.auto_sync_google_reviews,
           hide_manual_reviews_when_api_active: googleSettings.hide_manual_reviews_when_api_active,
         })
-        .neq("id", "");
+        .eq("id", existingData.id);
 
       if (error) throw error;
       toast.success("Google settings saved!");
