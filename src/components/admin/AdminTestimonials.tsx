@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Save, Star, Eye, EyeOff, ShoppingBag, Globe, Facebook, Instagram, MessageCircle } from "lucide-react";
+import { Plus, Trash2, Save, Star, Eye, EyeOff, ShoppingBag, Globe, Facebook, Instagram, MessageCircle, RefreshCw, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -41,9 +41,9 @@ const platformIcons: Record<string, any> = {
 
 const platformColors: Record<string, string> = {
   manual: "bg-muted text-muted-foreground",
-  google: "bg-blue-500/20 text-blue-500",
-  facebook: "bg-indigo-500/20 text-indigo-500",
-  instagram: "bg-pink-500/20 text-pink-500",
+  google: "bg-blue-500/20 text-blue-600 dark:text-blue-400",
+  facebook: "bg-indigo-500/20 text-indigo-600 dark:text-indigo-400",
+  instagram: "bg-pink-500/20 text-pink-600 dark:text-pink-400",
 };
 
 const AdminTestimonials = () => {
@@ -51,6 +51,8 @@ const AdminTestimonials = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [googlePlaceId, setGooglePlaceId] = useState("");
+  const [googleApiKey, setGoogleApiKey] = useState("");
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     fetchTestimonials();
@@ -152,6 +154,25 @@ const AdminTestimonials = () => {
     }
   };
 
+  const syncGoogleReviews = async () => {
+    if (!googlePlaceId || !googleApiKey) {
+      toast.error("Please enter both Place ID and API Key");
+      return;
+    }
+    
+    setSyncing(true);
+    try {
+      // This would call an edge function to fetch Google reviews
+      toast.info("Google Reviews sync will be available after setting up the edge function");
+      // TODO: Implement edge function for Google Places API
+    } catch (error) {
+      console.error("Error syncing Google reviews:", error);
+      toast.error("Failed to sync Google reviews");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const getPlatformIcon = (platform: string) => {
     const Icon = platformIcons[platform] || MessageCircle;
     return <Icon className="h-4 w-4" />;
@@ -169,40 +190,49 @@ const AdminTestimonials = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="font-display text-xl text-foreground flex items-center gap-2">
-            <Star className="h-5 w-5 text-gold" />
-            Customer Testimonials
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage customer reviews from various platforms
-          </p>
+      {/* Header */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 className="font-display text-xl text-foreground flex items-center gap-2">
+              <Star className="h-5 w-5 text-gold" />
+              Customer Testimonials
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage customer reviews from various platforms
+            </p>
+          </div>
+          <Button variant="gold" onClick={saveAll} disabled={saving} className="w-full sm:w-auto">
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? "Saving..." : "Save All"}
+          </Button>
         </div>
-        <Button variant="gold" onClick={saveAll} disabled={saving}>
-          <Save className="h-4 w-4 mr-2" />
-          {saving ? "Saving..." : "Save All"}
-        </Button>
       </div>
 
       <Tabs defaultValue="all" className="w-full">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <TabsList className="bg-muted">
-            <TabsTrigger value="all">All Reviews</TabsTrigger>
-            <TabsTrigger value="google" className="gap-1">
-              <Globe className="h-3 w-3" /> Google
-            </TabsTrigger>
-            <TabsTrigger value="facebook" className="gap-1">
-              <Facebook className="h-3 w-3" /> Facebook
-            </TabsTrigger>
-            <TabsTrigger value="instagram" className="gap-1">
-              <Instagram className="h-3 w-3" /> Instagram
-            </TabsTrigger>
-          </TabsList>
+        {/* Responsive Tab Controls */}
+        <div className="flex flex-col gap-4 mb-6">
+          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="bg-muted inline-flex w-max sm:w-auto">
+              <TabsTrigger value="all" className="text-xs sm:text-sm">All</TabsTrigger>
+              <TabsTrigger value="google" className="gap-1 text-xs sm:text-sm">
+                <Globe className="h-3 w-3" /> Google
+              </TabsTrigger>
+              <TabsTrigger value="facebook" className="gap-1 text-xs sm:text-sm">
+                <Facebook className="h-3 w-3" /> Facebook
+              </TabsTrigger>
+              <TabsTrigger value="instagram" className="gap-1 text-xs sm:text-sm">
+                <Instagram className="h-3 w-3" /> Instagram
+              </TabsTrigger>
+              <TabsTrigger value="manual" className="gap-1 text-xs sm:text-sm">
+                <MessageCircle className="h-3 w-3" /> Manual
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-          <div className="flex gap-2">
+          <div className="w-full sm:w-auto">
             <Select onValueChange={(platform) => addTestimonial(platform)}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <Plus className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Add Review" />
               </SelectTrigger>
@@ -239,11 +269,16 @@ const AdminTestimonials = () => {
               <Globe className="h-4 w-4 text-blue-500" />
               Google Business Integration
             </CardTitle>
+            <CardDescription className="text-xs">
+              Connect your Google Business account to sync reviews automatically
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <Label className="text-xs">Google Place ID</Label>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs flex items-center gap-1">
+                  <Globe className="h-3 w-3" /> Google Place ID
+                </Label>
                 <Input
                   value={googlePlaceId}
                   onChange={(e) => setGooglePlaceId(e.target.value)}
@@ -251,24 +286,50 @@ const AdminTestimonials = () => {
                   className="mt-1"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Find your Place ID at{" "}
+                  Find at{" "}
                   <a 
                     href="https://developers.google.com/maps/documentation/places/web-service/place-id" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-blue-500 hover:underline"
                   >
-                    Google Place ID Finder
+                    Place ID Finder
                   </a>
                 </p>
               </div>
-              <div className="flex items-end">
-                <Button variant="outline" disabled className="gap-2">
-                  <Globe className="h-4 w-4" />
-                  Sync Reviews (Coming Soon)
-                </Button>
+              <div>
+                <Label className="text-xs flex items-center gap-1">
+                  <Key className="h-3 w-3" /> Google Places API Key
+                </Label>
+                <Input
+                  value={googleApiKey}
+                  onChange={(e) => setGoogleApiKey(e.target.value)}
+                  placeholder="Enter your API Key"
+                  type="password"
+                  className="mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Get from{" "}
+                  <a 
+                    href="https://console.cloud.google.com/apis/credentials" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-500 hover:underline"
+                  >
+                    Google Cloud Console
+                  </a>
+                </p>
               </div>
             </div>
+            <Button 
+              variant="outline" 
+              onClick={syncGoogleReviews}
+              disabled={syncing || !googlePlaceId || !googleApiKey}
+              className="w-full sm:w-auto gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? "Syncing..." : "Sync Google Reviews"}
+            </Button>
           </CardContent>
         </Card>
 
@@ -278,8 +339,135 @@ const AdminTestimonials = () => {
               .filter((t) => tabValue === "all" || t.platform === tabValue)
               .map((testimonial, index) => (
                 <Card key={testimonial.id} className="overflow-hidden">
-                  <CardContent className="p-6">
-                    <div className="flex gap-6">
+                  <CardContent className="p-4 sm:p-6">
+                    {/* Mobile Layout */}
+                    <div className="flex flex-col gap-4 lg:hidden">
+                      {/* Top Row: Photo + Actions */}
+                      <div className="flex items-start gap-4">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0">
+                          <ImageUploadZone
+                            value={testimonial.customer_photo_url}
+                            onChange={(url) => updateField(testimonial.id, "customer_photo_url", url)}
+                            onRemove={() => updateField(testimonial.id, "customer_photo_url", "")}
+                            aspectRatio="square"
+                            bucket="testimonials"
+                            folder="customers"
+                            showUrlInput={false}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <Input
+                            value={testimonial.name}
+                            onChange={(e) => updateField(testimonial.id, "name", e.target.value)}
+                            className="font-medium"
+                            placeholder="Customer name"
+                          />
+                          <Input
+                            value={testimonial.location || ""}
+                            onChange={(e) => updateField(testimonial.id, "location", e.target.value)}
+                            className="mt-2 text-sm"
+                            placeholder="Location"
+                          />
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={testimonial.is_active}
+                              onCheckedChange={(checked) => updateField(testimonial.id, "is_active", checked)}
+                            />
+                            {testimonial.is_active ? (
+                              <Eye className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <EyeOff className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive h-8 w-8"
+                            onClick={() => deleteTestimonial(testimonial.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Rating & Platform Row */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs">Rating</Label>
+                          <Select
+                            value={String(testimonial.rating)}
+                            onValueChange={(v) => updateField(testimonial.id, "rating", parseInt(v))}
+                          >
+                            <SelectTrigger className="mt-1">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {[5, 4, 3, 2, 1].map((r) => (
+                                <SelectItem key={r} value={String(r)}>
+                                  {"⭐".repeat(r)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Platform</Label>
+                          <Select
+                            value={testimonial.platform}
+                            onValueChange={(v) => updateField(testimonial.id, "platform", v)}
+                          >
+                            <SelectTrigger className="mt-1">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="manual">Manual</SelectItem>
+                              <SelectItem value="google">Google</SelectItem>
+                              <SelectItem value="facebook">Facebook</SelectItem>
+                              <SelectItem value="instagram">Instagram</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {/* Review Text */}
+                      <div>
+                        <Label className="text-xs">Review</Label>
+                        <Textarea
+                          value={testimonial.text}
+                          onChange={(e) => updateField(testimonial.id, "text", e.target.value)}
+                          className="mt-1"
+                          rows={3}
+                        />
+                      </div>
+
+                      {/* Badges Row */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={testimonial.verified_purchase}
+                            onCheckedChange={(checked) => updateField(testimonial.id, "verified_purchase", checked)}
+                            className="scale-90"
+                          />
+                          <span className="text-xs text-muted-foreground">Verified</span>
+                        </div>
+                        {testimonial.verified_purchase && (
+                          <Badge variant="secondary" className="gap-1 text-xs">
+                            <ShoppingBag className="h-3 w-3" />
+                            Verified
+                          </Badge>
+                        )}
+                        <Badge className={`gap-1 text-xs ${platformColors[testimonial.platform] || platformColors.manual}`}>
+                          {getPlatformIcon(testimonial.platform)}
+                          {testimonial.platform.charAt(0).toUpperCase() + testimonial.platform.slice(1)}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">#{index + 1}</Badge>
+                      </div>
+                    </div>
+
+                    {/* Desktop Layout */}
+                    <div className="hidden lg:flex gap-6">
                       {/* Photo Upload */}
                       <div className="w-24 h-24 flex-shrink-0">
                         <ImageUploadZone
@@ -296,7 +484,7 @@ const AdminTestimonials = () => {
                       {/* Form Fields */}
                       <div className="flex-1 space-y-4">
                         <div className="flex items-start justify-between">
-                          <div className="flex-1 grid grid-cols-1 sm:grid-cols-4 gap-4">
+                          <div className="flex-1 grid grid-cols-4 gap-4">
                             <div>
                               <Label className="text-xs">Customer Name</Label>
                               <Input
@@ -416,9 +604,9 @@ const AdminTestimonials = () => {
               ))}
 
             {testimonials.filter((t) => tabValue === "all" || t.platform === tabValue).length === 0 && (
-              <Card className="p-12 text-center">
-                <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground mb-4">
+              <Card className="p-8 sm:p-12 text-center">
+                <Star className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground mb-4 text-sm sm:text-base">
                   {tabValue === "all" ? "No testimonials yet" : `No ${tabValue} reviews yet`}
                 </p>
                 <Button variant="gold" onClick={() => addTestimonial(tabValue === "all" ? "manual" : tabValue)}>
