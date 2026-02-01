@@ -1,79 +1,179 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import categoryBags from "@/assets/category-bags.jpg";
 
+interface FeaturedData {
+  id: string;
+  badge_text: string | null;
+  title_line1: string | null;
+  title_highlight: string | null;
+  description: string | null;
+  features: string[] | null;
+  button_text: string | null;
+  button_link: string | null;
+  price_text: string | null;
+  image_url: string | null;
+  layout: string;
+  is_active: boolean;
+}
+
 const FeaturedSection = () => {
+  const [data, setData] = useState<FeaturedData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+
+    const channel = supabase
+      .channel('featured_section_frontend')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'featured_sections' },
+        () => fetchData()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const { data: sectionData, error } = await supabase
+        .from("featured_sections")
+        .select("*")
+        .eq("section_key", "signature")
+        .eq("is_active", true)
+        .single();
+
+      if (error && error.code !== "PGRST116") throw error;
+      setData(sectionData);
+    } catch (error) {
+      console.error("Error fetching featured section:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Default fallback data
+  const defaultData: FeaturedData = {
+    id: "default",
+    badge_text: "Signature Collection",
+    title_line1: "The Floral Bloom",
+    title_highlight: "Tote Collection",
+    description: "Each bag in this collection is a canvas of nature's beauty, hand-painted with meticulous attention to detail. Inspired by the vibrant flora of Bengal, these pieces transform everyday accessories into wearable art.",
+    features: ["100% Genuine Leather", "Hand-painted by skilled artisans", "Water-resistant coating", "Limited edition pieces"],
+    button_text: "Explore Collection",
+    button_link: "/collections/floral-bloom",
+    price_text: "From ৳3,800",
+    image_url: null,
+    layout: "image-left",
+    is_active: true,
+  };
+
+  const sectionData = data || defaultData;
+  const isImageLeft = sectionData.layout === "image-left";
+
+  if (loading) {
+    return (
+      <section className="py-24 bg-background">
+        <div className="container mx-auto px-4 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="aspect-[4/5] rounded-lg bg-muted animate-pulse" />
+            <div className="space-y-4">
+              <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+              <div className="h-12 w-64 bg-muted rounded animate-pulse" />
+              <div className="h-24 w-full bg-muted rounded animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (!sectionData.is_active) return null;
+
   return (
     <section className="py-24 bg-background">
       <div className="container mx-auto px-4 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className={`grid lg:grid-cols-2 gap-12 items-center ${!isImageLeft ? "lg:flex-row-reverse" : ""}`}>
           {/* Image */}
           <motion.div
-            initial={{ opacity: 0, x: -30 }}
+            initial={{ opacity: 0, x: isImageLeft ? -30 : 30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="relative"
+            className={`relative ${!isImageLeft ? "lg:order-2" : ""}`}
           >
             <div className="aspect-[4/5] rounded-lg overflow-hidden">
               <img
-                src={categoryBags}
-                alt="Featured hand-painted bag"
+                src={sectionData.image_url || categoryBags}
+                alt="Featured collection"
                 className="w-full h-full object-cover"
               />
             </div>
             {/* Decorative Frame */}
-            <div className="absolute -bottom-6 -right-6 w-full h-full border-2 border-gold/30 rounded-lg -z-10" />
+            <div className={`absolute -bottom-6 ${isImageLeft ? "-right-6" : "-left-6"} w-full h-full border-2 border-gold/30 rounded-lg -z-10`} />
           </motion.div>
 
           {/* Content */}
           <motion.div
-            initial={{ opacity: 0, x: 30 }}
+            initial={{ opacity: 0, x: isImageLeft ? 30 : -30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="lg:pl-12"
+            className={`${isImageLeft ? "lg:pl-12" : "lg:pr-12 lg:order-1"}`}
           >
-            <span className="text-gold text-sm tracking-[0.3em] uppercase font-body">
-              Signature Collection
-            </span>
+            {sectionData.badge_text && (
+              <span className="text-gold text-sm tracking-[0.3em] uppercase font-body">
+                {sectionData.badge_text}
+              </span>
+            )}
             
             <h2 className="font-display text-4xl md:text-5xl text-foreground mt-4 mb-6">
-              The Floral Bloom
-              <br />
-              <span className="text-gold">Tote Collection</span>
+              {sectionData.title_line1}
+              {sectionData.title_highlight && (
+                <>
+                  <br />
+                  <span className="text-gold">{sectionData.title_highlight}</span>
+                </>
+              )}
             </h2>
 
-            <p className="text-muted-foreground text-lg mb-6 font-body">
-              Each bag in this collection is a canvas of nature's beauty, hand-painted with 
-              meticulous attention to detail. Inspired by the vibrant flora of Bengal, these 
-              pieces transform everyday accessories into wearable art.
-            </p>
+            {sectionData.description && (
+              <p className="text-muted-foreground text-lg mb-6 font-body">
+                {sectionData.description}
+              </p>
+            )}
 
-            <ul className="space-y-3 mb-8">
-              {[
-                "100% Genuine Leather",
-                "Hand-painted by skilled artisans",
-                "Water-resistant coating",
-                "Limited edition pieces"
-              ].map((feature, index) => (
-                <li key={index} className="flex items-center gap-3 text-foreground/80">
-                  <span className="h-1.5 w-1.5 rounded-full bg-gold" />
-                  {feature}
-                </li>
-              ))}
-            </ul>
+            {sectionData.features && sectionData.features.length > 0 && (
+              <ul className="space-y-3 mb-8">
+                {sectionData.features.map((feature, index) => (
+                  <li key={index} className="flex items-center gap-3 text-foreground/80">
+                    <span className="h-1.5 w-1.5 rounded-full bg-gold" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            )}
 
             <div className="flex flex-wrap gap-4">
-              <Link to="/collections/floral-bloom">
-                <Button variant="hero" size="lg">
-                  Explore Collection
-                </Button>
-              </Link>
-              <span className="flex items-center text-gold font-display text-2xl">
-                From ৳3,800
-              </span>
+              {sectionData.button_text && sectionData.button_link && (
+                <Link to={sectionData.button_link}>
+                  <Button variant="hero" size="lg">
+                    {sectionData.button_text}
+                  </Button>
+                </Link>
+              )}
+              {sectionData.price_text && (
+                <span className="flex items-center text-gold font-display text-2xl">
+                  {sectionData.price_text}
+                </span>
+              )}
             </div>
           </motion.div>
         </div>

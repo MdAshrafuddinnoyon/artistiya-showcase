@@ -75,6 +75,8 @@ import AdminCustomers from "@/components/admin/AdminCustomers";
 import AdminAnnouncementBar from "@/components/admin/AdminAnnouncementBar";
 import AdminGoogleIntegrations from "@/components/admin/AdminGoogleIntegrations";
 import AdminEmailSettings from "@/components/admin/AdminEmailSettings";
+import AdminFeaturedSection from "@/components/admin/AdminFeaturedSection";
+import AdminMakingSection from "@/components/admin/AdminMakingSection";
 
 // Menu sections for organized navigation
 const menuSections = [
@@ -114,6 +116,8 @@ const menuSections = [
     title: "Homepage",
     items: [
       { id: "hero-slider", name: "Hero Slider", icon: Image },
+      { id: "featured-section", name: "Signature Collection", icon: Package },
+      { id: "making-section", name: "Behind the Craft", icon: Star },
       { id: "homepage", name: "Sections CMS", icon: Layers },
       { id: "homepage-sections", name: "Product Sections", icon: Package },
       { id: "category-settings", name: "Category Display", icon: FolderTree },
@@ -253,6 +257,10 @@ const Admin = () => {
         return <AdminHomepageCMS />;
       case "homepage-sections":
         return <AdminHomepageSections />;
+      case "featured-section":
+        return <AdminFeaturedSection />;
+      case "making-section":
+        return <AdminMakingSection />;
       case "instagram":
         return <AdminInstagramPosts />;
       case "testimonials":

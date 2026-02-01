@@ -37,7 +37,10 @@ interface Product {
 const sectionTypes = [
   { value: "products", label: "Products Grid", icon: Package, description: "Display selected products" },
   { value: "category", label: "Category Products", icon: FolderTree, description: "Products from a category" },
+  { value: "best_selling", label: "Best Selling", icon: Package, description: "Top selling products" },
+  { value: "discount", label: "Discount Products", icon: Package, description: "Products on sale" },
   { value: "banner", label: "Promotional Banner", icon: Image, description: "Full-width banner" },
+  { value: "dual_banner", label: "Dual Banner", icon: Image, description: "Two side-by-side banners" },
   { value: "featured", label: "Featured Collection", icon: Layers, description: "Highlight a collection" },
 ];
 
@@ -78,15 +81,25 @@ const AdminHomepageSections = () => {
   const addSection = async (type: string) => {
     try {
       const typeInfo = sectionTypes.find((t) => t.value === type);
+      const defaultConfigs: Record<string, any> = {
+        products: { product_ids: [], columns: 4 },
+        category: { category_id: null, limit: 8 },
+        best_selling: { limit: 8, show_badge: true },
+        discount: { limit: 8, min_discount: 10 },
+        banner: { image_url: "", link: "", height: "400px", button_text: "", button_link: "" },
+        dual_banner: { 
+          banner1_image: "", banner1_link: "", banner1_title: "", 
+          banner2_image: "", banner2_link: "", banner2_title: "" 
+        },
+        featured: { collection_id: null },
+      };
+
       const { error } = await supabase.from("homepage_sections").insert({
         section_type: type,
         title: `New ${typeInfo?.label || "Section"}`,
         subtitle: "Add a subtitle",
         display_order: sections.length,
-        config: type === "products" ? { product_ids: [], columns: 4 } :
-                type === "category" ? { category_id: null, limit: 8 } :
-                type === "banner" ? { image_url: "", link: "", height: "400px" } :
-                { collection_id: null },
+        config: defaultConfigs[type] || {},
       });
 
       if (error) throw error;
@@ -364,23 +377,175 @@ const AdminHomepageSections = () => {
                     )}
 
                     {section.section_type === "banner" && (
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="col-span-2">
-                          <Label className="text-xs">Banner Image URL</Label>
-                          <Input
-                            value={section.config.image_url || ""}
-                            onChange={(e) => updateSectionConfig(section.id, { image_url: e.target.value })}
-                            className="mt-1"
-                            placeholder="https://..."
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="col-span-2">
+                            <Label className="text-xs">Banner Image URL</Label>
+                            <Input
+                              value={section.config.image_url || ""}
+                              onChange={(e) => updateSectionConfig(section.id, { image_url: e.target.value })}
+                              className="mt-1"
+                              placeholder="https://..."
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Banner Link</Label>
+                            <Input
+                              value={section.config.link || ""}
+                              onChange={(e) => updateSectionConfig(section.id, { link: e.target.value })}
+                              className="mt-1"
+                              placeholder="/shop"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-xs">Button Text</Label>
+                            <Input
+                              value={section.config.button_text || ""}
+                              onChange={(e) => updateSectionConfig(section.id, { button_text: e.target.value })}
+                              className="mt-1"
+                              placeholder="e.g. Shop Now"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Button Link</Label>
+                            <Input
+                              value={section.config.button_link || ""}
+                              onChange={(e) => updateSectionConfig(section.id, { button_link: e.target.value })}
+                              className="mt-1"
+                              placeholder="/shop"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {section.section_type === "best_selling" && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-xs">Products to Show</Label>
+                          <Select
+                            value={String(section.config.limit || 8)}
+                            onValueChange={(v) => updateSectionConfig(section.id, { limit: parseInt(v) })}
+                          >
+                            <SelectTrigger className="mt-1">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="4">4 Products</SelectItem>
+                              <SelectItem value="6">6 Products</SelectItem>
+                              <SelectItem value="8">8 Products</SelectItem>
+                              <SelectItem value="12">12 Products</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center gap-2 mt-6">
+                          <input
+                            type="checkbox"
+                            checked={section.config.show_badge ?? true}
+                            onChange={(e) => updateSectionConfig(section.id, { show_badge: e.target.checked })}
+                            className="rounded"
                           />
+                          <Label className="text-xs">Show "Best Seller" Badge</Label>
+                        </div>
+                      </div>
+                    )}
+
+                    {section.section_type === "discount" && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-xs">Products to Show</Label>
+                          <Select
+                            value={String(section.config.limit || 8)}
+                            onValueChange={(v) => updateSectionConfig(section.id, { limit: parseInt(v) })}
+                          >
+                            <SelectTrigger className="mt-1">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="4">4 Products</SelectItem>
+                              <SelectItem value="6">6 Products</SelectItem>
+                              <SelectItem value="8">8 Products</SelectItem>
+                              <SelectItem value="12">12 Products</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div>
-                          <Label className="text-xs">Link</Label>
+                          <Label className="text-xs">Minimum Discount %</Label>
                           <Input
-                            value={section.config.link || ""}
-                            onChange={(e) => updateSectionConfig(section.id, { link: e.target.value })}
+                            type="number"
+                            value={section.config.min_discount || 10}
+                            onChange={(e) => updateSectionConfig(section.id, { min_discount: parseInt(e.target.value) })}
                             className="mt-1"
-                            placeholder="/shop"
+                            min={0}
+                            max={100}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {section.section_type === "dual_banner" && (
+                      <div className="space-y-4">
+                        <p className="text-xs text-muted-foreground">Banner 1 (Left)</p>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="col-span-2">
+                            <Label className="text-xs">Image URL</Label>
+                            <Input
+                              value={section.config.banner1_image || ""}
+                              onChange={(e) => updateSectionConfig(section.id, { banner1_image: e.target.value })}
+                              className="mt-1"
+                              placeholder="https://..."
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Link</Label>
+                            <Input
+                              value={section.config.banner1_link || ""}
+                              onChange={(e) => updateSectionConfig(section.id, { banner1_link: e.target.value })}
+                              className="mt-1"
+                              placeholder="/shop"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Title</Label>
+                          <Input
+                            value={section.config.banner1_title || ""}
+                            onChange={(e) => updateSectionConfig(section.id, { banner1_title: e.target.value })}
+                            className="mt-1"
+                            placeholder="e.g. New Arrivals"
+                          />
+                        </div>
+
+                        <p className="text-xs text-muted-foreground pt-2">Banner 2 (Right)</p>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="col-span-2">
+                            <Label className="text-xs">Image URL</Label>
+                            <Input
+                              value={section.config.banner2_image || ""}
+                              onChange={(e) => updateSectionConfig(section.id, { banner2_image: e.target.value })}
+                              className="mt-1"
+                              placeholder="https://..."
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Link</Label>
+                            <Input
+                              value={section.config.banner2_link || ""}
+                              onChange={(e) => updateSectionConfig(section.id, { banner2_link: e.target.value })}
+                              className="mt-1"
+                              placeholder="/shop"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Title</Label>
+                          <Input
+                            value={section.config.banner2_title || ""}
+                            onChange={(e) => updateSectionConfig(section.id, { banner2_title: e.target.value })}
+                            className="mt-1"
+                            placeholder="e.g. Sale Items"
                           />
                         </div>
                       </div>

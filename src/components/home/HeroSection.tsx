@@ -32,6 +32,7 @@ interface HeroSlide {
   overlay_position: string;
   overlay_enabled: boolean;
   overlay_opacity: number | null;
+  image_fit: string;
 }
 
 const HeroSection = () => {
@@ -123,6 +124,7 @@ const HeroSection = () => {
     overlay_position: "left",
     overlay_enabled: true,
     overlay_opacity: 50,
+    image_fit: "cover",
   };
 
   const activeSlides = slides.length > 0 ? slides : [defaultSlide];
@@ -198,7 +200,8 @@ const HeroSection = () => {
           <img
             src={currentSlide.image_url || heroImage}
             alt="Hero background"
-            className="w-full h-full object-cover"
+            className="w-full h-full"
+            style={{ objectFit: (currentSlide.image_fit || "cover") as "cover" | "contain" | "fill" | "scale-down" }}
           />
           {/* Overlay - Configurable */}
           {(currentSlide.overlay_enabled ?? true) && (

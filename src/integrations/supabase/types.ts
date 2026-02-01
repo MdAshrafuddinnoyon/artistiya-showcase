@@ -829,6 +829,60 @@ export type Database = {
         }
         Relationships: []
       }
+      featured_sections: {
+        Row: {
+          badge_text: string | null
+          button_link: string | null
+          button_text: string | null
+          created_at: string | null
+          description: string | null
+          features: string[] | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          layout: string | null
+          price_text: string | null
+          section_key: string
+          title_highlight: string | null
+          title_line1: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          badge_text?: string | null
+          button_link?: string | null
+          button_text?: string | null
+          created_at?: string | null
+          description?: string | null
+          features?: string[] | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          layout?: string | null
+          price_text?: string | null
+          section_key?: string
+          title_highlight?: string | null
+          title_line1?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          badge_text?: string | null
+          button_link?: string | null
+          button_text?: string | null
+          created_at?: string | null
+          description?: string | null
+          features?: string[] | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          layout?: string | null
+          price_text?: string | null
+          section_key?: string
+          title_highlight?: string | null
+          title_line1?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       filter_settings: {
         Row: {
           created_at: string
@@ -940,6 +994,7 @@ export type Database = {
           description: string | null
           display_order: number | null
           id: string
+          image_fit: string | null
           image_link_url: string | null
           image_url: string | null
           is_active: boolean | null
@@ -968,6 +1023,7 @@ export type Database = {
           description?: string | null
           display_order?: number | null
           id?: string
+          image_fit?: string | null
           image_link_url?: string | null
           image_url?: string | null
           is_active?: boolean | null
@@ -996,6 +1052,7 @@ export type Database = {
           description?: string | null
           display_order?: number | null
           id?: string
+          image_fit?: string | null
           image_link_url?: string | null
           image_url?: string | null
           is_active?: boolean | null
@@ -1185,6 +1242,69 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           source?: string | null
+        }
+        Relationships: []
+      }
+      making_section: {
+        Row: {
+          background_image_url: string | null
+          badge_text: string | null
+          button_link: string | null
+          button_text: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          overlay_opacity: number | null
+          stat1_label: string | null
+          stat1_number: string | null
+          stat2_label: string | null
+          stat2_number: string | null
+          stat3_label: string | null
+          stat3_number: string | null
+          title_highlight: string | null
+          title_line1: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          background_image_url?: string | null
+          badge_text?: string | null
+          button_link?: string | null
+          button_text?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          overlay_opacity?: number | null
+          stat1_label?: string | null
+          stat1_number?: string | null
+          stat2_label?: string | null
+          stat2_number?: string | null
+          stat3_label?: string | null
+          stat3_number?: string | null
+          title_highlight?: string | null
+          title_line1?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          background_image_url?: string | null
+          badge_text?: string | null
+          button_link?: string | null
+          button_text?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          overlay_opacity?: number | null
+          stat1_label?: string | null
+          stat1_number?: string | null
+          stat2_label?: string | null
+          stat2_number?: string | null
+          stat3_label?: string | null
+          stat3_number?: string | null
+          title_highlight?: string | null
+          title_line1?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
