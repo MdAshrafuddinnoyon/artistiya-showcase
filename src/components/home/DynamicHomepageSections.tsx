@@ -182,6 +182,7 @@ const DynamicHomepageSections = () => {
         const selectedProducts = products.filter(p => 
           (section.config.product_ids || []).includes(p.id)
         );
+        // Skip rendering if no products selected
         if (selectedProducts.length === 0) return null;
 
         return (
@@ -191,7 +192,7 @@ const DynamicHomepageSections = () => {
                 <h2 className="font-display text-2xl md:text-3xl lg:text-4xl text-foreground">
                   {section.title}
                 </h2>
-                {section.subtitle && (
+                {section.subtitle && section.subtitle !== "Add a subtitle" && (
                   <p className="text-muted-foreground mt-2 text-sm md:text-base">{section.subtitle}</p>
                 )}
               </div>
@@ -206,10 +207,14 @@ const DynamicHomepageSections = () => {
       case "category": {
         // Get products from the selected category
         const categoryId = section.config.category_id;
-        const categoryProducts = categoryId 
-          ? products.filter(p => p.category_id === categoryId).slice(0, section.config.limit || 8)
-          : [];
+        // Skip if no category selected
+        if (!categoryId) return null;
         
+        const categoryProducts = products
+          .filter(p => p.category_id === categoryId)
+          .slice(0, section.config.limit || 8);
+        
+        // Skip if no products in this category
         if (categoryProducts.length === 0) return null;
 
         const category = categories.find(c => c.id === categoryId);
@@ -221,7 +226,7 @@ const DynamicHomepageSections = () => {
                 <h2 className="font-display text-2xl md:text-3xl lg:text-4xl text-foreground">
                   {section.title}
                 </h2>
-                {section.subtitle && (
+                {section.subtitle && section.subtitle !== "Add a subtitle" && (
                   <p className="text-muted-foreground mt-2 text-sm md:text-base">{section.subtitle}</p>
                 )}
               </div>
@@ -247,6 +252,7 @@ const DynamicHomepageSections = () => {
         const bestSellers = products
           .filter(p => p.is_featured)
           .slice(0, section.config.limit || 8);
+        // Skip if no featured products
         if (bestSellers.length === 0) return null;
 
         return (
@@ -256,7 +262,7 @@ const DynamicHomepageSections = () => {
                 <h2 className="font-display text-2xl md:text-3xl lg:text-4xl text-foreground">
                   {section.title}
                 </h2>
-                {section.subtitle && (
+                {section.subtitle && section.subtitle !== "Add a subtitle" && (
                   <p className="text-muted-foreground mt-2 text-sm md:text-base">{section.subtitle}</p>
                 )}
               </div>
@@ -275,6 +281,7 @@ const DynamicHomepageSections = () => {
             return discount >= (section.config.min_discount || 10);
           })
           .slice(0, section.config.limit || 8);
+        // Skip if no discounted products
         if (discountProducts.length === 0) return null;
 
         return (
@@ -287,7 +294,7 @@ const DynamicHomepageSections = () => {
                 <h2 className="font-display text-2xl md:text-3xl lg:text-4xl text-foreground">
                   {section.title}
                 </h2>
-                {section.subtitle && (
+                {section.subtitle && section.subtitle !== "Add a subtitle" && (
                   <p className="text-muted-foreground mt-2 text-sm md:text-base">{section.subtitle}</p>
                 )}
               </div>
