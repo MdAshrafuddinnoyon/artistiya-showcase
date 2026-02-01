@@ -142,7 +142,8 @@ const Header = () => {
                   className="h-8 md:h-10 w-auto"
                 />
               )}
-              {branding.show_logo_text && (
+              {/* Only show text if show_logo_text is true AND either no logo or explicitly enabled */}
+              {branding.show_logo_text && !branding.logo_url && (
                 <motion.h1 
                   className="font-display text-2xl md:text-3xl tracking-wide"
                   initial={{ opacity: 0 }}

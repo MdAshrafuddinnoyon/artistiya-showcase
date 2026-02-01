@@ -10,6 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import RelatedProducts from "@/components/product/RelatedProducts";
+import ProductReviewForm from "@/components/product/ProductReviewForm";
+import ProductReviewsList from "@/components/product/ProductReviewsList";
 import WhatsAppOrderButton from "@/components/common/WhatsAppOrderButton";
 import MobileProductDetail from "@/components/mobile/MobileProductDetail";
 import MobileAppHeader from "@/components/mobile/MobileAppHeader";
@@ -507,12 +509,15 @@ const ProductDetail = () => {
               </TabsContent>
 
               <TabsContent value="reviews" className="mt-8">
-                <div className="text-center py-12">
-                  <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">No reviews yet</p>
-                  <Button variant="outline" className="mt-4">
-                    Be the first to review
-                  </Button>
+                <div className="grid lg:grid-cols-2 gap-8">
+                  <div>
+                    <h3 className="font-display text-xl mb-4">Customer Reviews</h3>
+                    <ProductReviewsList productId={product.id} />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-xl mb-4">Write a Review</h3>
+                    <ProductReviewForm productId={product.id} />
+                  </div>
                 </div>
               </TabsContent>
             </Tabs>

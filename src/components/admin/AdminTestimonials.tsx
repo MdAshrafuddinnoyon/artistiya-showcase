@@ -50,12 +50,17 @@ const AdminTestimonials = () => {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [googlePlaceId, setGooglePlaceId] = useState("");
-  const [googleApiKey, setGoogleApiKey] = useState("");
+  const [googleSettings, setGoogleSettings] = useState({
+    google_place_id: "",
+    google_api_key: "",
+    auto_sync_google_reviews: false,
+    hide_manual_reviews_when_api_active: false,
+  });
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     fetchTestimonials();
+    fetchGoogleSettings();
   }, []);
 
   const fetchTestimonials = async () => {
@@ -154,17 +159,67 @@ const AdminTestimonials = () => {
     }
   };
 
+  const fetchGoogleSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("site_branding")
+        .select("google_place_id, google_api_key, auto_sync_google_reviews, hide_manual_reviews_when_api_active")
+        .single();
+
+      if (!error && data) {
+        setGoogleSettings({
+          google_place_id: data.google_place_id || "",
+          google_api_key: data.google_api_key || "",
+          auto_sync_google_reviews: data.auto_sync_google_reviews || false,
+          hide_manual_reviews_when_api_active: data.hide_manual_reviews_when_api_active || false,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching Google settings:", error);
+    }
+  };
+
+  const saveGoogleSettings = async () => {
+    try {
+      const { error } = await supabase
+        .from("site_branding")
+        .update({
+          google_place_id: googleSettings.google_place_id,
+          google_api_key: googleSettings.google_api_key,
+          auto_sync_google_reviews: googleSettings.auto_sync_google_reviews,
+          hide_manual_reviews_when_api_active: googleSettings.hide_manual_reviews_when_api_active,
+        })
+        .neq("id", "");
+
+      if (error) throw error;
+      toast.success("Google settings saved!");
+    } catch (error) {
+      console.error("Error saving Google settings:", error);
+      toast.error("Failed to save settings");
+    }
+  };
+
   const syncGoogleReviews = async () => {
-    if (!googlePlaceId || !googleApiKey) {
+    if (!googleSettings.google_place_id || !googleSettings.google_api_key) {
       toast.error("Please enter both Place ID and API Key");
       return;
     }
+
+    // Save settings first
+    await saveGoogleSettings();
     
     setSyncing(true);
     try {
-      // This would call an edge function to fetch Google reviews
-      toast.info("Google Reviews sync will be available after setting up the edge function");
-      // TODO: Implement edge function for Google Places API
+      const { data, error } = await supabase.functions.invoke("fetch-google-reviews");
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success(`Synced ${data.synced_reviews} reviews from ${data.place_name}`);
+        fetchTestimonials();
+      } else {
+        toast.error(data?.error || "Failed to sync reviews");
+      }
     } catch (error) {
       console.error("Error syncing Google reviews:", error);
       toast.error("Failed to sync Google reviews");
@@ -280,8 +335,8 @@ const AdminTestimonials = () => {
                   <Globe className="h-3 w-3" /> Google Place ID
                 </Label>
                 <Input
-                  value={googlePlaceId}
-                  onChange={(e) => setGooglePlaceId(e.target.value)}
+                  value={googleSettings.google_place_id}
+                  onChange={(e) => setGoogleSettings({ ...googleSettings, google_place_id: e.target.value })}
                   placeholder="Enter your Google Place ID"
                   className="mt-1"
                 />
@@ -302,8 +357,8 @@ const AdminTestimonials = () => {
                   <Key className="h-3 w-3" /> Google Places API Key
                 </Label>
                 <Input
-                  value={googleApiKey}
-                  onChange={(e) => setGoogleApiKey(e.target.value)}
+                  value={googleSettings.google_api_key}
+                  onChange={(e) => setGoogleSettings({ ...googleSettings, google_api_key: e.target.value })}
                   placeholder="Enter your API Key"
                   type="password"
                   className="mt-1"
@@ -321,15 +376,45 @@ const AdminTestimonials = () => {
                 </p>
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={syncGoogleReviews}
-              disabled={syncing || !googlePlaceId || !googleApiKey}
-              className="w-full sm:w-auto gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-              {syncing ? "Syncing..." : "Sync Google Reviews"}
-            </Button>
+
+            {/* Toggle options */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                <div>
+                  <Label className="text-sm">Auto-sync Reviews</Label>
+                  <p className="text-xs text-muted-foreground">Automatically fetch new reviews</p>
+                </div>
+                <Switch
+                  checked={googleSettings.auto_sync_google_reviews}
+                  onCheckedChange={(checked) => setGoogleSettings({ ...googleSettings, auto_sync_google_reviews: checked })}
+                />
+              </div>
+              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                <div>
+                  <Label className="text-sm">Hide Manual Reviews</Label>
+                  <p className="text-xs text-muted-foreground">When Google API is active</p>
+                </div>
+                <Switch
+                  checked={googleSettings.hide_manual_reviews_when_api_active}
+                  onCheckedChange={(checked) => setGoogleSettings({ ...googleSettings, hide_manual_reviews_when_api_active: checked })}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={syncGoogleReviews}
+                disabled={syncing || !googleSettings.google_place_id || !googleSettings.google_api_key}
+                className="gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? "Syncing..." : "Sync Google Reviews"}
+              </Button>
+              <Button variant="gold" onClick={saveGoogleSettings}>
+                Save Settings
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

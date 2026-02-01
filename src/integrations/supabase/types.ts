@@ -107,6 +107,45 @@ export type Database = {
         }
         Relationships: []
       }
+      blocked_customers: {
+        Row: {
+          block_reason: string
+          blocked_at: string
+          blocked_by: string | null
+          email: string | null
+          id: string
+          ip_address: string | null
+          is_active: boolean | null
+          phone: string | null
+          unblocked_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          block_reason: string
+          blocked_at?: string
+          blocked_by?: string | null
+          email?: string | null
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean | null
+          phone?: string | null
+          unblocked_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          block_reason?: string
+          blocked_at?: string
+          blocked_by?: string | null
+          email?: string | null
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean | null
+          phone?: string | null
+          unblocked_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       blog_categories: {
         Row: {
           created_at: string
@@ -472,6 +511,42 @@ export type Database = {
           is_active?: boolean | null
           title?: string
           title_bn?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      checkout_fraud_settings: {
+        Row: {
+          block_suspicious_orders: boolean | null
+          created_at: string
+          guest_checkout_enabled: boolean | null
+          id: string
+          max_cod_amount_new_customer: number | null
+          max_orders_per_phone_24h: number | null
+          order_rate_limit_seconds: number | null
+          require_captcha_for_guest: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          block_suspicious_orders?: boolean | null
+          created_at?: string
+          guest_checkout_enabled?: boolean | null
+          id?: string
+          max_cod_amount_new_customer?: number | null
+          max_orders_per_phone_24h?: number | null
+          order_rate_limit_seconds?: number | null
+          require_captcha_for_guest?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          block_suspicious_orders?: boolean | null
+          created_at?: string
+          guest_checkout_enabled?: boolean | null
+          id?: string
+          max_cod_amount_new_customer?: number | null
+          max_orders_per_phone_24h?: number | null
+          order_rate_limit_seconds?: number | null
+          require_captcha_for_guest?: boolean | null
           updated_at?: string
         }
         Relationships: []
@@ -2086,6 +2161,66 @@ export type Database = {
           },
         ]
       }
+      product_reviews: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          id: string
+          order_id: string | null
+          order_number: string
+          product_id: string
+          rating: number
+          review_text: string
+          reviewer_name: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          order_number: string
+          product_id: string
+          rating: number
+          review_text: string
+          reviewer_name?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          order_number?: string
+          product_id?: string
+          rating?: number
+          review_text?: string
+          reviewer_name?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_reviews_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           allow_customization: boolean | null
@@ -2353,6 +2488,7 @@ export type Database = {
       }
       site_branding: {
         Row: {
+          auto_sync_google_reviews: boolean | null
           business_hours: string | null
           business_hours_bn: string | null
           contact_address: string | null
@@ -2374,9 +2510,12 @@ export type Database = {
           footer_logo_size: string | null
           footer_right_logo_link: string | null
           footer_right_logo_url: string | null
+          google_api_key: string | null
           google_maps_embed_url: string | null
+          google_place_id: string | null
           header_announcement_active: boolean | null
           header_announcement_text: string | null
+          hide_manual_reviews_when_api_active: boolean | null
           id: string
           logo_text: string | null
           logo_text_secondary: string | null
@@ -2392,6 +2531,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_sync_google_reviews?: boolean | null
           business_hours?: string | null
           business_hours_bn?: string | null
           contact_address?: string | null
@@ -2413,9 +2553,12 @@ export type Database = {
           footer_logo_size?: string | null
           footer_right_logo_link?: string | null
           footer_right_logo_url?: string | null
+          google_api_key?: string | null
           google_maps_embed_url?: string | null
+          google_place_id?: string | null
           header_announcement_active?: boolean | null
           header_announcement_text?: string | null
+          hide_manual_reviews_when_api_active?: boolean | null
           id?: string
           logo_text?: string | null
           logo_text_secondary?: string | null
@@ -2431,6 +2574,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_sync_google_reviews?: boolean | null
           business_hours?: string | null
           business_hours_bn?: string | null
           contact_address?: string | null
@@ -2452,9 +2596,12 @@ export type Database = {
           footer_logo_size?: string | null
           footer_right_logo_link?: string | null
           footer_right_logo_url?: string | null
+          google_api_key?: string | null
           google_maps_embed_url?: string | null
+          google_place_id?: string | null
           header_announcement_active?: boolean | null
           header_announcement_text?: string | null
+          hide_manual_reviews_when_api_active?: boolean | null
           id?: string
           logo_text?: string | null
           logo_text_secondary?: string | null
