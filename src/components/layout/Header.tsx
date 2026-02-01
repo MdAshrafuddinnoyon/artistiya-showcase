@@ -33,6 +33,7 @@ interface SiteBranding {
   logo_url: string | null;
   logo_text: string;
   logo_text_secondary: string;
+  show_logo_text: boolean;
   header_announcement_text: string;
   header_announcement_active: boolean;
 }
@@ -71,6 +72,7 @@ const Header = () => {
     logo_url: null,
     logo_text: "artistiya",
     logo_text_secondary: ".store",
+    show_logo_text: true,
     header_announcement_text: "✨ Free shipping on orders over ৳5,000 ✨",
     header_announcement_active: true,
   });
@@ -132,14 +134,15 @@ const Header = () => {
         <div className="container mx-auto px-4 lg:px-8">
           <nav className="flex items-center justify-between h-20">
             {/* Logo */}
-            <Link to="/" className="flex-shrink-0">
-              {branding.logo_url ? (
+            <Link to="/" className="flex-shrink-0 flex items-center gap-2">
+              {branding.logo_url && (
                 <img 
                   src={branding.logo_url} 
                   alt="Logo" 
                   className="h-8 md:h-10 w-auto"
                 />
-              ) : (
+              )}
+              {branding.show_logo_text && (
                 <motion.h1 
                   className="font-display text-2xl md:text-3xl tracking-wide"
                   initial={{ opacity: 0 }}

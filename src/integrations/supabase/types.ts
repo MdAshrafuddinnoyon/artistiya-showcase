@@ -258,18 +258,21 @@ export type Database = {
       bundle_products: {
         Row: {
           bundle_id: string | null
+          category_id: string | null
           created_at: string
           id: string
           product_id: string | null
         }
         Insert: {
           bundle_id?: string | null
+          category_id?: string | null
           created_at?: string
           id?: string
           product_id?: string | null
         }
         Update: {
           bundle_id?: string | null
+          category_id?: string | null
           created_at?: string
           id?: string
           product_id?: string | null
@@ -280,6 +283,13 @@ export type Database = {
             columns: ["bundle_id"]
             isOneToOne: false
             referencedRelation: "product_bundles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bundle_products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
             referencedColumns: ["id"]
           },
           {
@@ -1926,14 +1936,22 @@ export type Database = {
         Row: {
           created_at: string
           favicon_url: string | null
+          footer_banner_height: number | null
+          footer_banner_link: string | null
+          footer_banner_url: string | null
           footer_copyright: string | null
           footer_description: string | null
+          footer_logo_size: string | null
           header_announcement_active: boolean | null
           header_announcement_text: string | null
           id: string
           logo_text: string | null
           logo_text_secondary: string | null
           logo_url: string | null
+          payment_methods: Json | null
+          show_logo_text: boolean | null
+          signup_discount_enabled: boolean | null
+          signup_discount_percent: number | null
           social_email: string | null
           social_facebook: string | null
           social_instagram: string | null
@@ -1942,14 +1960,22 @@ export type Database = {
         Insert: {
           created_at?: string
           favicon_url?: string | null
+          footer_banner_height?: number | null
+          footer_banner_link?: string | null
+          footer_banner_url?: string | null
           footer_copyright?: string | null
           footer_description?: string | null
+          footer_logo_size?: string | null
           header_announcement_active?: boolean | null
           header_announcement_text?: string | null
           id?: string
           logo_text?: string | null
           logo_text_secondary?: string | null
           logo_url?: string | null
+          payment_methods?: Json | null
+          show_logo_text?: boolean | null
+          signup_discount_enabled?: boolean | null
+          signup_discount_percent?: number | null
           social_email?: string | null
           social_facebook?: string | null
           social_instagram?: string | null
@@ -1958,14 +1984,22 @@ export type Database = {
         Update: {
           created_at?: string
           favicon_url?: string | null
+          footer_banner_height?: number | null
+          footer_banner_link?: string | null
+          footer_banner_url?: string | null
           footer_copyright?: string | null
           footer_description?: string | null
+          footer_logo_size?: string | null
           header_announcement_active?: boolean | null
           header_announcement_text?: string | null
           id?: string
           logo_text?: string | null
           logo_text_secondary?: string | null
           logo_url?: string | null
+          payment_methods?: Json | null
+          show_logo_text?: boolean | null
+          signup_discount_enabled?: boolean | null
+          signup_discount_percent?: number | null
           social_email?: string | null
           social_facebook?: string | null
           social_instagram?: string | null
@@ -2021,6 +2055,39 @@ export type Database = {
           key?: string
           updated_at?: string
           value?: Json | null
+        }
+        Relationships: []
+      }
+      social_links: {
+        Row: {
+          created_at: string | null
+          display_order: number | null
+          icon_name: string | null
+          id: string
+          is_active: boolean | null
+          platform: string
+          updated_at: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          platform: string
+          updated_at?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          platform?: string
+          updated_at?: string | null
+          url?: string
         }
         Relationships: []
       }
