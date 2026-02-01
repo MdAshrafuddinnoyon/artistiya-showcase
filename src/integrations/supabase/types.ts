@@ -620,6 +620,36 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_reports: {
+        Row: {
+          created_at: string | null
+          data: Json | null
+          date_from: string
+          date_to: string
+          generated_by: string | null
+          id: string
+          report_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          data?: Json | null
+          date_from: string
+          date_to: string
+          generated_by?: string | null
+          id?: string
+          report_type: string
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json | null
+          date_from?: string
+          date_to?: string
+          generated_by?: string | null
+          id?: string
+          report_type?: string
+        }
+        Relationships: []
+      }
       currency_rates: {
         Row: {
           currency_code: string
@@ -695,6 +725,63 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_discount_credits: {
+        Row: {
+          created_at: string | null
+          discount_type: string | null
+          discount_value: number
+          expires_at: string | null
+          id: string
+          is_used: boolean | null
+          order_id: string | null
+          source: string | null
+          used_at: string | null
+          used_on_order_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          discount_type?: string | null
+          discount_value: number
+          expires_at?: string | null
+          id?: string
+          is_used?: boolean | null
+          order_id?: string | null
+          source?: string | null
+          used_at?: string | null
+          used_on_order_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          discount_type?: string | null
+          discount_value?: number
+          expires_at?: string | null
+          id?: string
+          is_used?: boolean | null
+          order_id?: string | null
+          source?: string | null
+          used_at?: string | null
+          used_on_order_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_discount_credits_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_discount_credits_used_on_order_id_fkey"
+            columns: ["used_on_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           created_at: string | null
@@ -740,6 +827,45 @@ export type Database = {
           total_spent?: number | null
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      delivery_partners: {
+        Row: {
+          api_key: string | null
+          api_type: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          notes: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          api_key?: string | null
+          api_type?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          notes?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          api_key?: string | null
+          api_type?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          notes?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1717,6 +1843,8 @@ export type Database = {
         Row: {
           address_id: string | null
           created_at: string
+          delivered_at: string | null
+          delivery_partner_id: string | null
           device_fingerprint: string | null
           fraud_score: number | null
           id: string
@@ -1725,18 +1853,30 @@ export type Database = {
           is_preorder: boolean | null
           notes: string | null
           order_number: string
+          partner_payment_amount: number | null
+          partner_payment_date: string | null
+          partner_payment_status: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           payment_transaction_id: string | null
+          qr_code_id: string | null
+          qr_discount_claimed: boolean | null
+          qr_discount_claimed_at: string | null
+          return_reason: string | null
+          return_requested_at: string | null
+          shipped_at: string | null
           shipping_cost: number
           status: Database["public"]["Enums"]["order_status"] | null
           subtotal: number
           total: number
+          tracking_number: string | null
           updated_at: string
           user_id: string | null
         }
         Insert: {
           address_id?: string | null
           created_at?: string
+          delivered_at?: string | null
+          delivery_partner_id?: string | null
           device_fingerprint?: string | null
           fraud_score?: number | null
           id?: string
@@ -1745,18 +1885,30 @@ export type Database = {
           is_preorder?: boolean | null
           notes?: string | null
           order_number: string
+          partner_payment_amount?: number | null
+          partner_payment_date?: string | null
+          partner_payment_status?: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           payment_transaction_id?: string | null
+          qr_code_id?: string | null
+          qr_discount_claimed?: boolean | null
+          qr_discount_claimed_at?: string | null
+          return_reason?: string | null
+          return_requested_at?: string | null
+          shipped_at?: string | null
           shipping_cost: number
           status?: Database["public"]["Enums"]["order_status"] | null
           subtotal: number
           total: number
+          tracking_number?: string | null
           updated_at?: string
           user_id?: string | null
         }
         Update: {
           address_id?: string | null
           created_at?: string
+          delivered_at?: string | null
+          delivery_partner_id?: string | null
           device_fingerprint?: string | null
           fraud_score?: number | null
           id?: string
@@ -1765,12 +1917,22 @@ export type Database = {
           is_preorder?: boolean | null
           notes?: string | null
           order_number?: string
+          partner_payment_amount?: number | null
+          partner_payment_date?: string | null
+          partner_payment_status?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
           payment_transaction_id?: string | null
+          qr_code_id?: string | null
+          qr_discount_claimed?: boolean | null
+          qr_discount_claimed_at?: string | null
+          return_reason?: string | null
+          return_requested_at?: string | null
+          shipped_at?: string | null
           shipping_cost?: number
           status?: Database["public"]["Enums"]["order_status"] | null
           subtotal?: number
           total?: number
+          tracking_number?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -1780,6 +1942,13 @@ export type Database = {
             columns: ["address_id"]
             isOneToOne: false
             referencedRelation: "addresses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_delivery_partner_id_fkey"
+            columns: ["delivery_partner_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_partners"
             referencedColumns: ["id"]
           },
         ]
@@ -1885,6 +2054,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          trigger_category_id: string | null
         }
         Insert: {
           created_at?: string
@@ -1894,6 +2064,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          trigger_category_id?: string | null
         }
         Update: {
           created_at?: string
@@ -1903,8 +2074,17 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          trigger_category_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "product_bundles_trigger_category_id_fkey"
+            columns: ["trigger_category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       products: {
         Row: {
@@ -2037,6 +2217,51 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      qr_discount_settings: {
+        Row: {
+          created_at: string | null
+          discount_percent: number | null
+          discount_type: string | null
+          discount_value: number | null
+          expires_after_days: number | null
+          id: string
+          is_active: boolean | null
+          message: string | null
+          message_bn: string | null
+          min_order_value: number | null
+          updated_at: string | null
+          usage_limit_per_customer: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          discount_percent?: number | null
+          discount_type?: string | null
+          discount_value?: number | null
+          expires_after_days?: number | null
+          id?: string
+          is_active?: boolean | null
+          message?: string | null
+          message_bn?: string | null
+          min_order_value?: number | null
+          updated_at?: string | null
+          usage_limit_per_customer?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          discount_percent?: number | null
+          discount_type?: string | null
+          discount_value?: number | null
+          expires_after_days?: number | null
+          id?: string
+          is_active?: boolean | null
+          message?: string | null
+          message_bn?: string | null
+          min_order_value?: number | null
+          updated_at?: string | null
+          usage_limit_per_customer?: number | null
         }
         Relationships: []
       }
@@ -2421,6 +2646,7 @@ export type Database = {
           is_active: boolean | null
           product_id: string | null
           title: string
+          trigger_categories: string[] | null
           trigger_type: string | null
           trigger_value: string | null
         }
@@ -2433,6 +2659,7 @@ export type Database = {
           is_active?: boolean | null
           product_id?: string | null
           title: string
+          trigger_categories?: string[] | null
           trigger_type?: string | null
           trigger_value?: string | null
         }
@@ -2445,6 +2672,7 @@ export type Database = {
           is_active?: boolean | null
           product_id?: string | null
           title?: string
+          trigger_categories?: string[] | null
           trigger_type?: string | null
           trigger_value?: string | null
         }

@@ -28,6 +28,7 @@ import ChatWidgets from "./components/widgets/ChatWidgets";
 import ScrollToTop from "./components/common/ScrollToTop";
 import TeamMember from "./pages/TeamMember";
 import Gallery from "./pages/Gallery";
+import ClaimDiscount from "./pages/ClaimDiscount";
 
 const queryClient = new QueryClient();
 
@@ -65,6 +66,7 @@ const App = () => (
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/privacy" element={<Privacy />} />
                     <Route path="/gallery" element={<Gallery />} />
+                    <Route path="/claim-discount" element={<ClaimDiscount />} />
                     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
