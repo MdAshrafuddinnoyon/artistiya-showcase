@@ -434,6 +434,48 @@ export type Database = {
         }
         Relationships: []
       }
+      certifications: {
+        Row: {
+          created_at: string
+          description: string | null
+          description_bn: string | null
+          display_order: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          is_active: boolean | null
+          title: string
+          title_bn: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          description_bn?: string | null
+          display_order?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          is_active?: boolean | null
+          title: string
+          title_bn?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          description_bn?: string | null
+          display_order?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          is_active?: boolean | null
+          title?: string
+          title_bn?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       checkout_settings: {
         Row: {
           cod_enabled: boolean | null
@@ -537,6 +579,8 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean | null
+          lang1_label: string | null
+          lang2_label: string | null
           meta_description: string | null
           meta_title: string | null
           page_key: string
@@ -550,6 +594,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean | null
+          lang1_label?: string | null
+          lang2_label?: string | null
           meta_description?: string | null
           meta_title?: string | null
           page_key: string
@@ -563,6 +609,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean | null
+          lang1_label?: string | null
+          lang2_label?: string | null
           meta_description?: string | null
           meta_title?: string | null
           page_key?: string
@@ -1042,6 +1090,98 @@ export type Database = {
           },
         ]
       }
+      gallery_albums: {
+        Row: {
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          description_bn: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          published_at: string | null
+          title: string
+          title_bn: string | null
+          updated_at: string
+        }
+        Insert: {
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          description_bn?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          published_at?: string | null
+          title: string
+          title_bn?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          description_bn?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          published_at?: string | null
+          title?: string
+          title_bn?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      gallery_items: {
+        Row: {
+          album_id: string | null
+          created_at: string
+          description: string | null
+          description_bn: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          media_type: string | null
+          media_url: string
+          title: string | null
+          title_bn: string | null
+        }
+        Insert: {
+          album_id?: string | null
+          created_at?: string
+          description?: string | null
+          description_bn?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          media_type?: string | null
+          media_url: string
+          title?: string | null
+          title_bn?: string | null
+        }
+        Update: {
+          album_id?: string | null
+          created_at?: string
+          description?: string | null
+          description_bn?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          media_type?: string | null
+          media_url?: string
+          title?: string | null
+          title_bn?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gallery_items_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "gallery_albums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hero_slides: {
         Row: {
           animation_type: string | null
@@ -1138,6 +1278,8 @@ export type Database = {
           created_at: string
           display_order: number | null
           id: string
+          instagram_access_token: string | null
+          instagram_user_id: string | null
           is_active: boolean | null
           section_key: string
           updated_at: string
@@ -1147,6 +1289,8 @@ export type Database = {
           created_at?: string
           display_order?: number | null
           id?: string
+          instagram_access_token?: string | null
+          instagram_user_id?: string | null
           is_active?: boolean | null
           section_key: string
           updated_at?: string
@@ -1156,6 +1300,8 @@ export type Database = {
           created_at?: string
           display_order?: number | null
           id?: string
+          instagram_access_token?: string | null
+          instagram_user_id?: string | null
           is_active?: boolean | null
           section_key?: string
           updated_at?: string
@@ -1941,7 +2087,11 @@ export type Database = {
           footer_banner_url: string | null
           footer_copyright: string | null
           footer_description: string | null
+          footer_left_logo_link: string | null
+          footer_left_logo_url: string | null
           footer_logo_size: string | null
+          footer_right_logo_link: string | null
+          footer_right_logo_url: string | null
           header_announcement_active: boolean | null
           header_announcement_text: string | null
           id: string
@@ -1965,7 +2115,11 @@ export type Database = {
           footer_banner_url?: string | null
           footer_copyright?: string | null
           footer_description?: string | null
+          footer_left_logo_link?: string | null
+          footer_left_logo_url?: string | null
           footer_logo_size?: string | null
+          footer_right_logo_link?: string | null
+          footer_right_logo_url?: string | null
           header_announcement_active?: boolean | null
           header_announcement_text?: string | null
           id?: string
@@ -1989,7 +2143,11 @@ export type Database = {
           footer_banner_url?: string | null
           footer_copyright?: string | null
           footer_description?: string | null
+          footer_left_logo_link?: string | null
+          footer_left_logo_url?: string | null
           footer_logo_size?: string | null
+          footer_right_logo_link?: string | null
+          footer_right_logo_url?: string | null
           header_announcement_active?: boolean | null
           header_announcement_text?: string | null
           id?: string

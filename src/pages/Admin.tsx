@@ -33,11 +33,14 @@ import {
   MessageSquare,
   Sliders,
   X,
+  Award,
+  ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
+import { supabase } from "@/integrations/supabase/client";
 
 // Admin Components
 import AdminDashboardHome from "@/components/admin/AdminDashboardHome";
@@ -78,6 +81,8 @@ import AdminEmailSettings from "@/components/admin/AdminEmailSettings";
 import AdminFeaturedSection from "@/components/admin/AdminFeaturedSection";
 import AdminMakingSection from "@/components/admin/AdminMakingSection";
 import AdminCollections from "@/components/admin/AdminCollections";
+import AdminCertifications from "@/components/admin/AdminCertifications";
+import AdminGallery from "@/components/admin/AdminGallery";
 
 // Menu sections for organized navigation
 const menuSections = [
@@ -111,6 +116,8 @@ const menuSections = [
       { id: "content-pages", name: "Pages (About, Terms)", icon: Globe },
       { id: "team-members", name: "Team Members", icon: Users },
       { id: "faqs", name: "FAQs", icon: MessageSquare },
+      { id: "certifications", name: "Certifications", icon: Award },
+      { id: "gallery", name: "Gallery / Archive", icon: ImageIcon },
       { id: "media", name: "Media Library", icon: FolderOpen },
     ],
   },
@@ -164,6 +171,30 @@ const Admin = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<string[]>(["Overview", "Sales & Orders"]);
+  const [branding, setBranding] = useState<{
+    logo_url: string | null;
+    logo_text: string;
+    logo_text_secondary: string;
+    show_logo_text: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    const fetchBranding = async () => {
+      const { data } = await supabase
+        .from("site_branding")
+        .select("logo_url, logo_text, logo_text_secondary, show_logo_text")
+        .single();
+      if (data) {
+        setBranding({
+          logo_url: data.logo_url,
+          logo_text: data.logo_text || "artistiya",
+          logo_text_secondary: data.logo_text_secondary || ".store",
+          show_logo_text: data.show_logo_text ?? true,
+        });
+      }
+    };
+    fetchBranding();
+  }, []);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -275,6 +306,10 @@ const Admin = () => {
         return <AdminTeamMembers />;
       case "faqs":
         return <AdminFAQs />;
+      case "certifications":
+        return <AdminCertifications />;
+      case "gallery":
+        return <AdminGallery />;
       case "footer-links":
         return <AdminFooterLinks />;
       case "upsells":
@@ -323,9 +358,22 @@ const Admin = () => {
         {/* Logo */}
         <div className="p-4 border-b border-border flex items-center justify-between">
           {(sidebarOpen || mobileSidebarOpen) && (
-            <Link to="/" className="font-display text-xl">
-              <span className="text-gold">artistiya</span>
-              <span className="text-foreground">.store</span>
+            <Link to="/" className="flex items-center gap-2">
+              {branding?.logo_url && (
+                <img src={branding.logo_url} alt="Logo" className="h-8 w-auto" />
+              )}
+              {branding?.show_logo_text && (
+                <span className="font-display text-xl">
+                  <span className="text-gold">{branding?.logo_text || "artistiya"}</span>
+                  <span className="text-foreground">{branding?.logo_text_secondary || ".store"}</span>
+                </span>
+              )}
+              {!branding?.logo_url && !branding?.show_logo_text && (
+                <span className="font-display text-xl">
+                  <span className="text-gold">artistiya</span>
+                  <span className="text-foreground">.store</span>
+                </span>
+              )}
             </Link>
           )}
           <Button

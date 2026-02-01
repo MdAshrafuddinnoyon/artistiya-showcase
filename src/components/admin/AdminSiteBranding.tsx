@@ -30,6 +30,10 @@ interface SiteBranding {
   footer_banner_url: string | null;
   footer_banner_link: string | null;
   footer_banner_height: number;
+  footer_left_logo_url: string | null;
+  footer_left_logo_link: string | null;
+  footer_right_logo_url: string | null;
+  footer_right_logo_link: string | null;
   payment_methods: string[];
   signup_discount_percent: number;
   signup_discount_enabled: boolean;
@@ -73,6 +77,10 @@ const AdminSiteBranding = () => {
           show_logo_text: data.show_logo_text ?? true,
           footer_logo_size: data.footer_logo_size || "medium",
           footer_banner_height: data.footer_banner_height || 80,
+          footer_left_logo_url: data.footer_left_logo_url || null,
+          footer_left_logo_link: data.footer_left_logo_link || null,
+          footer_right_logo_url: data.footer_right_logo_url || null,
+          footer_right_logo_link: data.footer_right_logo_link || null,
           payment_methods: paymentMethodsArray,
           signup_discount_percent: data.signup_discount_percent || 5,
           signup_discount_enabled: data.signup_discount_enabled ?? true,
@@ -90,6 +98,10 @@ const AdminSiteBranding = () => {
           show_logo_text: true,
           footer_logo_size: "medium",
           footer_banner_height: 80,
+          footer_left_logo_url: null,
+          footer_left_logo_link: null,
+          footer_right_logo_url: null,
+          footer_right_logo_link: null,
           payment_methods: defaultPaymentMethods,
           signup_discount_percent: 5,
           signup_discount_enabled: true,
@@ -554,6 +566,63 @@ const AdminSiteBranding = () => {
                       Remove Banner
                     </Button>
                   )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Footer Authorization Logos */}
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-lg font-display">Authorization Logos</CardTitle>
+              <CardDescription>Add special logos or signatures to left and right of footer</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Logo */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Left Logo / Signature</Label>
+                  <ImageUploadZone
+                    value={branding.footer_left_logo_url || ""}
+                    onChange={(url) => updateField("footer_left_logo_url", url)}
+                    onRemove={() => updateField("footer_left_logo_url", null)}
+                    aspectRatio="video"
+                    bucket="media"
+                    folder="branding"
+                    showUrlInput={false}
+                  />
+                  <div>
+                    <Label className="text-xs">Link (Optional)</Label>
+                    <Input
+                      value={branding.footer_left_logo_link || ""}
+                      onChange={(e) => updateField("footer_left_logo_link", e.target.value)}
+                      placeholder="https://..."
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                {/* Right Logo */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Right Logo / Signature</Label>
+                  <ImageUploadZone
+                    value={branding.footer_right_logo_url || ""}
+                    onChange={(url) => updateField("footer_right_logo_url", url)}
+                    onRemove={() => updateField("footer_right_logo_url", null)}
+                    aspectRatio="video"
+                    bucket="media"
+                    folder="branding"
+                    showUrlInput={false}
+                  />
+                  <div>
+                    <Label className="text-xs">Link (Optional)</Label>
+                    <Input
+                      value={branding.footer_right_logo_link || ""}
+                      onChange={(e) => updateField("footer_right_logo_link", e.target.value)}
+                      placeholder="https://..."
+                      className="mt-1"
+                    />
+                  </div>
                 </div>
               </div>
             </CardContent>

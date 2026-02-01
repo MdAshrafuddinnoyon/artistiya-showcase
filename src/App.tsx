@@ -27,6 +27,7 @@ import OrderSuccess from "./pages/OrderSuccess";
 import ChatWidgets from "./components/widgets/ChatWidgets";
 import ScrollToTop from "./components/common/ScrollToTop";
 import TeamMember from "./pages/TeamMember";
+import Gallery from "./pages/Gallery";
 
 const queryClient = new QueryClient();
 
@@ -63,6 +64,7 @@ const App = () => (
                     <Route path="/track" element={<TrackOrder />} />
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/privacy" element={<Privacy />} />
+                    <Route path="/gallery" element={<Gallery />} />
                     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
