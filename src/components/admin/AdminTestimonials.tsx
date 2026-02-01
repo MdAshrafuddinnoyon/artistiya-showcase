@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { Plus, Trash2, Save, Upload, Star, Eye, EyeOff, MapPin, User, ExternalLink, ShoppingBag } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Trash2, Save, Star, Eye, EyeOff, MapPin, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import ImageUploadZone from "./ImageUploadZone";
 
 interface Testimonial {
   id: string;
@@ -31,9 +32,6 @@ const AdminTestimonials = () => {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedTestimonialId, setSelectedTestimonialId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTestimonials();
@@ -126,32 +124,6 @@ const AdminTestimonials = () => {
     }
   };
 
-  const handlePhotoUpload = async (testimonialId: string, file: File) => {
-    setUploading(testimonialId);
-    try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `testimonial-${testimonialId}-${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("testimonials")
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("testimonials")
-        .getPublicUrl(fileName);
-
-      updateField(testimonialId, "customer_photo_url", publicUrl);
-      toast.success("Photo uploaded");
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast.error("Failed to upload photo");
-    } finally {
-      setUploading(null);
-    }
-  };
-
   if (loading) {
     return (
       <div className="space-y-4">
@@ -186,19 +158,6 @@ const AdminTestimonials = () => {
         </div>
       </div>
 
-      <input
-        type="file"
-        ref={fileInputRef}
-        className="hidden"
-        accept="image/*"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file && selectedTestimonialId) {
-            handlePhotoUpload(selectedTestimonialId, file);
-          }
-        }}
-      />
-
       {testimonials.length === 0 ? (
         <Card className="p-12 text-center">
           <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -215,34 +174,16 @@ const AdminTestimonials = () => {
               <CardContent className="p-6">
                 <div className="flex gap-6">
                   {/* Photo Upload */}
-                  <div
-                    className="w-24 h-24 rounded-full bg-muted flex-shrink-0 cursor-pointer group relative overflow-hidden"
-                    onClick={() => {
-                      setSelectedTestimonialId(testimonial.id);
-                      fileInputRef.current?.click();
-                    }}
-                  >
-                    {uploading === testimonial.id ? (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="animate-spin h-6 w-6 border-2 border-gold border-t-transparent rounded-full" />
-                      </div>
-                    ) : testimonial.customer_photo_url ? (
-                      <>
-                        <img
-                          src={testimonial.customer_photo_url}
-                          alt={testimonial.name}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Upload className="h-6 w-6 text-white" />
-                        </div>
-                      </>
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground group-hover:text-gold transition-colors">
-                        <User className="h-8 w-8" />
-                        <span className="text-xs mt-1">Upload</span>
-                      </div>
-                    )}
+                  <div className="w-24 h-24 flex-shrink-0">
+                    <ImageUploadZone
+                      value={testimonial.customer_photo_url}
+                      onChange={(url) => updateField(testimonial.id, "customer_photo_url", url)}
+                      onRemove={() => updateField(testimonial.id, "customer_photo_url", "")}
+                      aspectRatio="square"
+                      bucket="testimonials"
+                      folder="customers"
+                      showUrlInput={false}
+                    />
                   </div>
 
                   {/* Form Fields */}

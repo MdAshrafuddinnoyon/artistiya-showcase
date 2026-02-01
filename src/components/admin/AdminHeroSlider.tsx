@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { Plus, Trash2, Save, Image, Eye, EyeOff, GripVertical, Upload, Link as LinkIcon } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Trash2, Save, Eye, EyeOff, GripVertical, Link as LinkIcon, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import ImageUploadZone from "./ImageUploadZone";
 
 interface HeroSlide {
   id: string;
@@ -42,9 +43,6 @@ const AdminHeroSlider = () => {
   const [slides, setSlides] = useState<HeroSlide[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedSlideId, setSelectedSlideId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSlides();
@@ -154,37 +152,6 @@ const AdminHeroSlider = () => {
     }
   };
 
-  const handleImageUpload = async (slideId: string, file: File) => {
-    setUploading(slideId);
-    try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `hero-${slideId}-${Date.now()}.${fileExt}`;
-      const filePath = `hero-slides/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("product-images")
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("product-images")
-        .getPublicUrl(filePath);
-
-      setSlides(prev =>
-        prev.map(s => s.id === slideId ? { ...s, image_url: publicUrl } : s)
-      );
-      
-      await updateSlide(slideId, { image_url: publicUrl });
-      toast.success("Image uploaded successfully");
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      toast.error("Failed to upload image");
-    } finally {
-      setUploading(null);
-    }
-  };
-
   const updateSlideField = (id: string, field: keyof HeroSlide, value: any) => {
     setSlides(prev =>
       prev.map(s => s.id === id ? { ...s, [field]: value } : s)
@@ -216,19 +183,6 @@ const AdminHeroSlider = () => {
           </Button>
         </div>
       </div>
-
-      <input
-        type="file"
-        ref={fileInputRef}
-        className="hidden"
-        accept="image/*"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file && selectedSlideId) {
-            handleImageUpload(selectedSlideId, file);
-          }
-        }}
-      />
 
       <div className="space-y-6">
         {slides.map((slide, index) => (
@@ -264,34 +218,15 @@ const AdminHeroSlider = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Image Upload */}
                 <div className="lg:row-span-2">
-                  <Label>Slide Image</Label>
-                  <div
-                    className="mt-2 aspect-video rounded-lg border-2 border-dashed border-border bg-muted/50 flex items-center justify-center cursor-pointer hover:border-gold transition-colors overflow-hidden"
-                    onClick={() => {
-                      setSelectedSlideId(slide.id);
-                      fileInputRef.current?.click();
-                    }}
-                  >
-                    {uploading === slide.id ? (
-                      <div className="text-center">
-                        <div className="animate-spin h-8 w-8 border-2 border-gold border-t-transparent rounded-full mx-auto mb-2" />
-                        <p className="text-sm text-muted-foreground">Uploading...</p>
-                      </div>
-                    ) : slide.image_url ? (
-                      <img
-                        src={slide.image_url}
-                        alt="Slide"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="text-center p-4">
-                        <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                        <p className="text-sm text-muted-foreground">
-                          Click to upload image
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                  <ImageUploadZone
+                    value={slide.image_url}
+                    onChange={(url) => updateSlideField(slide.id, "image_url", url)}
+                    onRemove={() => updateSlideField(slide.id, "image_url", "")}
+                    label="Slide Image"
+                    bucket="product-images"
+                    folder="hero-slides"
+                    aspectRatio="video"
+                  />
                   
                   {/* Image Link URL */}
                   <div className="mt-3">
@@ -528,7 +463,7 @@ const AdminHeroSlider = () => {
 
         {slides.length === 0 && (
           <div className="text-center py-12 bg-card border border-border rounded-xl">
-            <Image className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <ImageIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground mb-4">No slides yet</p>
             <Button variant="gold" onClick={addSlide}>
               <Plus className="h-4 w-4 mr-2" />
