@@ -3,6 +3,54 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
 
+type GuestCartEntry = { product_id: string; quantity: number };
+
+const GUEST_CART_STORAGE_KEY = "artistiya_guest_cart_v1";
+
+const safeReadGuestCart = (): GuestCartEntry[] => {
+  try {
+    const raw = localStorage.getItem(GUEST_CART_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter(
+        (x): x is GuestCartEntry =>
+          typeof x === "object" &&
+          x !== null &&
+          typeof (x as any).product_id === "string" &&
+          typeof (x as any).quantity === "number" &&
+          Number.isFinite((x as any).quantity)
+      )
+      .map((x) => ({ product_id: x.product_id, quantity: Math.max(1, Math.floor(x.quantity)) }));
+  } catch {
+    return [];
+  }
+};
+
+const safeWriteGuestCart = (entries: GuestCartEntry[]) => {
+  try {
+    localStorage.setItem(GUEST_CART_STORAGE_KEY, JSON.stringify(entries));
+  } catch {
+    // ignore
+  }
+};
+
+const clearGuestCart = () => {
+  try {
+    localStorage.removeItem(GUEST_CART_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+};
+
+const guestItemId = (productId: string) => `guest:${productId}`;
+
+const getGuestProductIdFromItemId = (itemId: string) => {
+  if (!itemId.startsWith("guest:")) return null;
+  return itemId.slice("guest:".length);
+};
+
 interface CartItem {
   id: string;
   product_id: string;
@@ -39,34 +87,75 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(false);
 
   const fetchCart = async () => {
-    if (!user) {
-      setItems([]);
-      return;
-    }
-
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("cart_items")
-        .select(`
-          id,
-          product_id,
-          quantity,
-          product:products (
+      // Logged-in cart (persisted in DB)
+      if (user) {
+        const { data, error } = await supabase
+          .from("cart_items")
+          .select(`
             id,
-            name,
-            name_bn,
-            price,
-            images,
-            stock_quantity,
-            is_preorderable,
-            production_time
-          )
-        `)
-        .eq("user_id", user.id);
+            product_id,
+            quantity,
+            product:products (
+              id,
+              name,
+              name_bn,
+              price,
+              images,
+              stock_quantity,
+              is_preorderable,
+              production_time
+            )
+          `)
+          .eq("user_id", user.id);
 
-      if (error) throw error;
-      setItems((data as unknown as CartItem[]) || []);
+        if (error) throw error;
+        setItems((data as unknown as CartItem[]) || []);
+        return;
+      }
+
+      // Guest cart (persisted in localStorage)
+      const guestEntries = safeReadGuestCart();
+      if (guestEntries.length === 0) {
+        setItems([]);
+        return;
+      }
+
+      const productIds = Array.from(new Set(guestEntries.map((e) => e.product_id)));
+      const { data: products, error: productsError } = await supabase
+        .from("products")
+        .select(
+          "id,name,name_bn,price,images,stock_quantity,is_preorderable,production_time"
+        )
+        .in("id", productIds);
+
+      if (productsError) throw productsError;
+
+      const byId = new Map<string, any>((products || []).map((p: any) => [p.id, p]));
+      const nextItems: CartItem[] = guestEntries
+        .map((e) => {
+          const p = byId.get(e.product_id);
+          if (!p) return null;
+          return {
+            id: guestItemId(e.product_id),
+            product_id: e.product_id,
+            quantity: e.quantity,
+            product: {
+              id: p.id,
+              name: p.name,
+              name_bn: p.name_bn ?? null,
+              price: p.price,
+              images: (p.images ?? []) as string[],
+              stock_quantity: p.stock_quantity,
+              is_preorderable: p.is_preorderable,
+              production_time: p.production_time ?? null,
+            },
+          } as CartItem;
+        })
+        .filter(Boolean) as CartItem[];
+
+      setItems(nextItems);
     } catch (error) {
       console.error("Error fetching cart:", error);
     } finally {
@@ -74,35 +163,103 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const migrateGuestCartToUserCart = async (userId: string) => {
+    const guestEntries = safeReadGuestCart();
+    if (guestEntries.length === 0) return;
+
+    try {
+      const { data: existing, error: existingError } = await supabase
+        .from("cart_items")
+        .select("id,product_id,quantity")
+        .eq("user_id", userId);
+
+      if (existingError) throw existingError;
+
+      const existingByProduct = new Map<string, { id: string; quantity: number }>();
+      (existing || []).forEach((row: any) => {
+        if (!existingByProduct.has(row.product_id)) {
+          existingByProduct.set(row.product_id, { id: row.id, quantity: row.quantity });
+        }
+      });
+
+      const ops = guestEntries.map(async (e) => {
+        const current = existingByProduct.get(e.product_id);
+        if (current) {
+          return supabase
+            .from("cart_items")
+            .update({ quantity: current.quantity + e.quantity })
+            .eq("id", current.id);
+        }
+
+        return supabase.from("cart_items").insert({
+          user_id: userId,
+          product_id: e.product_id,
+          quantity: e.quantity,
+        });
+      });
+
+      const results = await Promise.all(ops);
+      const firstError = results.find((r) => r.error)?.error;
+      if (firstError) throw firstError;
+
+      clearGuestCart();
+    } catch (error) {
+      // If merge fails, keep guest cart to avoid data loss.
+      console.error("Error migrating guest cart:", error);
+    }
+  };
+
   useEffect(() => {
-    fetchCart();
+    const run = async () => {
+      if (user) {
+        await migrateGuestCartToUserCart(user.id);
+      }
+      await fetchCart();
+    };
+
+    run();
   }, [user]);
 
   const addToCart = async (productId: string, quantity = 1) => {
-    if (!user) {
-      toast.error("Please login first");
-      return;
-    }
-
     try {
-      // Check if item already in cart
-      const existingItem = items.find(item => item.product_id === productId);
-      
-      if (existingItem) {
-        await updateQuantity(existingItem.id, existingItem.quantity + quantity);
-      } else {
-        const { error } = await supabase
-          .from("cart_items")
-          .insert({
+      // Logged-in
+      if (user) {
+        // Check if item already in cart
+        const existingItem = items.find((item) => item.product_id === productId);
+
+        if (existingItem) {
+          await updateQuantity(existingItem.id, existingItem.quantity + quantity);
+        } else {
+          const { error } = await supabase.from("cart_items").insert({
             user_id: user.id,
             product_id: productId,
             quantity,
           });
 
-        if (error) throw error;
-        toast.success("Added to cart");
-        await fetchCart();
+          if (error) throw error;
+          toast.success("Added to cart");
+          await fetchCart();
+        }
+
+        return;
       }
+
+      // Guest
+      const guestEntries = safeReadGuestCart();
+      const idx = guestEntries.findIndex((e) => e.product_id === productId);
+
+      if (idx >= 0) {
+        guestEntries[idx] = {
+          product_id: productId,
+          quantity: guestEntries[idx].quantity + quantity,
+        };
+      } else {
+        guestEntries.push({ product_id: productId, quantity });
+      }
+
+      safeWriteGuestCart(guestEntries);
+      toast.success("Added to cart");
+      await fetchCart();
     } catch (error) {
       console.error("Error adding to cart:", error);
       toast.error("Failed to add to cart");
@@ -111,11 +268,16 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const removeFromCart = async (itemId: string) => {
     try {
-      const { error } = await supabase
-        .from("cart_items")
-        .delete()
-        .eq("id", itemId);
+      const guestProductId = getGuestProductIdFromItemId(itemId);
+      if (!user && guestProductId) {
+        const guestEntries = safeReadGuestCart().filter((e) => e.product_id !== guestProductId);
+        safeWriteGuestCart(guestEntries);
+        toast.success("Removed from cart");
+        await fetchCart();
+        return;
+      }
 
+      const { error } = await supabase.from("cart_items").delete().eq("id", itemId);
       if (error) throw error;
       toast.success("Removed from cart");
       await fetchCart();
@@ -132,11 +294,19 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const { error } = await supabase
-        .from("cart_items")
-        .update({ quantity })
-        .eq("id", itemId);
+      const guestProductId = getGuestProductIdFromItemId(itemId);
+      if (!user && guestProductId) {
+        const guestEntries = safeReadGuestCart();
+        const idx = guestEntries.findIndex((e) => e.product_id === guestProductId);
+        if (idx >= 0) {
+          guestEntries[idx] = { product_id: guestProductId, quantity };
+          safeWriteGuestCart(guestEntries);
+        }
+        await fetchCart();
+        return;
+      }
 
+      const { error } = await supabase.from("cart_items").update({ quantity }).eq("id", itemId);
       if (error) throw error;
       await fetchCart();
     } catch (error) {
@@ -146,14 +316,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const clearCart = async () => {
-    if (!user) return;
-
     try {
-      const { error } = await supabase
-        .from("cart_items")
-        .delete()
-        .eq("user_id", user.id);
+      if (!user) {
+        clearGuestCart();
+        setItems([]);
+        return;
+      }
 
+      const { error } = await supabase.from("cart_items").delete().eq("user_id", user.id);
       if (error) throw error;
       setItems([]);
     } catch (error) {
