@@ -1085,8 +1085,14 @@ export type Database = {
           from_name: string | null
           id: string
           is_enabled: boolean | null
+          order_confirmation_template_id: string | null
           provider: string | null
           reply_to_email: string | null
+          resend_api_key: string | null
+          send_delivery_notification: boolean | null
+          send_order_confirmation: boolean | null
+          send_shipping_update: boolean | null
+          shipping_template_id: string | null
           smtp_host: string | null
           smtp_password: string | null
           smtp_port: number | null
@@ -1099,8 +1105,14 @@ export type Database = {
           from_name?: string | null
           id?: string
           is_enabled?: boolean | null
+          order_confirmation_template_id?: string | null
           provider?: string | null
           reply_to_email?: string | null
+          resend_api_key?: string | null
+          send_delivery_notification?: boolean | null
+          send_order_confirmation?: boolean | null
+          send_shipping_update?: boolean | null
+          shipping_template_id?: string | null
           smtp_host?: string | null
           smtp_password?: string | null
           smtp_port?: number | null
@@ -1113,8 +1125,14 @@ export type Database = {
           from_name?: string | null
           id?: string
           is_enabled?: boolean | null
+          order_confirmation_template_id?: string | null
           provider?: string | null
           reply_to_email?: string | null
+          resend_api_key?: string | null
+          send_delivery_notification?: boolean | null
+          send_order_confirmation?: boolean | null
+          send_shipping_update?: boolean | null
+          shipping_template_id?: string | null
           smtp_host?: string | null
           smtp_password?: string | null
           smtp_port?: number | null
@@ -2215,37 +2233,55 @@ export type Database = {
       }
       payment_providers: {
         Row: {
+          account_number: string | null
+          account_type: string | null
           config: Json | null
           created_at: string
           id: string
+          instructions: string | null
+          instructions_bn: string | null
           is_active: boolean | null
           is_sandbox: boolean | null
           name: string
+          payment_mode: string | null
           provider_type: string
+          qr_code_image: string | null
           store_id: string | null
           store_password: string | null
           updated_at: string
         }
         Insert: {
+          account_number?: string | null
+          account_type?: string | null
           config?: Json | null
           created_at?: string
           id?: string
+          instructions?: string | null
+          instructions_bn?: string | null
           is_active?: boolean | null
           is_sandbox?: boolean | null
           name: string
+          payment_mode?: string | null
           provider_type: string
+          qr_code_image?: string | null
           store_id?: string | null
           store_password?: string | null
           updated_at?: string
         }
         Update: {
+          account_number?: string | null
+          account_type?: string | null
           config?: Json | null
           created_at?: string
           id?: string
+          instructions?: string | null
+          instructions_bn?: string | null
           is_active?: boolean | null
           is_sandbox?: boolean | null
           name?: string
+          payment_mode?: string | null
           provider_type?: string
+          qr_code_image?: string | null
           store_id?: string | null
           store_password?: string | null
           updated_at?: string
