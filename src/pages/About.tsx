@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import { FileText, ExternalLink, Download } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +18,18 @@ interface TeamMember {
   bio: string | null;
   bio_bn: string | null;
   photo_url: string | null;
+  display_order: number;
+  is_active: boolean;
+}
+
+interface Certification {
+  id: string;
+  title: string;
+  title_bn: string | null;
+  description: string | null;
+  description_bn: string | null;
+  file_url: string;
+  file_type: string | null;
   display_order: number;
   is_active: boolean;
 }
@@ -86,6 +99,20 @@ const About = () => {
     },
   });
 
+  // Fetch certifications
+  const { data: certifications = [] } = useQuery({
+    queryKey: ["certifications"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("certifications")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order");
+      if (error) throw error;
+      return data as Certification[];
+    },
+  });
+
   const title = useMemo(() => {
     if (!page) return language === "bn" ? "আমাদের সম্পর্কে" : "About Us";
     if (language === "bn" && page.title_bn) return page.title_bn;
@@ -102,6 +129,10 @@ const About = () => {
     description: page?.meta_description || (language === "bn" ? "আমাদের গল্প, মূল্যবোধ এবং কারুশিল্প সম্পর্কে জানুন।" : "Learn about our story, values, and craftsmanship."),
     canonicalUrl: window.location.href,
   });
+
+  const isPdf = (url: string) => {
+    return url?.toLowerCase().endsWith('.pdf');
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -161,6 +192,86 @@ const About = () => {
               )}
             </div>
           </motion.div>
+
+          {/* Certifications Section */}
+          {certifications.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="max-w-4xl mx-auto mb-16"
+            >
+              <div className="text-center mb-10">
+                <span className="text-gold text-sm tracking-[0.3em] uppercase font-body">
+                  {language === "bn" ? "অনুমোদন ও সার্টিফিকেট" : "Certifications & Authorizations"}
+                </span>
+                <h2 className={`font-display text-3xl text-foreground mt-2 ${language === "bn" ? "font-bengali" : ""}`}>
+                  {language === "bn" ? "আমাদের স্বীকৃতি" : "Our Credentials"}
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {certifications.map((cert, index) => (
+                  <motion.div
+                    key={cert.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 * index }}
+                    className="bg-card border border-border rounded-xl overflow-hidden hover:border-gold/50 hover:shadow-lg transition-all group"
+                  >
+                    {/* Certificate Image/PDF Preview */}
+                    <div className="aspect-[4/3] bg-muted/50 relative overflow-hidden">
+                      {isPdf(cert.file_url) ? (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-red-600/20 to-red-800/20">
+                          <FileText className="h-16 w-16 text-red-500 mb-2" />
+                          <span className="text-sm text-muted-foreground">PDF Document</span>
+                        </div>
+                      ) : (
+                        <img
+                          src={cert.file_url}
+                          alt={language === "bn" && cert.title_bn ? cert.title_bn : cert.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      )}
+                      
+                      {/* View/Download Overlay */}
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                        <a
+                          href={cert.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="h-10 w-10 rounded-full bg-gold/20 flex items-center justify-center text-gold hover:bg-gold/30 transition-colors"
+                          title={language === "bn" ? "দেখুন" : "View"}
+                        >
+                          <ExternalLink className="h-5 w-5" />
+                        </a>
+                        <a
+                          href={cert.file_url}
+                          download
+                          className="h-10 w-10 rounded-full bg-gold/20 flex items-center justify-center text-gold hover:bg-gold/30 transition-colors"
+                          title={language === "bn" ? "ডাউনলোড" : "Download"}
+                        >
+                          <Download className="h-5 w-5" />
+                        </a>
+                      </div>
+                    </div>
+                    
+                    {/* Certificate Info */}
+                    <div className="p-4">
+                      <h3 className={`font-display text-lg text-foreground group-hover:text-gold transition-colors ${language === "bn" ? "font-bengali" : ""}`}>
+                        {language === "bn" && cert.title_bn ? cert.title_bn : cert.title}
+                      </h3>
+                      {(language === "bn" ? cert.description_bn : cert.description) && (
+                        <p className={`text-muted-foreground text-sm mt-2 line-clamp-2 ${language === "bn" ? "font-bengali" : ""}`}>
+                          {language === "bn" && cert.description_bn ? cert.description_bn : cert.description}
+                        </p>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
 
           {/* Team Members Section */}
           {teamMembers.length > 0 && (
