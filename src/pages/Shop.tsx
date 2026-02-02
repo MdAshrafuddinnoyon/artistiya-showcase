@@ -77,6 +77,21 @@ interface ShopSettings {
   products_per_page: number;
   show_out_of_stock: boolean;
   show_showcase_products: boolean;
+  // Layout settings
+  filter_position: string;
+  // Sales banner settings
+  show_sales_banner: boolean;
+  sales_banner_position: string;
+  sales_banner_text: string;
+  sales_banner_text_bn: string;
+  sales_banner_link: string;
+  sales_banner_bg_color: string;
+  sales_banner_text_color: string;
+  // Promo banner settings
+  show_promo_banner: boolean;
+  promo_banner_position: string;
+  promo_banner_image: string;
+  promo_banner_link: string;
 }
 
 interface ShopPageSettings {
@@ -128,6 +143,21 @@ const Shop = () => {
     products_per_page: 12,
     show_out_of_stock: true,
     show_showcase_products: true,
+    // Layout
+    filter_position: 'left',
+    // Sales banner
+    show_sales_banner: false,
+    sales_banner_position: 'top',
+    sales_banner_text: '',
+    sales_banner_text_bn: '',
+    sales_banner_link: '',
+    sales_banner_bg_color: '#C9A961',
+    sales_banner_text_color: '#000000',
+    // Promo banner
+    show_promo_banner: false,
+    promo_banner_position: 'right',
+    promo_banner_image: '',
+    promo_banner_link: '',
   });
 
   // Shop page appearance settings
@@ -420,154 +450,165 @@ const Shop = () => {
     return filterConfigs.some((f) => f.filter_key === filterKey && f.is_active);
   };
 
+  // Render individual filter based on filter_key
+  const renderFilter = (filterConfig: FilterSettingConfig) => {
+    switch (filterConfig.filter_key) {
+      case "price_range":
+        return (
+          <div key={filterConfig.id}>
+            <h3 className="font-display text-lg mb-4">{language === "bn" ? "মূল্য সীমা" : filterConfig.filter_name}</h3>
+            <div className="space-y-4">
+              <Slider
+                value={priceRange}
+                min={shopSettings.min_price}
+                max={shopSettings.max_price}
+                step={shopSettings.price_step}
+                onValueChange={(value) => setPriceRange(value as [number, number])}
+                className="mb-2"
+              />
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1">
+                  <Input
+                    type="number"
+                    value={priceRange[0]}
+                    onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
+                    className="text-center h-9"
+                    min={shopSettings.min_price}
+                    max={priceRange[1]}
+                  />
+                </div>
+                <span className="text-muted-foreground">—</span>
+                <div className="flex-1">
+                  <Input
+                    type="number"
+                    value={priceRange[1]}
+                    onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
+                    className="text-center h-9"
+                    min={priceRange[0]}
+                    max={shopSettings.max_price}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>৳{shopSettings.min_price.toLocaleString()}</span>
+                <span>৳{shopSettings.max_price.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+        );
+
+      case "preorder":
+        return (
+          <div key={filterConfig.id} className="flex items-center space-x-2">
+            <Checkbox
+              id="preorder"
+              checked={showPreorderOnly}
+              onCheckedChange={(checked) => {
+                setShowPreorderOnly(checked as boolean);
+                if (checked) setShowShowcaseOnly(false);
+              }}
+            />
+            <label htmlFor="preorder" className="text-sm cursor-pointer">
+              {language === "bn" ? "শুধু প্রি-অর্ডার" : filterConfig.filter_name}
+            </label>
+          </div>
+        );
+
+      case "showcase":
+        return (
+          <div key={filterConfig.id} className="flex items-center space-x-2">
+            <Checkbox
+              id="showcase"
+              checked={showShowcaseOnly}
+              onCheckedChange={(checked) => {
+                setShowShowcaseOnly(checked as boolean);
+                if (checked) setShowPreorderOnly(false);
+              }}
+            />
+            <label htmlFor="showcase" className="text-sm cursor-pointer flex items-center gap-1">
+              <Sparkles className="h-3 w-3 text-gold" />
+              {language === "bn" ? "শোকেস পণ্য" : filterConfig.filter_name}
+            </label>
+          </div>
+        );
+
+      case "colors":
+        if (availableColors.length === 0) return null;
+        return (
+          <div key={filterConfig.id}>
+            <h3 className="font-display text-lg mb-4">{language === "bn" ? "রং" : filterConfig.filter_name}</h3>
+            <div className="flex flex-wrap gap-2">
+              {availableColors.map((color) => (
+                <button
+                  key={color.id}
+                  onClick={() => {
+                    setSelectedColors((prev) =>
+                      prev.includes(color.name)
+                        ? prev.filter((c) => c !== color.name)
+                        : [...prev, color.name]
+                    );
+                  }}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
+                    selectedColors.includes(color.name)
+                      ? "border-gold bg-gold/20"
+                      : "border-border hover:border-gold/50"
+                  }`}
+                  title={language === "bn" && color.name_bn ? color.name_bn : color.name}
+                >
+                  <div
+                    className="w-5 h-5 rounded-full border border-border shadow-inner"
+                    style={{ backgroundColor: color.color_code }}
+                  />
+                  <span className="text-sm">
+                    {language === "bn" && color.name_bn ? color.name_bn : color.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+
+      case "sizes":
+        if (availableSizes.length === 0) return null;
+        return (
+          <div key={filterConfig.id}>
+            <h3 className="font-display text-lg mb-4">{language === "bn" ? "সাইজ" : filterConfig.filter_name}</h3>
+            <div className="flex flex-wrap gap-2">
+              {availableSizes.map((size) => (
+                <button
+                  key={size.id}
+                  onClick={() => {
+                    setSelectedSizes((prev) =>
+                      prev.includes(size.name)
+                        ? prev.filter((s) => s !== size.name)
+                        : [...prev, size.name]
+                    );
+                  }}
+                  className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                    selectedSizes.includes(size.name)
+                      ? "border-gold bg-gold/20 text-gold"
+                      : "border-border hover:border-gold/50"
+                  }`}
+                >
+                  {language === "bn" && size.name_bn ? size.name_bn : size.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
   const FilterContent = () => (
     <div className="space-y-6">
-      {/* Price Range - Only show if enabled in filter_settings */}
-      {isFilterEnabled("price_range") && (
-        <div>
-          <h3 className="font-display text-lg mb-4">{language === "bn" ? "মূল্য সীমা" : "Price Range"}</h3>
-          <div className="space-y-4">
-            <Slider
-              value={priceRange}
-              min={shopSettings.min_price}
-              max={shopSettings.max_price}
-              step={shopSettings.price_step}
-              onValueChange={(value) => setPriceRange(value as [number, number])}
-              className="mb-2"
-            />
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex-1">
-                <Input
-                  type="number"
-                  value={priceRange[0]}
-                  onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
-                  className="text-center h-9"
-                  min={shopSettings.min_price}
-                  max={priceRange[1]}
-                />
-              </div>
-              <span className="text-muted-foreground">—</span>
-              <div className="flex-1">
-                <Input
-                  type="number"
-                  value={priceRange[1]}
-                  onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
-                  className="text-center h-9"
-                  min={priceRange[0]}
-                  max={shopSettings.max_price}
-                />
-              </div>
-            </div>
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>৳{shopSettings.min_price.toLocaleString()}</span>
-              <span>৳{shopSettings.max_price.toLocaleString()}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Quick Filters - Only show toggles that are enabled */}
-      {(isFilterEnabled("preorder") || isFilterEnabled("showcase")) && (
-        <div className="space-y-3">
-          <h3 className="font-display text-lg mb-2">{language === "bn" ? "ফিল্টার" : "Filters"}</h3>
-          
-          {isFilterEnabled("preorder") && (
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="preorder"
-                checked={showPreorderOnly}
-                onCheckedChange={(checked) => {
-                  setShowPreorderOnly(checked as boolean);
-                  if (checked) setShowShowcaseOnly(false);
-                }}
-              />
-              <label htmlFor="preorder" className="text-sm cursor-pointer">
-                {language === "bn" ? "শুধু প্রি-অর্ডার" : "Pre-order Only"}
-              </label>
-            </div>
-          )}
-
-          {isFilterEnabled("showcase") && (
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="showcase"
-                checked={showShowcaseOnly}
-                onCheckedChange={(checked) => {
-                  setShowShowcaseOnly(checked as boolean);
-                  if (checked) setShowPreorderOnly(false);
-                }}
-              />
-              <label htmlFor="showcase" className="text-sm cursor-pointer flex items-center gap-1">
-                <Sparkles className="h-3 w-3 text-gold" />
-                {language === "bn" ? "শোকেস পণ্য" : "Showcase Products"}
-              </label>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Colors Filter - Only show if enabled and colors exist */}
-      {isFilterEnabled("colors") && availableColors.length > 0 && (
-        <div>
-          <h3 className="font-display text-lg mb-4">{language === "bn" ? "রং" : "Colors"}</h3>
-          <div className="flex flex-wrap gap-2">
-            {availableColors.map((color) => (
-              <button
-                key={color.id}
-                onClick={() => {
-                  setSelectedColors((prev) =>
-                    prev.includes(color.name)
-                      ? prev.filter((c) => c !== color.name)
-                      : [...prev, color.name]
-                  );
-                }}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
-                  selectedColors.includes(color.name)
-                    ? "border-gold bg-gold/20"
-                    : "border-border hover:border-gold/50"
-                }`}
-                title={language === "bn" && color.name_bn ? color.name_bn : color.name}
-              >
-                <div
-                  className="w-5 h-5 rounded-full border border-border shadow-inner"
-                  style={{ backgroundColor: color.color_code }}
-                />
-                <span className="text-sm">
-                  {language === "bn" && color.name_bn ? color.name_bn : color.name}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Sizes Filter - Only show if enabled and sizes exist */}
-      {isFilterEnabled("sizes") && availableSizes.length > 0 && (
-        <div>
-          <h3 className="font-display text-lg mb-4">{language === "bn" ? "সাইজ" : "Sizes"}</h3>
-          <div className="flex flex-wrap gap-2">
-            {availableSizes.map((size) => (
-              <button
-                key={size.id}
-                onClick={() => {
-                  setSelectedSizes((prev) =>
-                    prev.includes(size.name)
-                      ? prev.filter((s) => s !== size.name)
-                      : [...prev, size.name]
-                  );
-                }}
-                className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                  selectedSizes.includes(size.name)
-                    ? "border-gold bg-gold/20 text-gold"
-                    : "border-border hover:border-gold/50"
-                }`}
-              >
-                {language === "bn" && size.name_bn ? size.name_bn : size.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Dynamic Filters - Rendered in display_order */}
+      {filterConfigs
+        .filter(f => f.is_active)
+        .sort((a, b) => a.display_order - b.display_order)
+        .map(renderFilter)}
 
       {/* Categories - Always show */}
       <div>
@@ -627,6 +668,58 @@ const Shop = () => {
   const getSalesBannerTitle = () => {
     return language === "bn" && pageSettings.sales_banner_title_bn ? pageSettings.sales_banner_title_bn : pageSettings.sales_banner_title;
   };
+
+  // Get sales banner text from shop_settings
+  const getSalesBannerText = () => {
+    return language === "bn" && shopSettings.sales_banner_text_bn ? shopSettings.sales_banner_text_bn : shopSettings.sales_banner_text;
+  };
+
+  // Sales Banner Component
+  const SalesBanner = () => {
+    if (!shopSettings.show_sales_banner || !shopSettings.sales_banner_text) return null;
+    
+    const bannerContent = (
+      <div 
+        className="py-3 px-4 text-center font-medium rounded-lg mb-4"
+        style={{ 
+          backgroundColor: shopSettings.sales_banner_bg_color,
+          color: shopSettings.sales_banner_text_color,
+        }}
+      >
+        {getSalesBannerText()}
+      </div>
+    );
+
+    if (shopSettings.sales_banner_link) {
+      return <a href={shopSettings.sales_banner_link} className="block">{bannerContent}</a>;
+    }
+    return bannerContent;
+  };
+
+  // Promo Image Banner Component
+  const PromoBanner = () => {
+    if (!shopSettings.show_promo_banner || !shopSettings.promo_banner_image) return null;
+    
+    const bannerContent = (
+      <div className="rounded-xl overflow-hidden relative group">
+        <img 
+          src={shopSettings.promo_banner_image} 
+          alt="Promo" 
+          className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+      </div>
+    );
+
+    if (shopSettings.promo_banner_link) {
+      return <a href={shopSettings.promo_banner_link} className="block mb-4">{bannerContent}</a>;
+    }
+    return <div className="mb-4">{bannerContent}</div>;
+  };
+
+  // Check if filter should be on left or right
+  const isFilterOnRight = shopSettings.filter_position === 'right';
+  const isSalesBannerOnTop = shopSettings.sales_banner_position === 'top';
+  const isSalesBannerOnBottom = shopSettings.sales_banner_position === 'bottom';
 
   return (
     <div className="min-h-screen bg-background">
@@ -695,28 +788,15 @@ const Shop = () => {
             </div>
           )}
 
-          <div className="flex gap-8">
+          {/* Top Sales Banner */}
+          {isSalesBannerOnTop && <SalesBanner />}
+
+          <div className={`flex gap-8 ${isFilterOnRight ? 'flex-row-reverse' : ''}`}>
             {/* Desktop Sidebar */}
             <aside className="hidden lg:block w-64 flex-shrink-0">
               <div className="sticky top-32 space-y-4">
-                {/* Sales Banner */}
-                {pageSettings.sales_banner_enabled && pageSettings.sales_banner_image && (
-                  <a 
-                    href={pageSettings.sales_banner_link || "#"} 
-                    className="block rounded-xl overflow-hidden relative group"
-                  >
-                    <img 
-                      src={pageSettings.sales_banner_image} 
-                      alt={getSalesBannerTitle() || "Sales"} 
-                      className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                    {pageSettings.sales_banner_title && (
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end p-4">
-                        <span className="text-white font-display text-lg">{getSalesBannerTitle()}</span>
-                      </div>
-                    )}
-                  </a>
-                )}
+                {/* Promo Image Banner */}
+                <PromoBanner />
                 
                 <FilterContent />
               </div>
@@ -724,22 +804,32 @@ const Shop = () => {
 
             {/* Main Content */}
             <div className="flex-1">
-              {/* Mobile Sales Banner */}
-              {isMobile && pageSettings.sales_banner_enabled && pageSettings.sales_banner_image && (
+              {/* Mobile Sales Banner (always top on mobile) */}
+              {isMobile && shopSettings.show_sales_banner && shopSettings.sales_banner_text && (
+                <div 
+                  className="py-3 px-4 text-center font-medium rounded-lg mb-4"
+                  style={{ 
+                    backgroundColor: shopSettings.sales_banner_bg_color,
+                    color: shopSettings.sales_banner_text_color,
+                  }}
+                >
+                  {shopSettings.sales_banner_link ? (
+                    <a href={shopSettings.sales_banner_link}>{getSalesBannerText()}</a>
+                  ) : getSalesBannerText()}
+                </div>
+              )}
+
+              {/* Mobile Promo Banner */}
+              {isMobile && shopSettings.show_promo_banner && shopSettings.promo_banner_image && (
                 <a 
-                  href={pageSettings.sales_banner_link || "#"} 
+                  href={shopSettings.promo_banner_link || "#"} 
                   className="block rounded-xl overflow-hidden relative group mb-4"
                 >
                   <img 
-                    src={pageSettings.sales_banner_image} 
-                    alt={getSalesBannerTitle() || "Sales"} 
+                    src={shopSettings.promo_banner_image} 
+                    alt="Promo" 
                     className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105"
                   />
-                  {pageSettings.sales_banner_title && (
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end p-3">
-                      <span className="text-white font-display text-sm">{getSalesBannerTitle()}</span>
-                    </div>
-                  )}
                 </a>
               )}
 
@@ -758,23 +848,18 @@ const Shop = () => {
                       <SheetTitle>{t("shop.filter")}</SheetTitle>
                     </SheetHeader>
                     <div className="mt-4 space-y-4">
-                      {/* Sales Banner in Filter Sheet */}
-                      {pageSettings.sales_banner_enabled && pageSettings.sales_banner_image && (
+                      {/* Promo Banner in Filter Sheet */}
+                      {shopSettings.show_promo_banner && shopSettings.promo_banner_image && (
                         <a 
-                          href={pageSettings.sales_banner_link || "#"} 
+                          href={shopSettings.promo_banner_link || "#"} 
                           className="block rounded-lg overflow-hidden relative group"
                           onClick={() => setFilterOpen(false)}
                         >
                           <img 
-                            src={pageSettings.sales_banner_image} 
-                            alt={getSalesBannerTitle() || "Sales"} 
+                            src={shopSettings.promo_banner_image} 
+                            alt="Promo" 
                             className="w-full h-auto object-cover"
                           />
-                          {pageSettings.sales_banner_title && (
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-3">
-                              <span className="text-white font-display text-sm">{getSalesBannerTitle()}</span>
-                            </div>
-                          )}
                         </a>
                       )}
                       <FilterContent />
@@ -969,6 +1054,9 @@ const Shop = () => {
                   })}
                 </div>
               )}
+
+              {/* Bottom Sales Banner */}
+              {isSalesBannerOnBottom && <div className="mt-8"><SalesBanner /></div>}
             </div>
           </div>
         </div>
