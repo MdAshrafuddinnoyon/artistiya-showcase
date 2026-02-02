@@ -722,23 +722,42 @@ const AdminFilterSettings = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Banner Position</Label>
-                  <Select
-                    value={shopSettings.sales_banner_position}
-                    onValueChange={(value) => setShopSettings({ ...shopSettings, sales_banner_position: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {bannerPositionOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-3">
+                  <Label>Banner Position (উপরে/নিচে)</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShopSettings({ ...shopSettings, sales_banner_position: "top" })}
+                      className={`p-4 border rounded-lg text-center transition-all ${
+                        shopSettings.sales_banner_position === "top"
+                          ? "border-gold bg-gold/10 ring-2 ring-gold"
+                          : "border-border hover:border-gold/50"
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-2 mb-2">
+                        <div className="w-full h-2 bg-gold rounded" />
+                        <div className="w-full h-6 bg-muted rounded" />
+                        <div className="w-full h-6 bg-muted rounded" />
+                      </div>
+                      <span className="font-medium text-sm">Top (উপরে)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShopSettings({ ...shopSettings, sales_banner_position: "bottom" })}
+                      className={`p-4 border rounded-lg text-center transition-all ${
+                        shopSettings.sales_banner_position === "bottom"
+                          ? "border-gold bg-gold/10 ring-2 ring-gold"
+                          : "border-border hover:border-gold/50"
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-2 mb-2">
+                        <div className="w-full h-6 bg-muted rounded" />
+                        <div className="w-full h-6 bg-muted rounded" />
+                        <div className="w-full h-2 bg-gold rounded" />
+                      </div>
+                      <span className="font-medium text-sm">Bottom (নিচে)</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Preview */}
