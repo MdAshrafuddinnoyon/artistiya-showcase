@@ -38,7 +38,9 @@ const MobileCheckout = () => {
     phone: "",
     email: "",
     addressLine: "",
-    paymentMethod: "cod" as "cod" | "bkash" | "nagad",
+    paymentMethod: "cod" as "cod" | "bkash" | "nagad" | "bank_transfer",
+    transactionId: "",
+    paymentNote: "",
   });
 
   useEffect(() => {
@@ -99,17 +101,18 @@ const MobileCheckout = () => {
 
     try {
       const userId = user?.id || null;
+      const guestPlaceholder = "00000000-0000-0000-0000-000000000001";
 
       // Create address
       const addressData = {
-        user_id: userId || "00000000-0000-0000-0000-000000000000",
+        user_id: userId || guestPlaceholder,
         full_name: formData.fullName,
         phone: formData.phone,
         division: selectedDivision || "N/A",
         district: selectedDistrict || "N/A",
         thana: selectedThana || "N/A",
         address_line: shippingMethod === "pickup" ? "Store Pickup" : formData.addressLine,
-        is_default: false,
+        is_default: !!userId,
       };
 
       const { data: address, error: addressError } = await supabase
@@ -123,6 +126,13 @@ const MobileCheckout = () => {
       // Generate order number
       const orderNum = `ART-${Date.now()}`;
 
+      // Build notes
+      const orderNotes = [
+        formData.email ? `Guest Email: ${formData.email}` : null,
+        formData.transactionId ? `Txn ID: ${formData.transactionId}` : null,
+        formData.paymentNote ? `Payment Note: ${formData.paymentNote}` : null,
+      ].filter(Boolean).join(" | ") || null;
+
       // Create order
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
@@ -130,10 +140,11 @@ const MobileCheckout = () => {
           user_id: userId,
           address_id: address.id,
           payment_method: formData.paymentMethod,
+          payment_transaction_id: formData.transactionId || null,
           subtotal,
           shipping_cost: shippingMethod === "delivery" ? shippingCost : 0,
           total,
-          notes: formData.email ? `Guest Email: ${formData.email}` : null,
+          notes: orderNotes,
           order_number: orderNum,
         } as any)
         .select()
@@ -406,9 +417,10 @@ const MobileCheckout = () => {
 
           <RadioGroup
             value={formData.paymentMethod}
-            onValueChange={(value) => setFormData({ ...formData, paymentMethod: value as "cod" | "bkash" | "nagad" })}
+            onValueChange={(value) => setFormData({ ...formData, paymentMethod: value as any, transactionId: "", paymentNote: "" })}
             className="space-y-2"
           >
+            {/* COD */}
             <div className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-colors ${
               formData.paymentMethod === "cod" ? "border-gold bg-gold/10" : "border-border"
             }`}>
@@ -419,26 +431,89 @@ const MobileCheckout = () => {
               </label>
             </div>
             
+            {/* bKash */}
             <div className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-colors ${
-              formData.paymentMethod === "bkash" ? "border-gold bg-gold/10" : "border-border"
+              formData.paymentMethod === "bkash" ? "border-pink-500 bg-pink-500/10" : "border-border"
             }`}>
               <RadioGroupItem value="bkash" id="bkash" />
               <label htmlFor="bkash" className="flex items-center gap-2 flex-1 cursor-pointer">
                 <div className="w-5 h-5 bg-[#E2136E] rounded text-white text-[8px] font-bold flex items-center justify-center">b</div>
-                <span className="text-sm font-medium">bKash</span>
+                <span className="text-sm font-medium">bKash Send Money</span>
               </label>
             </div>
             
+            {/* Nagad */}
             <div className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-colors ${
-              formData.paymentMethod === "nagad" ? "border-gold bg-gold/10" : "border-border"
+              formData.paymentMethod === "nagad" ? "border-orange-500 bg-orange-500/10" : "border-border"
             }`}>
               <RadioGroupItem value="nagad" id="nagad" />
               <label htmlFor="nagad" className="flex items-center gap-2 flex-1 cursor-pointer">
                 <div className="w-5 h-5 bg-[#F6A200] rounded text-white text-[8px] font-bold flex items-center justify-center">N</div>
-                <span className="text-sm font-medium">Nagad</span>
+                <span className="text-sm font-medium">Nagad Send Money</span>
+              </label>
+            </div>
+
+            {/* Bank / Other */}
+            <div className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-colors ${
+              formData.paymentMethod === "bank_transfer" ? "border-blue-500 bg-blue-500/10" : "border-border"
+            }`}>
+              <RadioGroupItem value="bank_transfer" id="bank_transfer" />
+              <label htmlFor="bank_transfer" className="flex items-center gap-2 flex-1 cursor-pointer">
+                <CreditCard className="h-5 w-5 text-blue-500" />
+                <span className="text-sm font-medium">Bank / Other</span>
               </label>
             </div>
           </RadioGroup>
+
+          {/* bKash/Nagad Transaction ID */}
+          {(formData.paymentMethod === "bkash" || formData.paymentMethod === "nagad") && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              className="mt-3 space-y-2"
+            >
+              <div className="p-2 bg-gold/5 border border-gold/20 rounded-lg">
+                <p className="text-xs text-muted-foreground">
+                  {formData.paymentMethod === "bkash" 
+                    ? "bKash নম্বর: 01XXXXXXXXX — Send Money করে Transaction ID দিন"
+                    : "Nagad নম্বর: 01XXXXXXXXX — Send Money করে Transaction ID দিন"}
+                </p>
+              </div>
+              <div>
+                <Label className="text-sm">Transaction ID *</Label>
+                <Input
+                  value={formData.transactionId}
+                  onChange={(e) => setFormData({ ...formData, transactionId: e.target.value })}
+                  placeholder="e.g. 8N7A5XXXXX"
+                  className="mt-1 h-10"
+                />
+              </div>
+            </motion.div>
+          )}
+
+          {/* Bank Transfer / Other */}
+          {formData.paymentMethod === "bank_transfer" && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              className="mt-3 space-y-2"
+            >
+              <div className="p-2 bg-blue-500/5 border border-blue-500/20 rounded-lg">
+                <p className="text-xs text-muted-foreground">
+                  Bank: XYZ Bank | Account: 123456789 | Name: Artistiya
+                </p>
+              </div>
+              <div>
+                <Label className="text-sm">Payment Reference / Note</Label>
+                <Input
+                  value={formData.paymentNote}
+                  onChange={(e) => setFormData({ ...formData, paymentNote: e.target.value })}
+                  placeholder="Transaction reference or note"
+                  className="mt-1 h-10"
+                />
+              </div>
+            </motion.div>
+          )}
         </div>
 
         {/* Order Summary */}

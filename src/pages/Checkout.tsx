@@ -48,9 +48,10 @@ const Checkout = () => {
     phone: "",
     email: "",
     addressLine: "",
-    paymentMethod: "cod" as "cod" | "bkash" | "nagad",
+    paymentMethod: "cod" as "cod" | "bkash" | "nagad" | "bank_transfer",
     transactionId: "",
     notes: "",
+    paymentNote: "",
   });
 
   // Check if automated payment providers are available
@@ -129,16 +130,18 @@ const Checkout = () => {
       // For guest checkout, we'll create order without user_id
       const userId = user?.id || null;
 
-      // Create address (for guests, store with null user_id or create guest record)
+      // Create address
+      // For logged-in users, use their ID; for guests, use a constant guest placeholder
+      const guestPlaceholder = "00000000-0000-0000-0000-000000000001";
       const addressData = {
-        user_id: userId || "00000000-0000-0000-0000-000000000000", // Guest placeholder
+        user_id: userId || guestPlaceholder,
         full_name: formData.fullName,
         phone: formData.phone,
         division: selectedDivision,
         district: selectedDistrict,
         thana: selectedThana,
         address_line: formData.addressLine,
-        is_default: userId ? true : false,
+        is_default: !!userId,
       };
 
       const { data: address, error: addressError } = await supabase
@@ -152,6 +155,13 @@ const Checkout = () => {
       // Generate order number
       const orderNum = `ART-${Date.now()}`;
 
+      // Build notes combining user notes, guest email, and payment note
+      const orderNotes = [
+        formData.notes,
+        !userId && formData.email ? `Guest Email: ${formData.email}` : null,
+        formData.paymentNote ? `Payment Note: ${formData.paymentNote}` : null,
+      ].filter(Boolean).join(" | ") || null;
+
       // Create order
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
@@ -164,7 +174,7 @@ const Checkout = () => {
           shipping_cost: shippingCost,
           total,
           is_preorder: hasPreorderItems,
-          notes: formData.notes || (formData.email ? `Guest Email: ${formData.email}` : null),
+          notes: orderNotes,
           order_number: orderNum,
         } as any)
         .select()
@@ -507,61 +517,73 @@ const Checkout = () => {
 
                   <RadioGroup
                     value={formData.paymentMethod}
-                    onValueChange={(v) => setFormData({ ...formData, paymentMethod: v as any })}
+                    onValueChange={(v) => setFormData({ ...formData, paymentMethod: v as any, transactionId: "", paymentNote: "" })}
                     className="space-y-2 md:space-y-3"
                   >
-                    <div className="flex items-center space-x-3 p-3 md:p-4 border border-border rounded-lg hover:border-gold/50 transition-colors">
+                    {/* COD */}
+                    <div className={`flex items-center space-x-3 p-3 md:p-4 border rounded-lg transition-colors ${formData.paymentMethod === "cod" ? "border-gold bg-gold/5" : "border-border hover:border-gold/50"}`}>
                       <RadioGroupItem value="cod" id="cod" />
                       <Label htmlFor="cod" className="flex-1 cursor-pointer">
                         <span className="font-medium text-sm md:text-base">
-                          Cash on Delivery
+                          {language === "bn" ? "ক্যাশ অন ডেলিভারি" : "Cash on Delivery"}
                         </span>
-                        <span className={`block text-sm text-muted-foreground ${language === "bn" ? "font-bengali" : ""}`}>
-                          {t("checkout.codDesc")}
+                        <span className="block text-sm text-muted-foreground">
+                          {language === "bn" ? "ডেলিভারির সময় টাকা দিন" : "Pay when you receive"}
                         </span>
                       </Label>
                     </div>
 
+                    {/* bKash */}
                     <div className={`flex items-center space-x-3 p-4 border rounded-lg transition-colors ${formData.paymentMethod === "bkash" ? "border-pink-500/50 bg-pink-500/5" : "border-border hover:border-gold/50"}`}>
                       <RadioGroupItem value="bkash" id="bkash" />
                       <Label htmlFor="bkash" className="flex-1 cursor-pointer">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-pink-500">bKash</span>
+                          <span className="font-medium text-pink-500">bKash Send Money</span>
                           {bkashAvailable && (
                             <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-500">
-                              {language === "bn" ? "অটো পেমেন্ট" : "Auto Pay"}
+                              {language === "bn" ? "অটো পেমেন্ট উপলব্ধ" : "Auto Pay Available"}
                             </Badge>
                           )}
                         </div>
                         <span className="block text-sm text-muted-foreground">
-                          {bkashAvailable 
-                            ? (language === "bn" ? "bKash পেজে রিডাইরেক্ট হবে" : "Redirect to bKash checkout")
-                            : (language === "bn" ? "ম্যানুয়াল পেমেন্ট" : "Manual payment")}
+                          {language === "bn" ? "Send Money করুন ও Transaction ID দিন" : "Send Money & enter Transaction ID"}
                         </span>
                       </Label>
                     </div>
 
+                    {/* Nagad */}
                     <div className={`flex items-center space-x-3 p-4 border rounded-lg transition-colors ${formData.paymentMethod === "nagad" ? "border-orange-500/50 bg-orange-500/5" : "border-border hover:border-gold/50"}`}>
                       <RadioGroupItem value="nagad" id="nagad" />
                       <Label htmlFor="nagad" className="flex-1 cursor-pointer">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-orange-500">Nagad</span>
+                          <span className="font-medium text-orange-500">Nagad Send Money</span>
                           {nagadAvailable && (
                             <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-500">
-                              {language === "bn" ? "অটো পেমেন্ট" : "Auto Pay"}
+                              {language === "bn" ? "অটো পেমেন্ট উপলব্ধ" : "Auto Pay Available"}
                             </Badge>
                           )}
                         </div>
                         <span className="block text-sm text-muted-foreground">
-                          {nagadAvailable 
-                            ? (language === "bn" ? "Nagad পেজে রিডাইরেক্ট হবে" : "Redirect to Nagad checkout")
-                            : (language === "bn" ? "ম্যানুয়াল পেমেন্ট" : "Manual payment")}
+                          {language === "bn" ? "Send Money করুন ও Transaction ID দিন" : "Send Money & enter Transaction ID"}
+                        </span>
+                      </Label>
+                    </div>
+
+                    {/* Bank/Other */}
+                    <div className={`flex items-center space-x-3 p-4 border rounded-lg transition-colors ${formData.paymentMethod === "bank_transfer" ? "border-blue-500/50 bg-blue-500/5" : "border-border hover:border-gold/50"}`}>
+                      <RadioGroupItem value="bank_transfer" id="bank_transfer" />
+                      <Label htmlFor="bank_transfer" className="flex-1 cursor-pointer">
+                        <span className="font-medium text-blue-500">
+                          {language === "bn" ? "ব্যাংক / অন্যান্য" : "Bank / Other"}
+                        </span>
+                        <span className="block text-sm text-muted-foreground">
+                          {language === "bn" ? "ব্যাংক ট্রান্সফার বা অন্যান্য পদ্ধতি" : "Bank transfer or other methods"}
                         </span>
                       </Label>
                     </div>
                   </RadioGroup>
 
-                  {/* Show payment mode selector for bKash/Nagad */}
+                  {/* Show payment mode selector for bKash/Nagad when auto is available */}
                   {((formData.paymentMethod === "bkash" && bkashAvailable) || 
                     (formData.paymentMethod === "nagad" && nagadAvailable)) && (
                     <motion.div
@@ -592,14 +614,14 @@ const Checkout = () => {
                             className="accent-gold"
                           />
                           <span className="text-sm">
-                            {language === "bn" ? "ম্যানুয়াল" : "Manual"}
+                            {language === "bn" ? "ম্যানুয়াল" : "Manual Send Money"}
                           </span>
                         </label>
                       </div>
                     </motion.div>
                   )}
 
-                  {/* Manual transaction ID field */}
+                  {/* Manual transaction ID field for bKash/Nagad */}
                   {(formData.paymentMethod === "bkash" || formData.paymentMethod === "nagad") && 
                    (paymentMode === "manual" || 
                     (formData.paymentMethod === "bkash" && !bkashAvailable) ||
@@ -610,20 +632,62 @@ const Checkout = () => {
                       className="mt-4"
                     >
                       <div className="p-3 bg-gold/5 border border-gold/20 rounded-lg mb-3">
+                        <p className="text-sm font-medium text-foreground mb-1">
+                          {language === "bn" ? "পেমেন্ট নির্দেশনা:" : "Payment Instructions:"}
+                        </p>
                         <p className="text-sm text-muted-foreground">
                           {formData.paymentMethod === "bkash" 
-                            ? (language === "bn" ? "01XXXXXXXXX নম্বরে Send Money করে Transaction ID দিন" : "Send Money to 01XXXXXXXXX and enter Transaction ID")
-                            : (language === "bn" ? "01XXXXXXXXX নম্বরে Send Money করে Transaction ID দিন" : "Send Money to 01XXXXXXXXX and enter Transaction ID")}
+                            ? (language === "bn" 
+                                ? "bKash নম্বর: 01XXXXXXXXX — Send Money করে নিচে Transaction ID দিন" 
+                                : "bKash Number: 01XXXXXXXXX — Send Money and enter Transaction ID below")
+                            : (language === "bn" 
+                                ? "Nagad নম্বর: 01XXXXXXXXX — Send Money করে নিচে Transaction ID দিন" 
+                                : "Nagad Number: 01XXXXXXXXX — Send Money and enter Transaction ID below")}
                         </p>
                       </div>
-                      <Label htmlFor="transactionId" className={language === "bn" ? "font-bengali" : ""}>
-                        {t("checkout.transactionId")} *
+                      <Label htmlFor="transactionId">
+                        {language === "bn" ? "ট্রানজ্যাকশন আইডি" : "Transaction ID"} *
                       </Label>
                       <Input
                         id="transactionId"
                         placeholder="e.g. 8N7A5XXXXX"
                         value={formData.transactionId}
                         onChange={(e) => setFormData({ ...formData, transactionId: e.target.value })}
+                        className="mt-1.5"
+                      />
+                    </motion.div>
+                  )}
+
+                  {/* Bank / Other payment instructions */}
+                  {formData.paymentMethod === "bank_transfer" && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      className="mt-4"
+                    >
+                      <div className="p-3 bg-blue-500/5 border border-blue-500/20 rounded-lg mb-3">
+                        <p className="text-sm font-medium text-foreground mb-1">
+                          {language === "bn" ? "ব্যাংক ট্রান্সফার তথ্য:" : "Bank Transfer Details:"}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {language === "bn" 
+                            ? "ব্যাংক: XYZ Bank | অ্যাকাউন্ট: 123456789 | নাম: Artistiya | রাউটিং: 123456" 
+                            : "Bank: XYZ Bank | Account: 123456789 | Name: Artistiya | Routing: 123456"}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {language === "bn" 
+                            ? "পেমেন্ট সম্পন্ন করে নিচে রেফারেন্স/নোট লিখুন" 
+                            : "After payment, enter reference/note below"}
+                        </p>
+                      </div>
+                      <Label htmlFor="paymentNote">
+                        {language === "bn" ? "পেমেন্ট রেফারেন্স / নোট" : "Payment Reference / Note"}
+                      </Label>
+                      <Input
+                        id="paymentNote"
+                        placeholder={language === "bn" ? "ট্রানজ্যাকশন রেফারেন্স বা নোট" : "Transaction reference or note"}
+                        value={formData.paymentNote}
+                        onChange={(e) => setFormData({ ...formData, paymentNote: e.target.value })}
                         className="mt-1.5"
                       />
                     </motion.div>
