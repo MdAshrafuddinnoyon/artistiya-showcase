@@ -433,8 +433,11 @@ export type Database = {
           created_at: string
           description: string | null
           display_order: number | null
+          icon_emoji: string | null
+          icon_name: string | null
           id: string
           image_url: string | null
+          mobile_image_url: string | null
           name: string
           name_bn: string | null
           parent_id: string | null
@@ -444,8 +447,11 @@ export type Database = {
           created_at?: string
           description?: string | null
           display_order?: number | null
+          icon_emoji?: string | null
+          icon_name?: string | null
           id?: string
           image_url?: string | null
+          mobile_image_url?: string | null
           name: string
           name_bn?: string | null
           parent_id?: string | null
@@ -455,8 +461,11 @@ export type Database = {
           created_at?: string
           description?: string | null
           display_order?: number | null
+          icon_emoji?: string | null
+          icon_name?: string | null
           id?: string
           image_url?: string | null
+          mobile_image_url?: string | null
           name?: string
           name_bn?: string | null
           parent_id?: string | null

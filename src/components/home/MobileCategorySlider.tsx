@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, icons } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/hooks/useLanguage";
 
@@ -10,6 +10,9 @@ interface Category {
   name_bn: string | null;
   slug: string;
   image_url: string | null;
+  icon_name: string | null;
+  icon_emoji: string | null;
+  mobile_image_url: string | null;
 }
 
 const MobileCategorySlider = () => {
@@ -26,10 +29,10 @@ const MobileCategorySlider = () => {
 
   useEffect(() => {
     const fetchCategories = async () => {
-      // Fetch ALL categories without limit
+      // Fetch ALL categories with new icon fields
       const { data, error } = await supabase
         .from("categories")
-        .select("id, name, name_bn, slug, image_url")
+        .select("id, name, name_bn, slug, image_url, icon_name, icon_emoji, mobile_image_url")
         .order("display_order", { ascending: true });
 
       if (!error && data) {
@@ -124,9 +127,9 @@ const MobileCategorySlider = () => {
     scrollToIndex(newIndex);
   };
 
-  // Default category icons
+  // Default category icons - used as fallback
   const getCategoryIcon = (slug: string) => {
-    const icons: Record<string, string> = {
+    const defaultIcons: Record<string, string> = {
       jewelry: "💍",
       bags: "👜",
       woven: "🧶",
@@ -135,7 +138,17 @@ const MobileCategorySlider = () => {
       fashion: "👗",
       accessories: "✨",
     };
-    return icons[slug] || "🛍️";
+    return defaultIcons[slug] || "🛍️";
+  };
+
+  // Get the display image for mobile (prioritize mobile_image_url)
+  const getMobileImage = (category: Category) => {
+    return category.mobile_image_url || category.image_url;
+  };
+
+  // Get the display icon/emoji
+  const getDisplayEmoji = (category: Category) => {
+    return category.icon_emoji || getCategoryIcon(category.slug);
   };
 
   // Use fetched categories directly - no default fallback
@@ -207,7 +220,7 @@ const MobileCategorySlider = () => {
             style={{ scrollSnapAlign: "start" }}
           >
             <div
-              className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl border-2 transition-all ${
+              className={`w-14 h-14 rounded-full flex items-center justify-center text-xl border-2 transition-all ${
                 activeCategory === "all" || !activeCategory
                   ? "bg-gold/20 border-gold ring-2 ring-gold/30"
                   : "bg-muted border-border hover:border-gold/50"
@@ -238,22 +251,22 @@ const MobileCategorySlider = () => {
               style={{ scrollSnapAlign: "start" }}
             >
               <div
-                className={`w-16 h-16 rounded-full flex items-center justify-center overflow-hidden border-2 transition-all ${
+                className={`w-14 h-14 rounded-full flex items-center justify-center overflow-hidden border-2 transition-all ${
                   activeCategory === category.id
                     ? "border-gold ring-2 ring-gold/30"
                     : "border-border hover:border-gold/50"
                 }`}
               >
-                {category.image_url ? (
+                {getMobileImage(category) ? (
                   <img
-                    src={category.image_url}
+                    src={getMobileImage(category)!}
                     alt={category.name}
                     className="w-full h-full object-cover"
                     draggable={false}
                   />
                 ) : (
-                  <span className="text-2xl bg-muted w-full h-full flex items-center justify-center">
-                    {getCategoryIcon(category.slug)}
+                  <span className="text-xl bg-muted w-full h-full flex items-center justify-center">
+                    {getDisplayEmoji(category)}
                   </span>
                 )}
               </div>

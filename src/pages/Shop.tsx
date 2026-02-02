@@ -583,10 +583,10 @@ const Shop = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="pt-24 pb-24">
-        {/* Hero Section with Background */}
+      <main className="pt-20 md:pt-24 pb-24">
+        {/* Hero Section with Background - Responsive sizing */}
         <div 
-          className="relative py-16 md:py-24 mb-8"
+          className="relative py-8 md:py-16 lg:py-24 mb-4 md:mb-8"
           style={{
             backgroundImage: pageSettings.hero_background_image ? `url(${pageSettings.hero_background_image})` : undefined,
             backgroundSize: 'cover',
@@ -608,10 +608,10 @@ const Shop = () => {
               transition={{ duration: 0.6 }}
               className="text-center"
             >
-              <span className="text-gold text-sm tracking-[0.3em] uppercase font-body">
+              <span className="text-gold text-[10px] md:text-sm tracking-[0.2em] md:tracking-[0.3em] uppercase font-body">
                 {getPageSubtitle()}
               </span>
-              <h1 className="font-display text-5xl md:text-6xl text-foreground mt-4">
+              <h1 className="font-display text-2xl sm:text-3xl md:text-5xl lg:text-6xl text-foreground mt-2 md:mt-4">
                 {getPageTitle()}
               </h1>
             </motion.div>

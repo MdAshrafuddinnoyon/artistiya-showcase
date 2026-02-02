@@ -34,6 +34,9 @@ interface Category {
   image_url: string | null;
   display_order: number | null;
   parent_id: string | null;
+  icon_name: string | null;
+  icon_emoji: string | null;
+  mobile_image_url: string | null;
 }
 
 const AdminCategories = () => {
@@ -55,6 +58,8 @@ const AdminCategories = () => {
     image_url: "",
     display_order: "0",
     parent_id: "",
+    icon_emoji: "",
+    mobile_image_url: "",
   });
 
   const fetchCategories = async () => {
@@ -131,6 +136,8 @@ const AdminCategories = () => {
       image_url: formData.image_url || null,
       display_order: parseInt(formData.display_order) || 0,
       parent_id: formData.parent_id || null,
+      icon_emoji: formData.icon_emoji || null,
+      mobile_image_url: formData.mobile_image_url || null,
     };
 
     try {
@@ -168,6 +175,8 @@ const AdminCategories = () => {
       image_url: category.image_url || "",
       display_order: (category.display_order || 0).toString(),
       parent_id: category.parent_id || "",
+      icon_emoji: category.icon_emoji || "",
+      mobile_image_url: category.mobile_image_url || "",
     });
     setDialogOpen(true);
   };
@@ -221,6 +230,8 @@ const AdminCategories = () => {
       image_url: "",
       display_order: "0",
       parent_id: "",
+      icon_emoji: "",
+      mobile_image_url: "",
     });
   };
 
@@ -508,6 +519,38 @@ const AdminCategories = () => {
                         ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* Mobile Display Options */}
+                <div className="border-t border-border pt-4 mt-4">
+                  <h4 className="text-sm font-medium mb-3 text-muted-foreground">Mobile Display Options</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="icon_emoji">Emoji Icon (Mobile)</Label>
+                      <Input
+                        id="icon_emoji"
+                        value={formData.icon_emoji}
+                        onChange={(e) => setFormData({ ...formData, icon_emoji: e.target.value })}
+                        placeholder="e.g., 💍, 👜, 🎨"
+                        className="text-xl"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Shown when no image is set
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="mobile_image_url">Mobile Image URL</Label>
+                      <Input
+                        id="mobile_image_url"
+                        value={formData.mobile_image_url}
+                        onChange={(e) => setFormData({ ...formData, mobile_image_url: e.target.value })}
+                        placeholder="Optional: separate mobile image"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Overrides main image on mobile
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 <div>
