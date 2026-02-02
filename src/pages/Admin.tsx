@@ -40,6 +40,8 @@ import {
   QrCode,
   Shield,
   Palette as PaletteIcon,
+  Tag,
+  Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -99,6 +101,8 @@ import AdminAbandonedCarts from "@/components/admin/AdminAbandonedCarts";
 import AdminProductVariants from "@/components/admin/AdminProductVariants";
 import AdminNewsletterSubscribers from "@/components/admin/AdminNewsletterSubscribers";
 import AdminFilterSettings from "@/components/admin/AdminFilterSettings";
+import AdminPromoCodes from "@/components/admin/AdminPromoCodes";
+import AdminNotifications from "@/components/admin/AdminNotifications";
 
 // Menu sections for organized navigation
 const menuSections = [
@@ -121,6 +125,8 @@ const menuSections = [
       { id: "upsells", name: "Upsell Offers", icon: Gift },
       { id: "bundles", name: "Product Bundles", icon: Package },
       { id: "delivery-partners", name: "Delivery Partners", icon: Building2 },
+      { id: "promo-codes", name: "Promo Codes", icon: Tag },
+      { id: "notifications", name: "Notifications", icon: Bell },
     ],
   },
   {
@@ -373,6 +379,10 @@ const Admin = () => {
         return <AdminFilterSettings />;
       case "newsletter":
         return <AdminNewsletterSubscribers />;
+      case "promo-codes":
+        return <AdminPromoCodes />;
+      case "notifications":
+        return <AdminNotifications />;
       case "settings":
         return <AdminSettings />;
       default:

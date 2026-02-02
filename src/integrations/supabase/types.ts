@@ -1959,6 +1959,51 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          image_url: string | null
+          is_global: boolean | null
+          is_read: boolean | null
+          link_url: string | null
+          message: string
+          message_bn: string | null
+          title: string
+          title_bn: string | null
+          type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_global?: boolean | null
+          is_read?: boolean | null
+          link_url?: string | null
+          message: string
+          message_bn?: string | null
+          title: string
+          title_bn?: string | null
+          type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_global?: boolean | null
+          is_read?: boolean | null
+          link_url?: string | null
+          message?: string
+          message_bn?: string | null
+          title?: string
+          title_bn?: string | null
+          type?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       order_fraud_flags: {
         Row: {
           created_at: string
@@ -2617,6 +2662,101 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      promo_code_usage: {
+        Row: {
+          discount_applied: number
+          id: string
+          order_id: string | null
+          promo_code_id: string | null
+          used_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          discount_applied: number
+          id?: string
+          order_id?: string | null
+          promo_code_id?: string | null
+          used_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          discount_applied?: number
+          id?: string
+          order_id?: string | null
+          promo_code_id?: string | null
+          used_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_code_usage_promo_code_id_fkey"
+            columns: ["promo_code_id"]
+            isOneToOne: false
+            referencedRelation: "promo_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promo_codes: {
+        Row: {
+          applicable_categories: string[] | null
+          applicable_products: string[] | null
+          code: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          discount_type: string
+          discount_value: number
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          max_discount_amount: number | null
+          min_order_amount: number | null
+          starts_at: string | null
+          updated_at: string | null
+          usage_limit: number | null
+          used_count: number | null
+        }
+        Insert: {
+          applicable_categories?: string[] | null
+          applicable_products?: string[] | null
+          code: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_discount_amount?: number | null
+          min_order_amount?: number | null
+          starts_at?: string | null
+          updated_at?: string | null
+          usage_limit?: number | null
+          used_count?: number | null
+        }
+        Update: {
+          applicable_categories?: string[] | null
+          applicable_products?: string[] | null
+          code?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_discount_amount?: number | null
+          min_order_amount?: number | null
+          starts_at?: string | null
+          updated_at?: string | null
+          usage_limit?: number | null
+          used_count?: number | null
         }
         Relationships: []
       }
