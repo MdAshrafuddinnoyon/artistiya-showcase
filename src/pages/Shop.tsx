@@ -93,6 +93,16 @@ interface ShopPageSettings {
   sales_banner_link: string | null;
 }
 
+interface FilterSettingConfig {
+  id: string;
+  filter_key: string;
+  filter_name: string;
+  filter_type: string;
+  is_active: boolean;
+  display_order: number;
+  options: Record<string, any>;
+}
+
 const Shop = () => {
   const { category: categorySlug } = useParams();
   const { t, language } = useLanguage();
@@ -104,6 +114,7 @@ const Shop = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [availableColors, setAvailableColors] = useState<ProductColor[]>([]);
   const [availableSizes, setAvailableSizes] = useState<ProductSize[]>([]);
+  const [filterConfigs, setFilterConfigs] = useState<FilterSettingConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filterOpen, setFilterOpen] = useState(false);
@@ -147,7 +158,7 @@ const Shop = () => {
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("newest");
 
-  // Fetch shop settings with realtime subscription
+  // Fetch shop settings and filter configs with realtime subscription
   useEffect(() => {
     const fetchSettings = async () => {
       // Fetch shop settings
@@ -171,13 +182,33 @@ const Shop = () => {
       if (pageData) {
         setPageSettings(pageData as any);
       }
+
+      // Fetch filter configurations
+      const { data: filterData } = await supabase
+        .from("filter_settings")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+
+      if (filterData) {
+        const configs: FilterSettingConfig[] = filterData.map((f) => ({
+          id: f.id,
+          filter_key: f.filter_key,
+          filter_name: f.filter_name,
+          filter_type: f.filter_type,
+          is_active: f.is_active ?? true,
+          display_order: f.display_order ?? 0,
+          options: (typeof f.options === "object" && f.options !== null ? f.options : {}) as Record<string, any>,
+        }));
+        setFilterConfigs(configs);
+      }
     };
     
     fetchSettings();
 
-    // Subscribe to realtime changes for shop_page_settings
+    // Subscribe to realtime changes for shop_page_settings, shop_settings, and filter_settings
     const channel = supabase
-      .channel('shop_page_settings_realtime')
+      .channel('shop_all_settings_realtime')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'shop_page_settings' },
@@ -186,6 +217,11 @@ const Shop = () => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'shop_settings' },
+        () => fetchSettings()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'filter_settings' },
         () => fetchSettings()
       )
       .subscribe();
@@ -379,86 +415,99 @@ const Shop = () => {
     await addToCart(productId);
   };
 
+  // Helper to check if a specific filter is enabled
+  const isFilterEnabled = (filterKey: string) => {
+    return filterConfigs.some((f) => f.filter_key === filterKey && f.is_active);
+  };
+
   const FilterContent = () => (
     <div className="space-y-6">
-      {/* Price Range with smooth slider */}
-      <div>
-        <h3 className="font-display text-lg mb-4">{language === "bn" ? "মূল্য সীমা" : "Price Range"}</h3>
-        <div className="space-y-4">
-          <Slider
-            value={priceRange}
-            min={shopSettings.min_price}
-            max={shopSettings.max_price}
-            step={shopSettings.price_step}
-            onValueChange={(value) => setPriceRange(value as [number, number])}
-            className="mb-2"
-          />
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex-1">
-              <Input
-                type="number"
-                value={priceRange[0]}
-                onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
-                className="text-center h-9"
-                min={shopSettings.min_price}
-                max={priceRange[1]}
-              />
+      {/* Price Range - Only show if enabled in filter_settings */}
+      {isFilterEnabled("price_range") && (
+        <div>
+          <h3 className="font-display text-lg mb-4">{language === "bn" ? "মূল্য সীমা" : "Price Range"}</h3>
+          <div className="space-y-4">
+            <Slider
+              value={priceRange}
+              min={shopSettings.min_price}
+              max={shopSettings.max_price}
+              step={shopSettings.price_step}
+              onValueChange={(value) => setPriceRange(value as [number, number])}
+              className="mb-2"
+            />
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1">
+                <Input
+                  type="number"
+                  value={priceRange[0]}
+                  onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
+                  className="text-center h-9"
+                  min={shopSettings.min_price}
+                  max={priceRange[1]}
+                />
+              </div>
+              <span className="text-muted-foreground">—</span>
+              <div className="flex-1">
+                <Input
+                  type="number"
+                  value={priceRange[1]}
+                  onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
+                  className="text-center h-9"
+                  min={priceRange[0]}
+                  max={shopSettings.max_price}
+                />
+              </div>
             </div>
-            <span className="text-muted-foreground">—</span>
-            <div className="flex-1">
-              <Input
-                type="number"
-                value={priceRange[1]}
-                onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
-                className="text-center h-9"
-                min={priceRange[0]}
-                max={shopSettings.max_price}
-              />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>৳{shopSettings.min_price.toLocaleString()}</span>
+              <span>৳{shopSettings.max_price.toLocaleString()}</span>
             </div>
           </div>
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>৳{shopSettings.min_price.toLocaleString()}</span>
-            <span>৳{shopSettings.max_price.toLocaleString()}</span>
-          </div>
         </div>
-      </div>
+      )}
 
-      {/* Quick Filters */}
-      <div className="space-y-3">
-        <h3 className="font-display text-lg mb-2">{language === "bn" ? "ফিল্টার" : "Filters"}</h3>
-        
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="preorder"
-            checked={showPreorderOnly}
-            onCheckedChange={(checked) => {
-              setShowPreorderOnly(checked as boolean);
-              if (checked) setShowShowcaseOnly(false);
-            }}
-          />
-          <label htmlFor="preorder" className="text-sm cursor-pointer">
-            {language === "bn" ? "শুধু প্রি-অর্ডার" : "Pre-order Only"}
-          </label>
+      {/* Quick Filters - Only show toggles that are enabled */}
+      {(isFilterEnabled("preorder") || isFilterEnabled("showcase")) && (
+        <div className="space-y-3">
+          <h3 className="font-display text-lg mb-2">{language === "bn" ? "ফিল্টার" : "Filters"}</h3>
+          
+          {isFilterEnabled("preorder") && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="preorder"
+                checked={showPreorderOnly}
+                onCheckedChange={(checked) => {
+                  setShowPreorderOnly(checked as boolean);
+                  if (checked) setShowShowcaseOnly(false);
+                }}
+              />
+              <label htmlFor="preorder" className="text-sm cursor-pointer">
+                {language === "bn" ? "শুধু প্রি-অর্ডার" : "Pre-order Only"}
+              </label>
+            </div>
+          )}
+
+          {isFilterEnabled("showcase") && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="showcase"
+                checked={showShowcaseOnly}
+                onCheckedChange={(checked) => {
+                  setShowShowcaseOnly(checked as boolean);
+                  if (checked) setShowPreorderOnly(false);
+                }}
+              />
+              <label htmlFor="showcase" className="text-sm cursor-pointer flex items-center gap-1">
+                <Sparkles className="h-3 w-3 text-gold" />
+                {language === "bn" ? "শোকেস পণ্য" : "Showcase Products"}
+              </label>
+            </div>
+          )}
         </div>
+      )}
 
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="showcase"
-            checked={showShowcaseOnly}
-            onCheckedChange={(checked) => {
-              setShowShowcaseOnly(checked as boolean);
-              if (checked) setShowPreorderOnly(false);
-            }}
-          />
-          <label htmlFor="showcase" className="text-sm cursor-pointer flex items-center gap-1">
-            <Sparkles className="h-3 w-3 text-gold" />
-            {language === "bn" ? "শোকেস পণ্য" : "Showcase Products"}
-          </label>
-        </div>
-      </div>
-
-      {/* Colors Filter */}
-      {availableColors.length > 0 && (
+      {/* Colors Filter - Only show if enabled and colors exist */}
+      {isFilterEnabled("colors") && availableColors.length > 0 && (
         <div>
           <h3 className="font-display text-lg mb-4">{language === "bn" ? "রং" : "Colors"}</h3>
           <div className="flex flex-wrap gap-2">
@@ -492,8 +541,8 @@ const Shop = () => {
         </div>
       )}
 
-      {/* Sizes Filter */}
-      {availableSizes.length > 0 && (
+      {/* Sizes Filter - Only show if enabled and sizes exist */}
+      {isFilterEnabled("sizes") && availableSizes.length > 0 && (
         <div>
           <h3 className="font-display text-lg mb-4">{language === "bn" ? "সাইজ" : "Sizes"}</h3>
           <div className="flex flex-wrap gap-2">
@@ -520,7 +569,7 @@ const Shop = () => {
         </div>
       )}
 
-      {/* Categories */}
+      {/* Categories - Always show */}
       <div>
         <h3 className="font-display text-lg mb-4">{language === "bn" ? "ক্যাটাগরি" : "Categories"}</h3>
         <div className="space-y-2 max-h-48 overflow-y-auto">
