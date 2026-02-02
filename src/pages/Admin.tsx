@@ -39,6 +39,7 @@ import {
   Building2,
   QrCode,
   Shield,
+  Palette as PaletteIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -95,6 +96,7 @@ import AdminProductReviews from "@/components/admin/AdminProductReviews";
 import AdminShopSettings from "@/components/admin/AdminShopSettings";
 import AdminBundles from "@/components/admin/AdminBundles";
 import AdminAbandonedCarts from "@/components/admin/AdminAbandonedCarts";
+import AdminProductVariants from "@/components/admin/AdminProductVariants";
 
 // Menu sections for organized navigation
 const menuSections = [
@@ -123,6 +125,7 @@ const menuSections = [
     title: "Catalog",
     items: [
       { id: "products", name: "Products", icon: Package },
+      { id: "product-variants", name: "Color & Size Options", icon: PaletteIcon },
       { id: "categories", name: "Categories", icon: FolderTree },
       { id: "collections", name: "Collections", icon: Layers },
     ],
@@ -276,6 +279,8 @@ const Admin = () => {
         return <AdminProducts />;
       case "categories":
         return <AdminCategories />;
+      case "product-variants":
+        return <AdminProductVariants />;
       case "media":
         return <AdminMediaManager />;
       case "blog":

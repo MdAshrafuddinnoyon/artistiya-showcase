@@ -56,6 +56,19 @@ interface Category {
   slug: string;
 }
 
+interface ProductColor {
+  id: string;
+  name: string;
+  name_bn: string | null;
+  color_code: string;
+}
+
+interface ProductSize {
+  id: string;
+  name: string;
+  name_bn: string | null;
+}
+
 interface ShopSettings {
   min_price: number;
   max_price: number;
@@ -89,6 +102,8 @@ const Shop = () => {
   
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [availableColors, setAvailableColors] = useState<ProductColor[]>([]);
+  const [availableSizes, setAvailableSizes] = useState<ProductSize[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filterOpen, setFilterOpen] = useState(false);
@@ -128,6 +143,8 @@ const Shop = () => {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000]);
   const [showPreorderOnly, setShowPreorderOnly] = useState(false);
   const [showShowcaseOnly, setShowShowcaseOnly] = useState(false);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("newest");
 
   // Fetch shop settings with realtime subscription
@@ -178,28 +195,56 @@ const Shop = () => {
     };
   }, []);
 
-  // Fetch categories with realtime subscription
+  // Fetch categories and variant options
   useEffect(() => {
-    const fetchCategories = async () => {
-      const { data, error } = await supabase
-        .from("categories")
-        .select("id, name, name_bn, slug")
-        .order("display_order", { ascending: true });
+    const fetchCategoriesAndVariants = async () => {
+      const [categoriesRes, colorsRes, sizesRes] = await Promise.all([
+        supabase
+          .from("categories")
+          .select("id, name, name_bn, slug")
+          .order("display_order", { ascending: true }),
+        supabase
+          .from("product_colors")
+          .select("id, name, name_bn, color_code")
+          .eq("is_active", true)
+          .order("display_order"),
+        supabase
+          .from("product_sizes")
+          .select("id, name, name_bn")
+          .eq("is_active", true)
+          .order("display_order"),
+      ]);
 
-      if (!error && data) {
-        setCategories(data);
+      if (!categoriesRes.error && categoriesRes.data) {
+        setCategories(categoriesRes.data);
+      }
+      if (!colorsRes.error && colorsRes.data) {
+        setAvailableColors(colorsRes.data);
+      }
+      if (!sizesRes.error && sizesRes.data) {
+        setAvailableSizes(sizesRes.data);
       }
     };
 
-    fetchCategories();
+    fetchCategoriesAndVariants();
 
     // Subscribe to realtime changes
     const channel = supabase
-      .channel('categories_shop_realtime')
+      .channel('categories_variants_realtime')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'categories' },
-        () => fetchCategories()
+        () => fetchCategoriesAndVariants()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'product_colors' },
+        () => fetchCategoriesAndVariants()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'product_sizes' },
+        () => fetchCategoriesAndVariants()
       )
       .subscribe();
 
@@ -412,6 +457,69 @@ const Shop = () => {
         </div>
       </div>
 
+      {/* Colors Filter */}
+      {availableColors.length > 0 && (
+        <div>
+          <h3 className="font-display text-lg mb-4">{language === "bn" ? "রং" : "Colors"}</h3>
+          <div className="flex flex-wrap gap-2">
+            {availableColors.map((color) => (
+              <button
+                key={color.id}
+                onClick={() => {
+                  setSelectedColors((prev) =>
+                    prev.includes(color.name)
+                      ? prev.filter((c) => c !== color.name)
+                      : [...prev, color.name]
+                  );
+                }}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
+                  selectedColors.includes(color.name)
+                    ? "border-gold bg-gold/20"
+                    : "border-border hover:border-gold/50"
+                }`}
+                title={language === "bn" && color.name_bn ? color.name_bn : color.name}
+              >
+                <div
+                  className="w-5 h-5 rounded-full border border-border shadow-inner"
+                  style={{ backgroundColor: color.color_code }}
+                />
+                <span className="text-sm">
+                  {language === "bn" && color.name_bn ? color.name_bn : color.name}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Sizes Filter */}
+      {availableSizes.length > 0 && (
+        <div>
+          <h3 className="font-display text-lg mb-4">{language === "bn" ? "সাইজ" : "Sizes"}</h3>
+          <div className="flex flex-wrap gap-2">
+            {availableSizes.map((size) => (
+              <button
+                key={size.id}
+                onClick={() => {
+                  setSelectedSizes((prev) =>
+                    prev.includes(size.name)
+                      ? prev.filter((s) => s !== size.name)
+                      : [...prev, size.name]
+                  );
+                }}
+                className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                  selectedSizes.includes(size.name)
+                    ? "border-gold bg-gold/20 text-gold"
+                    : "border-border hover:border-gold/50"
+                }`}
+              >
+                {language === "bn" && size.name_bn ? size.name_bn : size.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Categories */}
       <div>
         <h3 className="font-display text-lg mb-4">{language === "bn" ? "ক্যাটাগরি" : "Categories"}</h3>
@@ -447,6 +555,8 @@ const Shop = () => {
           setPriceRange([shopSettings.min_price, shopSettings.max_price]);
           setShowPreorderOnly(false);
           setShowShowcaseOnly(false);
+          setSelectedColors([]);
+          setSelectedSizes([]);
           setSearchQuery("");
         }}
       >
