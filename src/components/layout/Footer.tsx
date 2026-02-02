@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Instagram, Facebook, Mail, Twitter, Youtube, Linkedin, MessageCircle, Pin, Music, Globe, Phone, Send, Camera, ExternalLink } from "lucide-react";
+import { Instagram, Facebook, Mail, Twitter, Youtube, Linkedin, MessageCircle, Pin, Music, Globe, Phone, Send, Camera, ExternalLink, Loader2, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import MobileAppFooter from "@/components/mobile/MobileAppFooter";
-
+import { useToast } from "@/hooks/use-toast";
 interface SiteBranding {
   logo_url: string | null;
   logo_text: string;
@@ -77,8 +77,18 @@ const logoSizes: Record<string, string> = {
   xlarge: "h-16",
 };
 
+interface NewsletterSettings {
+  is_enabled: boolean;
+  title: string | null;
+  subtitle: string | null;
+  button_text: string | null;
+  placeholder_text: string | null;
+  success_message: string | null;
+}
+
 const Footer = () => {
   const isMobile = useIsMobile();
+  const { toast } = useToast();
   const [branding, setBranding] = useState<SiteBranding>({
     logo_url: null,
     logo_text: "artistiya",
@@ -102,6 +112,17 @@ const Footer = () => {
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
   const [linkGroups, setLinkGroups] = useState<FooterLinkGroup[]>([]);
   const [links, setLinks] = useState<FooterLink[]>([]);
+  const [newsletterSettings, setNewsletterSettings] = useState<NewsletterSettings>({
+    is_enabled: true,
+    title: "Join Our Artistic Journey",
+    subtitle: "Subscribe to receive updates on new collections and exclusive offers",
+    button_text: "Subscribe",
+    placeholder_text: "Enter your email",
+    success_message: "Thank you for subscribing!",
+  });
+  const [email, setEmail] = useState("");
+  const [subscribing, setSubscribing] = useState(false);
+  const [subscribed, setSubscribed] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -120,6 +141,9 @@ const Footer = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'social_links' }, () => {
         fetchData();
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'newsletter_settings' }, () => {
+        fetchData();
+      })
       .subscribe();
 
     return () => {
@@ -129,11 +153,12 @@ const Footer = () => {
 
   const fetchData = async () => {
     try {
-      const [brandingRes, groupsRes, linksRes, socialRes] = await Promise.all([
+      const [brandingRes, groupsRes, linksRes, socialRes, newsletterRes] = await Promise.all([
         supabase.from("site_branding").select("*").single(),
         supabase.from("footer_link_groups").select("*").eq("is_active", true).order("display_order"),
         supabase.from("footer_links").select("*").eq("is_active", true).order("display_order"),
         supabase.from("social_links").select("*").eq("is_active", true).order("display_order"),
+        supabase.from("newsletter_settings").select("*").single(),
       ]);
 
       if (brandingRes.data) {
@@ -156,8 +181,67 @@ const Footer = () => {
       if (groupsRes.data) setLinkGroups(groupsRes.data);
       if (linksRes.data) setLinks(linksRes.data);
       if (socialRes.data) setSocialLinks(socialRes.data);
+      if (newsletterRes.data) {
+        setNewsletterSettings({
+          is_enabled: newsletterRes.data.is_enabled ?? true,
+          title: newsletterRes.data.title,
+          subtitle: newsletterRes.data.subtitle,
+          button_text: newsletterRes.data.button_text,
+          placeholder_text: newsletterRes.data.placeholder_text,
+          success_message: newsletterRes.data.success_message,
+        });
+      }
     } catch (error) {
       console.error("Error fetching footer data:", error);
+    }
+  };
+
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !email.includes("@")) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSubscribing(true);
+    
+    try {
+      const { error } = await supabase.from("newsletter_subscribers").insert({
+        email: email.toLowerCase().trim(),
+        source: "footer",
+      });
+
+      if (error) {
+        if (error.code === "23505") {
+          toast({
+            title: "Already Subscribed",
+            description: "This email is already subscribed to our newsletter",
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        setSubscribed(true);
+        setEmail("");
+        toast({
+          title: "Success!",
+          description: newsletterSettings.success_message || "Thank you for subscribing!",
+        });
+      }
+    } catch (error) {
+      console.error("Newsletter subscription error:", error);
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubscribing(false);
     }
   };
 
@@ -244,33 +328,57 @@ const Footer = () => {
       )}
 
       {/* Newsletter Section */}
-      <div className="border-b border-border">
-        <div className="container mx-auto px-4 lg:px-8 py-16">
-          <div className="max-w-2xl mx-auto text-center">
-            <motion.h3
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="font-display text-3xl md:text-4xl text-foreground mb-4"
-            >
-              Join Our Artistic Journey
-            </motion.h3>
-            <p className="text-muted-foreground mb-8">
-              Subscribe to receive updates on new collections and exclusive offers
-            </p>
-            <form className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-              <Input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1 bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-gold"
-              />
-              <Button variant="gold" className="px-8">
-                Subscribe
-              </Button>
-            </form>
+      {newsletterSettings.is_enabled && (
+        <div className="border-b border-border">
+          <div className="container mx-auto px-4 lg:px-8 py-16">
+            <div className="max-w-2xl mx-auto text-center">
+              <motion.h3
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="font-display text-3xl md:text-4xl text-foreground mb-4"
+              >
+                {newsletterSettings.title || "Join Our Artistic Journey"}
+              </motion.h3>
+              <p className="text-muted-foreground mb-8">
+                {newsletterSettings.subtitle || "Subscribe to receive updates on new collections and exclusive offers"}
+              </p>
+              
+              {subscribed ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="flex items-center justify-center gap-2 text-green-500"
+                >
+                  <CheckCircle className="h-6 w-6" />
+                  <span className="text-lg font-medium">
+                    {newsletterSettings.success_message || "Thank you for subscribing!"}
+                  </span>
+                </motion.div>
+              ) : (
+                <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={newsletterSettings.placeholder_text || "Enter your email"}
+                    className="flex-1 bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-gold"
+                    disabled={subscribing}
+                    required
+                  />
+                  <Button variant="gold" className="px-8" disabled={subscribing}>
+                    {subscribing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      newsletterSettings.button_text || "Subscribe"
+                    )}
+                  </Button>
+                </form>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Main Footer */}
       <div className="container mx-auto px-4 lg:px-8 py-16">

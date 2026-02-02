@@ -21,9 +21,12 @@ const MobileAppFooter = ({ branding }: MobileAppFooterProps) => {
           <QuickLink href="/about" label="About Us" />
           <QuickLink href="/contact" label="Contact" />
           <QuickLink href="/faq" label="FAQs" />
+          <QuickLink href="/blog" label="Blog" />
           <QuickLink href="/track" label="Track Order" />
+          <QuickLink href="/gallery" label="Gallery" />
           <QuickLink href="/terms" label="Terms" />
           <QuickLink href="/privacy" label="Privacy" />
+          <QuickLink href="/collections" label="Collections" />
         </div>
       </div>
 
