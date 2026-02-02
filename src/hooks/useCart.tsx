@@ -260,9 +260,43 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       safeWriteGuestCart(guestEntries);
       toast.success("Added to cart");
       await fetchCart();
+      
+      // Track as abandoned cart for marketing
+      await trackAbandonedCart(guestEntries);
     } catch (error) {
       console.error("Error adding to cart:", error);
       toast.error("Failed to add to cart");
+    }
+  };
+
+  const trackAbandonedCart = async (cartEntries: GuestCartEntry[]) => {
+    try {
+      // Only track for guest users with items
+      if (user || cartEntries.length === 0) return;
+
+      const productIds = cartEntries.map((e) => e.product_id);
+      const { data: products } = await supabase
+        .from("products")
+        .select("id, price")
+        .in("id", productIds);
+
+      const cartTotal = cartEntries.reduce((sum, entry) => {
+        const product = products?.find((p) => p.id === entry.product_id);
+        return sum + (product?.price || 0) * entry.quantity;
+      }, 0);
+
+      // Upsert abandoned cart
+      await supabase.from("abandoned_carts").upsert(
+        {
+          cart_data: cartEntries,
+          cart_total: cartTotal,
+          last_activity_at: new Date().toISOString(),
+        },
+        { onConflict: "id", ignoreDuplicates: false }
+      );
+    } catch (error) {
+      // Silent fail - don't interrupt user experience
+      console.error("Error tracking abandoned cart:", error);
     }
   };
 
