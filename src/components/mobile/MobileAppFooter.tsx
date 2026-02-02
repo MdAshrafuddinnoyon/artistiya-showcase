@@ -137,7 +137,7 @@ const MobileAppFooter = () => {
       ]);
 
       if (brandingRes.data) {
-        const paymentMethodsArray = Array.isArray(brandingRes.data.payment_methods) 
+        const paymentMethodsArray = Array.isArray(brandingRes.data.payment_methods) && brandingRes.data.payment_methods.length > 0
           ? brandingRes.data.payment_methods as string[]
           : ["bKash", "Nagad", "Visa", "Mastercard", "COD"];
         
