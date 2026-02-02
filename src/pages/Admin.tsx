@@ -391,15 +391,18 @@ const Admin = () => {
         <div className="p-4 border-b border-border flex items-center justify-between">
           {(sidebarOpen || mobileSidebarOpen) && (
             <Link to="/" className="flex items-center gap-2">
-              {branding?.logo_url && (
+              {/* Show logo image if available and text is disabled */}
+              {branding?.logo_url && !branding?.show_logo_text && (
                 <img src={branding.logo_url} alt="Logo" className="h-8 w-auto" />
               )}
+              {/* Show logo text if enabled (takes priority) */}
               {branding?.show_logo_text && (
                 <span className="font-display text-xl">
                   <span className="text-gold">{branding?.logo_text || "artistiya"}</span>
                   <span className="text-foreground">{branding?.logo_text_secondary || ".store"}</span>
                 </span>
               )}
+              {/* Fallback: show default text when neither logo nor text is configured */}
               {!branding?.logo_url && !branding?.show_logo_text && (
                 <span className="font-display text-xl">
                   <span className="text-gold">artistiya</span>
