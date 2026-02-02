@@ -1872,6 +1872,84 @@ export type Database = {
           },
         ]
       }
+      newsletter_settings: {
+        Row: {
+          button_text: string | null
+          button_text_bn: string | null
+          created_at: string
+          id: string
+          is_enabled: boolean | null
+          placeholder_text: string | null
+          subtitle: string | null
+          subtitle_bn: string | null
+          success_message: string | null
+          title: string | null
+          title_bn: string | null
+          updated_at: string
+        }
+        Insert: {
+          button_text?: string | null
+          button_text_bn?: string | null
+          created_at?: string
+          id?: string
+          is_enabled?: boolean | null
+          placeholder_text?: string | null
+          subtitle?: string | null
+          subtitle_bn?: string | null
+          success_message?: string | null
+          title?: string | null
+          title_bn?: string | null
+          updated_at?: string
+        }
+        Update: {
+          button_text?: string | null
+          button_text_bn?: string | null
+          created_at?: string
+          id?: string
+          is_enabled?: boolean | null
+          placeholder_text?: string | null
+          subtitle?: string | null
+          subtitle_bn?: string | null
+          success_message?: string | null
+          title?: string | null
+          title_bn?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      newsletter_subscribers: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          is_active: boolean | null
+          source: string | null
+          subscribed_at: string | null
+          unsubscribed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          source?: string | null
+          subscribed_at?: string | null
+          unsubscribed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          source?: string | null
+          subscribed_at?: string | null
+          unsubscribed_at?: string | null
+        }
+        Relationships: []
+      }
       order_fraud_flags: {
         Row: {
           created_at: string

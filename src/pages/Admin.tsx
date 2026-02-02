@@ -97,6 +97,7 @@ import AdminShopSettings from "@/components/admin/AdminShopSettings";
 import AdminBundles from "@/components/admin/AdminBundles";
 import AdminAbandonedCarts from "@/components/admin/AdminAbandonedCarts";
 import AdminProductVariants from "@/components/admin/AdminProductVariants";
+import AdminNewsletterSubscribers from "@/components/admin/AdminNewsletterSubscribers";
 
 // Menu sections for organized navigation
 const menuSections = [
@@ -176,6 +177,7 @@ const menuSections = [
       { id: "delivery-zones", name: "Delivery Zones", icon: Truck },
       { id: "currency", name: "Currency", icon: DollarSign },
       { id: "email-settings", name: "Email Settings", icon: Mail },
+      { id: "newsletter", name: "Newsletter", icon: Mail },
       { id: "email-templates", name: "Email Templates", icon: Mail },
       { id: "invoice", name: "Invoice", icon: Receipt },
       { id: "qr-settings", name: "QR Code Discount", icon: QrCode },
@@ -365,6 +367,8 @@ const Admin = () => {
         return <AdminProductReviews />;
       case "shop-settings":
         return <AdminShopSettings />;
+      case "newsletter":
+        return <AdminNewsletterSubscribers />;
       case "settings":
         return <AdminSettings />;
       default:
