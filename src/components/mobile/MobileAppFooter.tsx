@@ -12,6 +12,13 @@ interface SiteBranding {
   logo_text: string;
   logo_text_secondary: string;
   footer_description: string;
+  footer_banner_url: string | null;
+  footer_banner_link: string | null;
+  footer_banner_height: number;
+  footer_left_logo_url: string | null;
+  footer_left_logo_link: string | null;
+  footer_right_logo_url: string | null;
+  footer_right_logo_link: string | null;
   social_instagram: string;
   social_facebook: string;
   social_email: string;
@@ -73,6 +80,13 @@ const MobileAppFooter = () => {
     logo_text: "artistiya",
     logo_text_secondary: ".store",
     footer_description: "Where every piece tells a story of tradition, artistry, and elegance.",
+    footer_banner_url: null,
+    footer_banner_link: null,
+    footer_banner_height: 60,
+    footer_left_logo_url: null,
+    footer_left_logo_link: null,
+    footer_right_logo_url: null,
+    footer_right_logo_link: null,
     social_instagram: "",
     social_facebook: "",
     social_email: "",
@@ -233,6 +247,29 @@ const MobileAppFooter = () => {
 
   return (
     <footer className="md:hidden bg-charcoal border-t border-border pb-20">
+      {/* Footer Banner */}
+      {branding.footer_banner_url && (
+        <div className="border-b border-border">
+          {branding.footer_banner_link ? (
+            <Link to={branding.footer_banner_link}>
+              <img 
+                src={branding.footer_banner_url} 
+                alt="Banner"
+                className="w-full object-cover"
+                style={{ height: `${branding.footer_banner_height || 60}px` }}
+              />
+            </Link>
+          ) : (
+            <img 
+              src={branding.footer_banner_url} 
+              alt="Banner"
+              className="w-full object-cover"
+              style={{ height: `${branding.footer_banner_height || 60}px` }}
+            />
+          )}
+        </div>
+      )}
+
       {/* Newsletter Section */}
       {newsletterSettings.is_enabled && (
         <div className="px-4 py-6 border-b border-border">
@@ -386,6 +423,30 @@ const MobileAppFooter = () => {
           )}
         </div>
       </div>
+
+      {/* Partner Logos */}
+      {(branding.footer_left_logo_url || branding.footer_right_logo_url) && (
+        <div className="px-4 py-3 border-b border-border flex justify-center items-center gap-6">
+          {branding.footer_left_logo_url && (
+            branding.footer_left_logo_link ? (
+              <a href={branding.footer_left_logo_link} target="_blank" rel="noopener noreferrer">
+                <img src={branding.footer_left_logo_url} alt="Partner" className="h-6 w-auto opacity-70 hover:opacity-100 transition-opacity" />
+              </a>
+            ) : (
+              <img src={branding.footer_left_logo_url} alt="Partner" className="h-6 w-auto opacity-70" />
+            )
+          )}
+          {branding.footer_right_logo_url && (
+            branding.footer_right_logo_link ? (
+              <a href={branding.footer_right_logo_link} target="_blank" rel="noopener noreferrer">
+                <img src={branding.footer_right_logo_url} alt="Partner" className="h-6 w-auto opacity-70 hover:opacity-100 transition-opacity" />
+              </a>
+            ) : (
+              <img src={branding.footer_right_logo_url} alt="Partner" className="h-6 w-auto opacity-70" />
+            )
+          )}
+        </div>
+      )}
 
       {/* Payment Methods - Dynamic */}
       <div className="px-4 py-3 border-b border-border">
