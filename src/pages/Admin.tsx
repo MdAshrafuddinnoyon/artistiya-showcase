@@ -93,6 +93,7 @@ import AdminQRSettings from "@/components/admin/AdminQRSettings";
 import AdminFraudSettings from "@/components/admin/AdminFraudSettings";
 import AdminProductReviews from "@/components/admin/AdminProductReviews";
 import AdminShopSettings from "@/components/admin/AdminShopSettings";
+import AdminBundles from "@/components/admin/AdminBundles";
 
 // Menu sections for organized navigation
 const menuSections = [
@@ -112,6 +113,7 @@ const menuSections = [
       { id: "product-reviews", name: "Product Reviews", icon: MessageSquare },
       { id: "fraud-settings", name: "Fraud & Security", icon: Shield },
       { id: "upsells", name: "Upsell Offers", icon: Gift },
+      { id: "bundles", name: "Product Bundles", icon: Package },
       { id: "delivery-partners", name: "Delivery Partners", icon: Building2 },
     ],
   },
@@ -332,6 +334,8 @@ const Admin = () => {
         return <AdminFooterLinks />;
       case "upsells":
         return <AdminUpsellOffers />;
+      case "bundles":
+        return <AdminBundles />;
       case "delivery-partners":
         return <AdminDeliveryPartners />;
       case "checkout":

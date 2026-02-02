@@ -13,6 +13,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import WhatsAppOrderButton from "@/components/common/WhatsAppOrderButton";
 import CheckoutOffersSidebar from "@/components/checkout/CheckoutOffersSidebar";
+import SignupDiscountBanner from "@/components/checkout/SignupDiscountBanner";
 import MobileCheckout from "@/components/mobile/MobileCheckout";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
@@ -315,25 +316,11 @@ const Checkout = () => {
             Checkout
           </h1>
 
-          {/* Guest Checkout Notice */}
+          {/* Guest Checkout Notice with 5% Discount Incentive */}
           {!user && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="max-w-3xl mx-auto mb-4 md:mb-6 p-3 md:p-4 bg-muted rounded-lg flex items-center justify-between"
-            >
-              <div className="flex items-center gap-2 md:gap-3">
-                <User className="h-4 w-4 md:h-5 md:w-5 text-gold" />
-                <span className="text-xs md:text-sm">
-                  Ordering as Guest
-                </span>
-              </div>
-              <Link to="/auth">
-                <Button variant="link" size="sm" className="text-gold text-xs md:text-sm">
-                  Login
-                </Button>
-              </Link>
-            </motion.div>
+            <div className="max-w-3xl mx-auto mb-6 space-y-4">
+              <SignupDiscountBanner discountPercent={5} />
+            </div>
           )}
 
           <form onSubmit={handleSubmit}>
