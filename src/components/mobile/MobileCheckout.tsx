@@ -3,7 +3,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
   ChevronLeft, MapPin, Phone, Truck, Store, 
-  CreditCard, Wallet, User, Loader2, Navigation 
+  CreditCard, Wallet, User, Loader2, Navigation,
+  Gift, UserPlus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
+import { useLanguage } from "@/hooks/useLanguage";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { divisions, calculateShippingCost, getDistrictsByDivision, getThanasByDistrict } from "@/data/bangladeshLocations";
@@ -20,6 +22,7 @@ import { useGeolocation, useShippingCost } from "@/hooks/useGeolocation";
 const MobileCheckout = () => {
   const { user } = useAuth();
   const { items, subtotal, clearCart } = useCart();
+  const { language } = useLanguage();
   const navigate = useNavigate();
   const { loading: geoLoading, detectLocation } = useGeolocation();
   const { getShippingCost } = useShippingCost();
@@ -224,19 +227,39 @@ const MobileCheckout = () => {
           ))}
         </div>
 
-        {/* Guest Notice */}
+        {/* Guest Discount Banner */}
         {!user && (
-          <div className="p-4 bg-muted/50 border-b border-border">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-gold" />
-                <span className="text-sm">Ordering as Guest</span>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="p-4 bg-gradient-to-r from-gold/20 via-gold/10 to-gold/20 border-b border-gold/30"
+          >
+            <div className="flex items-start gap-3">
+              <div className="h-9 w-9 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
+                <Gift className="h-4 w-4 text-gold" />
               </div>
-              <Link to="/auth" className="text-gold text-sm font-medium">
-                Login
+              <div className="flex-1">
+                <h3 className={`font-semibold text-sm text-foreground ${language === "bn" ? "font-bengali" : ""}`}>
+                  {language === "bn" 
+                    ? "একাউন্ট তৈরি করে ৫% ডিসকাউন্ট পান!" 
+                    : "Get 5% OFF with an account!"}
+                </h3>
+                <p className={`text-xs text-muted-foreground mt-0.5 ${language === "bn" ? "font-bengali" : ""}`}>
+                  {language === "bn"
+                    ? "একাউন্ট তৈরি করলে ডিসকাউন্ট এবং অর্ডার ট্র্যাকিং পাবেন।"
+                    : "Create an account for discounts & order tracking."}
+                </p>
+              </div>
+              <Link to="/auth?redirect=/checkout">
+                <Button variant="gold" size="sm" className="h-8 px-3">
+                  <UserPlus className="h-3.5 w-3.5 mr-1" />
+                  <span className={`text-xs ${language === "bn" ? "font-bengali" : ""}`}>
+                    {language === "bn" ? "তৈরি করুন" : "Sign Up"}
+                  </span>
+                </Button>
               </Link>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Contact Info */}
