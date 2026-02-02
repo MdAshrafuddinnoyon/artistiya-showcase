@@ -26,6 +26,7 @@ import BulkSelectionToolbar from "./BulkSelectionToolbar";
 import RichTextEditor from "./RichTextEditor";
 import AdminBlogCategories from "./AdminBlogCategories";
 import AdminBlogSettings from "./AdminBlogSettings";
+import ImageUploadZone from "./ImageUploadZone";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -539,20 +540,17 @@ const AdminBlogPosts = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="featured_image">Featured Image URL</Label>
-                    <Input
-                      id="featured_image"
+                    <ImageUploadZone
                       value={formData.featured_image}
-                      onChange={(e) => setFormData({ ...formData, featured_image: e.target.value })}
-                      placeholder="https://..."
+                      onChange={(url) => setFormData({ ...formData, featured_image: url })}
+                      onRemove={() => setFormData({ ...formData, featured_image: "" })}
+                      label="Featured Image"
+                      bucket="media"
+                      folder="blog"
+                      aspectRatio="video"
+                      showUrlInput={true}
+                      placeholder="Upload or select blog featured image"
                     />
-                    {formData.featured_image && (
-                      <img 
-                        src={formData.featured_image} 
-                        alt="Preview" 
-                        className="mt-2 h-32 w-auto rounded-lg object-cover"
-                      />
-                    )}
                   </div>
 
                   <div className="flex items-center gap-6">
