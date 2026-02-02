@@ -14,6 +14,8 @@ import {
   TrendingUp,
   Users,
   Building2,
+  ShoppingCart,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +47,10 @@ interface CRMStats {
   totalRevenue: number;
   pendingPayments: number;
   receivedPayments: number;
+  totalCustomers: number;
+  newCustomersThisPeriod: number;
+  abandonedCarts: number;
+  abandonedValue: number;
 }
 
 interface DeliveryPartnerStats {
@@ -67,6 +73,10 @@ const AdminCRM = () => {
     totalRevenue: 0,
     pendingPayments: 0,
     receivedPayments: 0,
+    totalCustomers: 0,
+    newCustomersThisPeriod: 0,
+    abandonedCarts: 0,
+    abandonedValue: 0,
   });
   const [partnerStats, setPartnerStats] = useState<DeliveryPartnerStats[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
@@ -117,6 +127,25 @@ const AdminCRM = () => {
         .filter((o) => o.partner_payment_status === "received")
         .reduce((sum, o) => sum + (o.partner_payment_amount || 0), 0);
 
+      // Fetch customer stats
+      const { data: customersData } = await supabase
+        .from("customers")
+        .select("id, created_at");
+      
+      const totalCustomers = customersData?.length || 0;
+      const newCustomersThisPeriod = customersData?.filter(
+        (c) => new Date(c.created_at) >= new Date(`${dateFrom}T00:00:00`)
+      ).length || 0;
+
+      // Fetch abandoned cart stats
+      const { data: abandonedData } = await supabase
+        .from("abandoned_carts")
+        .select("id, cart_total, is_recovered")
+        .eq("is_recovered", false);
+      
+      const abandonedCarts = abandonedData?.length || 0;
+      const abandonedValue = abandonedData?.reduce((sum, c) => sum + (c.cart_total || 0), 0) || 0;
+
       setStats({
         totalOrders: allOrders.length,
         deliveredOrders: delivered.length,
@@ -126,6 +155,10 @@ const AdminCRM = () => {
         totalRevenue,
         pendingPayments,
         receivedPayments,
+        totalCustomers,
+        newCustomersThisPeriod,
+        abandonedCarts,
+        abandonedValue,
       });
 
       // Calculate partner stats
@@ -283,6 +316,20 @@ const AdminCRM = () => {
       color: "text-gold",
       bg: "bg-gold/10",
     },
+    {
+      title: "Customers",
+      value: stats.totalCustomers,
+      icon: Users,
+      color: "text-purple-500",
+      bg: "bg-purple-500/10",
+    },
+    {
+      title: "Abandoned",
+      value: stats.abandonedCarts,
+      icon: ShoppingCart,
+      color: "text-orange-500",
+      bg: "bg-orange-500/10",
+    },
   ];
 
   if (loading) {
@@ -348,7 +395,7 @@ const AdminCRM = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
         {statCards.map((stat, index) => (
           <motion.div
             key={stat.title}
@@ -372,6 +419,7 @@ const AdminCRM = () => {
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="customers">Customers</TabsTrigger>
           <TabsTrigger value="partners">Delivery Partners</TabsTrigger>
           <TabsTrigger value="payments">Payments</TabsTrigger>
         </TabsList>
@@ -440,6 +488,63 @@ const AdminCRM = () => {
                       width: `${
                         stats.totalOrders > 0
                           ? (stats.deliveredOrders / stats.totalOrders) * 100
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="customers">
+          <Card>
+            <CardHeader>
+              <CardTitle>Customer Insights</CardTitle>
+              <CardDescription>Customer growth and retention metrics</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 text-center">
+                  <Users className="h-6 w-6 text-purple-500 mx-auto mb-2" />
+                  <p className="text-2xl font-bold text-purple-500">{stats.totalCustomers}</p>
+                  <p className="text-xs text-muted-foreground">Total Customers</p>
+                </div>
+                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 text-center">
+                  <UserPlus className="h-6 w-6 text-green-500 mx-auto mb-2" />
+                  <p className="text-2xl font-bold text-green-500">{stats.newCustomersThisPeriod}</p>
+                  <p className="text-xs text-muted-foreground">New This Period</p>
+                </div>
+                <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4 text-center">
+                  <ShoppingCart className="h-6 w-6 text-orange-500 mx-auto mb-2" />
+                  <p className="text-2xl font-bold text-orange-500">{stats.abandonedCarts}</p>
+                  <p className="text-xs text-muted-foreground">Abandoned Carts</p>
+                </div>
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-center">
+                  <DollarSign className="h-6 w-6 text-red-500 mx-auto mb-2" />
+                  <p className="text-2xl font-bold text-red-500">৳{stats.abandonedValue.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">Lost Revenue</p>
+                </div>
+              </div>
+
+              {/* Customer Retention Rate */}
+              <div className="bg-muted/50 rounded-lg p-4">
+                <div className="flex justify-between text-sm mb-2">
+                  <span>Customer Acquisition Rate</span>
+                  <span className="font-medium">
+                    {stats.totalCustomers > 0
+                      ? Math.round((stats.newCustomersThisPeriod / stats.totalCustomers) * 100)
+                      : 0}%
+                  </span>
+                </div>
+                <div className="h-3 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-purple-500 transition-all"
+                    style={{
+                      width: `${
+                        stats.totalCustomers > 0
+                          ? (stats.newCustomersThisPeriod / stats.totalCustomers) * 100
                           : 0
                       }%`,
                     }}

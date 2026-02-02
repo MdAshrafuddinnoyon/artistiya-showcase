@@ -94,6 +94,7 @@ import AdminFraudSettings from "@/components/admin/AdminFraudSettings";
 import AdminProductReviews from "@/components/admin/AdminProductReviews";
 import AdminShopSettings from "@/components/admin/AdminShopSettings";
 import AdminBundles from "@/components/admin/AdminBundles";
+import AdminAbandonedCarts from "@/components/admin/AdminAbandonedCarts";
 
 // Menu sections for organized navigation
 const menuSections = [
@@ -110,6 +111,7 @@ const menuSections = [
       { id: "crm", name: "CRM Dashboard", icon: BarChart3 },
       { id: "leads", name: "Leads", icon: Users },
       { id: "customers", name: "Customers", icon: Users },
+      { id: "abandoned-carts", name: "Abandoned Carts", icon: ShoppingCart },
       { id: "product-reviews", name: "Product Reviews", icon: MessageSquare },
       { id: "fraud-settings", name: "Fraud & Security", icon: Shield },
       { id: "upsells", name: "Upsell Offers", icon: Gift },
@@ -284,6 +286,8 @@ const Admin = () => {
         return <AdminLeads />;
       case "customers":
         return <AdminCustomers />;
+      case "abandoned-carts":
+        return <AdminAbandonedCarts />;
       case "announcement":
         return <AdminAnnouncementBar />;
       case "marketing":

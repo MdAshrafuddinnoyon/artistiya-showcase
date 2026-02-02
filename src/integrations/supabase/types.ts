@@ -14,6 +14,59 @@ export type Database = {
   }
   public: {
     Tables: {
+      abandoned_carts: {
+        Row: {
+          cart_data: Json | null
+          cart_total: number | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          is_recovered: boolean | null
+          last_activity_at: string | null
+          phone: string | null
+          recovered_order_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          cart_data?: Json | null
+          cart_total?: number | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          is_recovered?: boolean | null
+          last_activity_at?: string | null
+          phone?: string | null
+          recovered_order_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          cart_data?: Json | null
+          cart_total?: number | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          is_recovered?: boolean | null
+          last_activity_at?: string | null
+          phone?: string | null
+          recovered_order_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "abandoned_carts_recovered_order_id_fkey"
+            columns: ["recovered_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       addresses: {
         Row: {
           address_line: string
