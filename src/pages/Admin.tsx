@@ -98,6 +98,7 @@ import AdminBundles from "@/components/admin/AdminBundles";
 import AdminAbandonedCarts from "@/components/admin/AdminAbandonedCarts";
 import AdminProductVariants from "@/components/admin/AdminProductVariants";
 import AdminNewsletterSubscribers from "@/components/admin/AdminNewsletterSubscribers";
+import AdminFilterSettings from "@/components/admin/AdminFilterSettings";
 
 // Menu sections for organized navigation
 const menuSections = [
@@ -171,6 +172,7 @@ const menuSections = [
     title: "Settings",
     items: [
       { id: "shop-settings", name: "Shop Page", icon: ShoppingBag },
+      { id: "filter-settings", name: "Filter Management", icon: Sliders },
       { id: "checkout", name: "Checkout", icon: ShoppingBag },
       { id: "payments", name: "Payments", icon: CreditCard },
       { id: "delivery", name: "Delivery Providers", icon: Truck },
@@ -367,6 +369,8 @@ const Admin = () => {
         return <AdminProductReviews />;
       case "shop-settings":
         return <AdminShopSettings />;
+      case "filter-settings":
+        return <AdminFilterSettings />;
       case "newsletter":
         return <AdminNewsletterSubscribers />;
       case "settings":
