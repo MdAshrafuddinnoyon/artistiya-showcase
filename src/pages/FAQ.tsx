@@ -108,15 +108,15 @@ const FAQ = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center max-w-2xl mx-auto mb-12"
+            className="text-center max-w-2xl mx-auto mb-8 md:mb-12"
           >
-            <span className="text-gold text-sm tracking-[0.3em] uppercase font-body">
+            <span className="text-gold text-[10px] md:text-sm tracking-[0.2em] md:tracking-[0.3em] uppercase font-body">
               {language === "bn" ? "সাহায্য কেন্দ্র" : "Help Center"}
             </span>
-            <h1 className={`font-display text-4xl md:text-5xl text-foreground mt-4 mb-4 ${language === "bn" ? "font-bengali" : ""}`}>
+            <h1 className={`font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-foreground mt-2 md:mt-4 mb-2 md:mb-4 ${language === "bn" ? "font-bengali" : ""}`}>
               {language === "bn" ? "সচরাচর জিজ্ঞাসা" : "Frequently Asked Questions"}
             </h1>
-            <p className={`text-muted-foreground ${language === "bn" ? "font-bengali" : ""}`}>
+            <p className={`text-muted-foreground text-sm md:text-base ${language === "bn" ? "font-bengali" : ""}`}>
               {language === "bn" 
                 ? "আমাদের পণ্য, অর্ডার এবং সেবা সম্পর্কে সাধারণ প্রশ্নের উত্তর খুঁজুন।"
                 : "Find answers to common questions about our products, orders, and services."}

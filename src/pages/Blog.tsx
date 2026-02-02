@@ -101,18 +101,19 @@ const Blog = () => {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="container mx-auto px-4 py-12">
-        {/* Hero */}
-        <div className="text-center mb-12">
-          <h1 className="font-display text-3xl md:text-4xl text-foreground mb-4">
-            {language === "bn" ? "ব্লগ" : "Our Blog"}
-          </h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            {language === "bn"
-              ? "আমাদের সাম্প্রতিক খবর, গল্প এবং অন্তর্দৃষ্টি পড়ুন"
-              : "Read our latest news, stories, and insights"}
-          </p>
-        </div>
+      <main className="pt-20 md:pt-24">
+        <div className="container mx-auto px-4 py-8 md:py-12">
+          {/* Hero */}
+          <div className="text-center mb-6 md:mb-12">
+            <h1 className="font-display text-2xl sm:text-3xl md:text-4xl text-foreground mb-2 md:mb-4">
+              {language === "bn" ? "ব্লগ" : "Our Blog"}
+            </h1>
+            <p className="text-muted-foreground text-sm md:text-base max-w-2xl mx-auto">
+              {language === "bn"
+                ? "আমাদের সাম্প্রতিক খবর, গল্প এবং অন্তর্দৃষ্টি পড়ুন"
+                : "Read our latest news, stories, and insights"}
+            </p>
+          </div>
 
         {/* Search & Filter */}
         <div className="flex flex-col md:flex-row gap-4 mb-8">
@@ -269,6 +270,7 @@ const Blog = () => {
             </div>
           </>
         )}
+        </div>
       </main>
 
       <Footer />

@@ -175,12 +175,12 @@ const Collections = () => {
       <div className="min-h-screen bg-background">
         <Header />
         
-        <main className="pt-32 pb-24">
+        <main className="pt-20 md:pt-32 pb-24">
           <div className="container mx-auto px-4 lg:px-8">
             {/* Back Link */}
             <Link 
               to="/collections" 
-              className="inline-flex items-center text-muted-foreground hover:text-gold mb-8 transition-colors"
+              className="inline-flex items-center text-sm text-muted-foreground hover:text-gold mb-4 md:mb-8 transition-colors"
             >
               ← {language === "bn" ? "সব কালেকশন" : "All Collections"}
             </Link>
@@ -190,16 +190,16 @@ const Collections = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="text-center mb-12"
+              className="text-center mb-6 md:mb-12"
             >
-              <span className="text-gold text-sm tracking-[0.3em] uppercase font-body">
+              <span className="text-gold text-[10px] md:text-sm tracking-[0.2em] md:tracking-[0.3em] uppercase font-body">
                 {language === "bn" ? "কালেকশন" : "Collection"}
               </span>
-              <h1 className={`font-display text-5xl md:text-6xl text-foreground mt-4 ${language === "bn" ? "font-bengali" : ""}`}>
+              <h1 className={`font-display text-2xl sm:text-3xl md:text-5xl lg:text-6xl text-foreground mt-2 md:mt-4 ${language === "bn" ? "font-bengali" : ""}`}>
                 {getCategoryName(selectedCategory)}
               </h1>
               {selectedCategory.description && (
-                <p className="text-muted-foreground mt-4 max-w-2xl mx-auto">
+                <p className="text-muted-foreground text-sm md:text-base mt-2 md:mt-4 max-w-2xl mx-auto">
                   {selectedCategory.description}
                 </p>
               )}
@@ -315,19 +315,19 @@ const Collections = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="pt-32 pb-24">
+      <main className="pt-20 md:pt-32 pb-24">
         <div className="container mx-auto px-4 lg:px-8">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-16"
+            className="text-center mb-8 md:mb-16"
           >
-            <span className={`text-gold text-sm tracking-[0.3em] uppercase font-body ${language === "bn" ? "font-bengali" : ""}`}>
+            <span className={`text-gold text-[10px] md:text-sm tracking-[0.2em] md:tracking-[0.3em] uppercase font-body ${language === "bn" ? "font-bengali" : ""}`}>
               {language === "bn" ? "আপনার জন্য বাছাই করা" : "Curated For You"}
             </span>
-            <h1 className={`font-display text-5xl md:text-6xl text-foreground mt-4 ${language === "bn" ? "font-bengali" : ""}`}>
+            <h1 className={`font-display text-2xl sm:text-3xl md:text-5xl lg:text-6xl text-foreground mt-2 md:mt-4 ${language === "bn" ? "font-bengali" : ""}`}>
               {language === "bn" ? "আমাদের " : "Our "}
               <span className="text-gold">{language === "bn" ? "কালেকশন" : "Collections"}</span>
             </h1>
@@ -335,7 +335,7 @@ const Collections = () => {
 
           {/* Collections Grid */}
           {loading ? (
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-8">
               {[...Array(6)].map((_, i) => (
                 <div key={i} className="animate-pulse">
                   <div className="aspect-[3/4] bg-muted rounded-lg" />
@@ -343,7 +343,7 @@ const Collections = () => {
               ))}
             </div>
           ) : (
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-8">
               {categories.map((category, index) => (
                 <motion.div
                   key={category.id}
@@ -362,19 +362,19 @@ const Collections = () => {
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-charcoal-deep via-charcoal-deep/50 to-transparent" />
-                    <div className="absolute inset-0 flex flex-col items-center justify-end p-8 text-center">
-                      <span className="text-gold text-xs tracking-widest uppercase mb-2">
+                    <div className="absolute inset-0 flex flex-col items-center justify-end p-3 md:p-8 text-center">
+                      <span className="text-gold text-[9px] md:text-xs tracking-widest uppercase mb-1 md:mb-2">
                         {category.productCount} {language === "bn" ? "টি পণ্য" : "Products"}
                       </span>
-                      <h3 className={`font-display text-3xl text-foreground mb-2 ${language === "bn" ? "font-bengali" : ""}`}>
+                      <h3 className={`font-display text-base sm:text-lg md:text-2xl lg:text-3xl text-foreground mb-1 md:mb-2 ${language === "bn" ? "font-bengali" : ""}`}>
                         {getCategoryName(category)}
                       </h3>
                       {category.description && (
-                        <p className="text-muted-foreground font-body text-sm line-clamp-2">
+                        <p className="text-muted-foreground font-body text-[10px] md:text-sm line-clamp-2 hidden sm:block">
                           {category.description}
                         </p>
                       )}
-                      <div className="mt-4 w-0 h-0.5 bg-gold group-hover:w-16 transition-all duration-500" />
+                      <div className="mt-2 md:mt-4 w-0 h-0.5 bg-gold group-hover:w-8 md:group-hover:w-16 transition-all duration-500" />
                     </div>
                   </Link>
                 </motion.div>
