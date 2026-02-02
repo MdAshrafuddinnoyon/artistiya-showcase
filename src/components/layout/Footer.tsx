@@ -297,7 +297,7 @@ const Footer = () => {
 
   // Show mobile footer for mobile devices
   if (isMobile) {
-    return <MobileAppFooter branding={branding} />;
+    return <MobileAppFooter />;
   }
 
   return (
