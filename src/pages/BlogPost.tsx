@@ -149,94 +149,95 @@ const BlogPostPage = () => {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="container mx-auto px-4 py-12">
-        <motion.article
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="max-w-3xl mx-auto"
-        >
-          {/* Back Button */}
-          <Link
-            to="/blog"
-            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8"
+      <main className="pt-20 md:pt-24">
+        <div className="container mx-auto px-4 py-6 md:py-12">
+          <motion.article
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-3xl mx-auto"
           >
-            <ArrowLeft className="h-4 w-4" />
-            {language === "bn" ? "ব্লগে ফিরে যান" : "Back to Blog"}
-          </Link>
+            {/* Back Button */}
+            <Link
+              to="/blog"
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6 md:mb-8"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              {language === "bn" ? "ব্লগে ফিরে যান" : "Back to Blog"}
+            </Link>
 
-          {/* Header */}
-          <header className="mb-8">
-            {post.category && (
-              <Badge variant="outline" className="mb-4">
-                {language === "bn" && post.category.name_bn
-                  ? post.category.name_bn
-                  : post.category.name}
-              </Badge>
+            {/* Header */}
+            <header className="mb-6 md:mb-8">
+              {post.category && (
+                <Badge variant="outline" className="mb-3 md:mb-4 text-xs">
+                  {language === "bn" && post.category.name_bn
+                    ? post.category.name_bn
+                    : post.category.name}
+                </Badge>
+              )}
+              <h1 className="font-display text-xl sm:text-2xl md:text-3xl lg:text-4xl text-foreground mb-3 md:mb-4">
+                {language === "bn" && post.title_bn ? post.title_bn : post.title}
+              </h1>
+              <div className="flex items-center gap-3 md:gap-4 text-xs md:text-sm text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3 md:h-4 md:w-4" />
+                  {formatDate(post.published_at)}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleShare}
+                  className="ml-auto h-8 text-xs"
+                >
+                  <Share2 className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                  {language === "bn" ? "শেয়ার" : "Share"}
+                </Button>
+              </div>
+            </header>
+
+            {/* Featured Image */}
+            {post.featured_image && (
+              <div className="aspect-[16/9] rounded-lg md:rounded-xl overflow-hidden mb-6 md:mb-8">
+                <img
+                  src={post.featured_image}
+                  alt={post.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
             )}
-            <h1 className="font-display text-3xl md:text-4xl text-foreground mb-4">
-              {language === "bn" && post.title_bn ? post.title_bn : post.title}
-            </h1>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Calendar className="h-4 w-4" />
-                {formatDate(post.published_at)}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleShare}
-                className="ml-auto"
-              >
-                <Share2 className="h-4 w-4 mr-1" />
-                Share
-              </Button>
-            </div>
-          </header>
 
-          {/* Featured Image */}
-          {post.featured_image && (
-            <div className="aspect-[16/9] rounded-xl overflow-hidden mb-8">
-              <img
-                src={post.featured_image}
-                alt={post.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
-
-          {/* Content */}
-          <div
-            className="prose prose-lg max-w-none dark:prose-invert prose-headings:font-display prose-a:text-gold"
-            dangerouslySetInnerHTML={{
-              __html:
-                language === "bn" && post.content_bn
-                  ? post.content_bn
-                  : post.content,
-            }}
-          />
-        </motion.article>
+            {/* Content */}
+            <div
+              className="prose prose-sm md:prose-lg max-w-none dark:prose-invert prose-headings:font-display prose-a:text-gold"
+              dangerouslySetInnerHTML={{
+                __html:
+                  language === "bn" && post.content_bn
+                    ? post.content_bn
+                    : post.content,
+              }}
+            />
+          </motion.article>
 
         {/* Related Posts */}
         {relatedPosts.length > 0 && (
-          <section className="max-w-3xl mx-auto mt-16 pt-12 border-t border-border">
-            <h2 className="font-display text-2xl text-foreground mb-6">
+          <section className="max-w-3xl mx-auto mt-10 md:mt-16 pt-8 md:pt-12 border-t border-border">
+            <h2 className="font-display text-lg md:text-2xl text-foreground mb-4 md:mb-6">
               {language === "bn" ? "সম্পর্কিত পোস্ট" : "Related Posts"}
             </h2>
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
               {relatedPosts.map((related) => (
                 <Link
                   key={related.id}
                   to={`/blog/${related.slug}`}
                   className="group"
                 >
-                  <div className="aspect-[16/10] rounded-lg overflow-hidden mb-3">
+                  <div className="aspect-[16/10] rounded-lg overflow-hidden mb-2 md:mb-3">
                     <img
                       src={related.featured_image || "/placeholder.svg"}
                       alt={related.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   </div>
-                  <h3 className="font-medium text-foreground group-hover:text-gold transition-colors line-clamp-2">
+                  <h3 className="font-medium text-xs md:text-sm text-foreground group-hover:text-gold transition-colors line-clamp-2">
                     {language === "bn" && related.title_bn
                       ? related.title_bn
                       : related.title}
@@ -246,6 +247,7 @@ const BlogPostPage = () => {
             </div>
           </section>
         )}
+        </div>
       </main>
 
       <Footer />
