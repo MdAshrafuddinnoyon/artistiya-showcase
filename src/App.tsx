@@ -24,6 +24,7 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
 import OrderSuccess from "./pages/OrderSuccess";
+import OrderDetail from "./pages/OrderDetail";
 import ChatWidgets from "./components/widgets/ChatWidgets";
 import ScrollToTop from "./components/common/ScrollToTop";
 import TeamMember from "./pages/TeamMember";
@@ -56,6 +57,7 @@ const App = () => (
                     <Route path="/auth" element={<Auth />} />
                     <Route path="/checkout" element={<Checkout />} />
                     <Route path="/order-success" element={<OrderSuccess />} />
+                    <Route path="/order/:id" element={<OrderDetail />} />
                     <Route path="/team/:id" element={<TeamMember />} />
                     <Route path="/admin" element={<Admin />} />
                     <Route path="/dashboard" element={<Dashboard />} />

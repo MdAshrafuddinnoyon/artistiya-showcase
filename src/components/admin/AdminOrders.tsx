@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Eye, Truck, CheckCircle, XCircle, Clock, Search, AlertTriangle, Shield, FileText, Printer, Download, Loader2, Calendar, Filter } from "lucide-react";
+import { Eye, Truck, CheckCircle, XCircle, Clock, Search, AlertTriangle, Shield, FileText, Printer, Download, Loader2, Calendar, Filter, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -233,6 +233,63 @@ const AdminOrders = () => {
     } catch (error) {
       console.error("Error updating partner:", error);
       toast.error("Failed to update partner");
+    }
+  };
+
+  const handleTrackingUpdate = async (orderId: string, trackingNumber: string) => {
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ tracking_number: trackingNumber || null })
+        .eq("id", orderId);
+
+      if (error) throw error;
+      toast.success("Tracking number updated");
+    } catch (error) {
+      console.error("Error updating tracking:", error);
+      toast.error("Failed to update tracking");
+    }
+  };
+
+  const handleSingleInvoice = async (orderId: string) => {
+    try {
+      const response = await supabase.functions.invoke('generate-invoice', {
+        body: { orderId }
+      });
+
+      if (response.error) throw new Error(response.error.message);
+
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(response.data.html);
+        printWindow.document.close();
+        printWindow.print();
+      }
+      toast.success("Invoice generated");
+    } catch (error: any) {
+      console.error("Error generating invoice:", error);
+      toast.error("Failed to generate invoice");
+    }
+  };
+
+  const handleSingleDeliverySlip = async (orderId: string) => {
+    try {
+      const response = await supabase.functions.invoke('generate-delivery-slip', {
+        body: { orderId }
+      });
+
+      if (response.error) throw new Error(response.error.message);
+
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(response.data.html);
+        printWindow.document.close();
+        printWindow.print();
+      }
+      toast.success("Delivery slip generated");
+    } catch (error: any) {
+      console.error("Error generating slip:", error);
+      toast.error("Failed to generate delivery slip");
     }
   };
 
@@ -548,16 +605,18 @@ const AdminOrders = () => {
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Customer</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Total</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Partner</th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Tracking</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Risk</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Status</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Date</th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Docs</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={11} className="text-center py-12 text-muted-foreground">
                     No orders found
                   </td>
                 </tr>
@@ -599,6 +658,13 @@ const AdminOrders = () => {
                           ))}
                         </SelectContent>
                       </Select>
+                    </td>
+                    <td className="p-4">
+                      <TrackingInput
+                        orderId={order.id}
+                        initialValue={order.tracking_number || ""}
+                        onUpdate={handleTrackingUpdate}
+                      />
                     </td>
                     <td className="p-4">
                       {order.is_flagged ? (
@@ -643,6 +709,28 @@ const AdminOrders = () => {
                     </td>
                     <td className="p-4 text-sm text-muted-foreground">
                       {new Date(order.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="p-4">
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleSingleInvoice(order.id)}
+                          title="Invoice"
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleSingleDeliverySlip(order.id)}
+                          title="Delivery Slip"
+                        >
+                          <Printer className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </td>
                     <td className="p-4">
                       <Button
@@ -759,6 +847,38 @@ const AdminOrders = () => {
         </DialogContent>
       </Dialog>
     </div>
+  );
+};
+
+// Tracking Input Component
+const TrackingInput = ({ 
+  orderId, 
+  initialValue, 
+  onUpdate 
+}: { 
+  orderId: string; 
+  initialValue: string; 
+  onUpdate: (orderId: string, value: string) => Promise<void>;
+}) => {
+  const [value, setValue] = useState(initialValue);
+  const [isFocused, setIsFocused] = useState(false);
+
+  const handleBlur = async () => {
+    setIsFocused(false);
+    if (value !== initialValue) {
+      await onUpdate(orderId, value);
+    }
+  };
+
+  return (
+    <Input
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onFocus={() => setIsFocused(true)}
+      onBlur={handleBlur}
+      placeholder="Enter tracking"
+      className={`w-28 h-8 text-xs ${isFocused ? 'ring-1 ring-gold' : ''}`}
+    />
   );
 };
 
