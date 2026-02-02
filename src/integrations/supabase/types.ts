@@ -2904,36 +2904,72 @@ export type Database = {
         Row: {
           created_at: string | null
           default_sort: string | null
+          filter_position: string | null
           id: string
           max_price: number | null
           min_price: number | null
           price_step: number | null
           products_per_page: number | null
+          promo_banner_image: string | null
+          promo_banner_link: string | null
+          promo_banner_position: string | null
+          sales_banner_bg_color: string | null
+          sales_banner_link: string | null
+          sales_banner_position: string | null
+          sales_banner_text: string | null
+          sales_banner_text_bn: string | null
+          sales_banner_text_color: string | null
           show_out_of_stock: boolean | null
+          show_promo_banner: boolean | null
+          show_sales_banner: boolean | null
           show_showcase_products: boolean | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           default_sort?: string | null
+          filter_position?: string | null
           id?: string
           max_price?: number | null
           min_price?: number | null
           price_step?: number | null
           products_per_page?: number | null
+          promo_banner_image?: string | null
+          promo_banner_link?: string | null
+          promo_banner_position?: string | null
+          sales_banner_bg_color?: string | null
+          sales_banner_link?: string | null
+          sales_banner_position?: string | null
+          sales_banner_text?: string | null
+          sales_banner_text_bn?: string | null
+          sales_banner_text_color?: string | null
           show_out_of_stock?: boolean | null
+          show_promo_banner?: boolean | null
+          show_sales_banner?: boolean | null
           show_showcase_products?: boolean | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           default_sort?: string | null
+          filter_position?: string | null
           id?: string
           max_price?: number | null
           min_price?: number | null
           price_step?: number | null
           products_per_page?: number | null
+          promo_banner_image?: string | null
+          promo_banner_link?: string | null
+          promo_banner_position?: string | null
+          sales_banner_bg_color?: string | null
+          sales_banner_link?: string | null
+          sales_banner_position?: string | null
+          sales_banner_text?: string | null
+          sales_banner_text_bn?: string | null
+          sales_banner_text_color?: string | null
           show_out_of_stock?: boolean | null
+          show_promo_banner?: boolean | null
+          show_sales_banner?: boolean | null
           show_showcase_products?: boolean | null
           updated_at?: string | null
         }
