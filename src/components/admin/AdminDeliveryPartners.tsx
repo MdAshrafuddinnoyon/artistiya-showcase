@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Building2, Phone, Mail } from "lucide-react";
+import { Plus, Pencil, Trash2, Building2, Phone, Mail, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +13,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -21,6 +29,7 @@ interface DeliveryPartner {
   contact_phone: string | null;
   contact_email: string | null;
   api_type: string | null;
+  api_key: string | null;
   is_active: boolean;
   notes: string | null;
 }
@@ -35,6 +44,7 @@ const AdminDeliveryPartners = () => {
     contact_phone: "",
     contact_email: "",
     api_type: "",
+    api_key: "",
     is_active: true,
     notes: "",
   });
@@ -72,6 +82,7 @@ const AdminDeliveryPartners = () => {
             contact_phone: formData.contact_phone || null,
             contact_email: formData.contact_email || null,
             api_type: formData.api_type || null,
+            api_key: formData.api_key || null,
             is_active: formData.is_active,
             notes: formData.notes || null,
           })
@@ -85,6 +96,7 @@ const AdminDeliveryPartners = () => {
           contact_phone: formData.contact_phone || null,
           contact_email: formData.contact_email || null,
           api_type: formData.api_type || null,
+          api_key: formData.api_key || null,
           is_active: formData.is_active,
           notes: formData.notes || null,
         });
@@ -100,6 +112,7 @@ const AdminDeliveryPartners = () => {
         contact_phone: "",
         contact_email: "",
         api_type: "",
+        api_key: "",
         is_active: true,
         notes: "",
       });
@@ -117,6 +130,7 @@ const AdminDeliveryPartners = () => {
       contact_phone: partner.contact_phone || "",
       contact_email: partner.contact_email || "",
       api_type: partner.api_type || "",
+      api_key: partner.api_key || "",
       is_active: partner.is_active,
       notes: partner.notes || "",
     });
@@ -195,6 +209,7 @@ const AdminDeliveryPartners = () => {
                   contact_phone: "",
                   contact_email: "",
                   api_type: "",
+                  api_key: "",
                   is_active: true,
                   notes: "",
                 });
@@ -249,14 +264,39 @@ const AdminDeliveryPartners = () => {
 
               <div>
                 <Label htmlFor="apiType">API Type</Label>
-                <Input
-                  id="apiType"
-                  placeholder="e.g., pathao, steadfast, redx"
+                <Select
                   value={formData.api_type}
+                  onValueChange={(value) => setFormData({ ...formData, api_type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select API Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pathao">Pathao</SelectItem>
+                    <SelectItem value="steadfast">Steadfast</SelectItem>
+                    <SelectItem value="redx">RedX</SelectItem>
+                    <SelectItem value="paperfly">Paperfly</SelectItem>
+                    <SelectItem value="ecourier">eCourier</SelectItem>
+                    <SelectItem value="sundarban">Sundarban Courier</SelectItem>
+                    <SelectItem value="custom">Custom API</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="apiKey">API Key / Secret</Label>
+                <Input
+                  id="apiKey"
+                  type="password"
+                  placeholder="Enter API key for real-time tracking"
+                  value={formData.api_key}
                   onChange={(e) =>
-                    setFormData({ ...formData, api_type: e.target.value })
+                    setFormData({ ...formData, api_key: e.target.value })
                   }
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  API key enables real-time tracking and automated status updates
+                </p>
               </div>
 
               <div>
@@ -313,7 +353,15 @@ const AdminDeliveryPartners = () => {
                     <Building2 className="h-5 w-5 text-gold" />
                   </div>
                   <div>
-                    <h3 className="font-medium text-foreground">{partner.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium text-foreground">{partner.name}</h3>
+                      {partner.api_key && (
+                        <Badge className="bg-green-500/20 text-green-500 border-green-500/30 text-xs">
+                          <Key className="h-3 w-3 mr-1" />
+                          API
+                        </Badge>
+                      )}
+                    </div>
                     {partner.api_type && (
                       <span className="text-xs text-muted-foreground uppercase">
                         {partner.api_type}

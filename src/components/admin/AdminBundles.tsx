@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Save, Package, Percent, Eye, EyeOff, GripVertical, X } from "lucide-react";
+import { Plus, Trash2, Save, Package, Percent, Eye, EyeOff, GripVertical, X, Search, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,8 +8,15 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+interface Category {
+  id: string;
+  name: string;
+  name_bn: string | null;
+}
 
 interface Product {
   id: string;
@@ -17,11 +24,13 @@ interface Product {
   name_bn: string | null;
   price: number;
   images: string[] | null;
+  category_id: string | null;
 }
 
 interface BundleProduct {
   id: string;
   product_id: string | null;
+  category_id: string | null;
   product?: Product | null;
 }
 
@@ -38,8 +47,11 @@ interface Bundle {
 const AdminBundles = () => {
   const [bundles, setBundles] = useState<Bundle[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -47,7 +59,7 @@ const AdminBundles = () => {
 
   const fetchData = async () => {
     try {
-      const [bundlesRes, productsRes] = await Promise.all([
+      const [bundlesRes, productsRes, categoriesRes] = await Promise.all([
         supabase
           .from("product_bundles")
           .select(`
@@ -57,21 +69,27 @@ const AdminBundles = () => {
             discount_percent,
             is_active,
             display_order,
-            bundle_products(id, product_id, product:products(id, name, name_bn, price, images))
+            bundle_products(id, product_id, category_id, product:products(id, name, name_bn, price, images, category_id))
           `)
           .order("display_order"),
         supabase
           .from("products")
-          .select("id, name, name_bn, price, images")
+          .select("id, name, name_bn, price, images, category_id")
           .eq("is_active", true)
           .order("name"),
+        supabase
+          .from("categories")
+          .select("id, name, name_bn")
+          .order("display_order"),
       ]);
 
       if (bundlesRes.error) throw bundlesRes.error;
       if (productsRes.error) throw productsRes.error;
+      if (categoriesRes.error) throw categoriesRes.error;
 
       setBundles((bundlesRes.data as any) || []);
       setProducts(productsRes.data || []);
+      setCategories(categoriesRes.data || []);
     } catch (error) {
       console.error("Error fetching bundles:", error);
       toast.error("Failed to load bundles");
@@ -79,7 +97,6 @@ const AdminBundles = () => {
       setLoading(false);
     }
   };
-
   const addBundle = async () => {
     try {
       const { data, error } = await supabase
@@ -368,26 +385,77 @@ const AdminBundles = () => {
                       </p>
                     )}
 
-                    {/* Add Product Select */}
-                    <Select
-                      value=""
-                      onValueChange={(productId) => addProductToBundle(bundle.id, productId)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Add product to bundle..." />
-                      </SelectTrigger>
-                      <SelectContent>
+                    {/* Category Filter + Search + Product Select */}
+                    <div className="space-y-3 p-4 bg-muted/50 rounded-lg border border-border">
+                      <div className="flex gap-2">
+                        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                          <SelectTrigger className="w-[180px]">
+                            <Filter className="h-4 w-4 mr-2" />
+                            <SelectValue placeholder="Filter by category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Categories</SelectItem>
+                            {categories.map((cat) => (
+                              <SelectItem key={cat.id} value={cat.id}>
+                                {cat.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <div className="relative flex-1">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Search products..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Filtered Products Grid */}
+                      <div className="max-h-48 overflow-y-auto space-y-1">
                         {products
-                          .filter(
-                            (p) => !bundleProducts.some((bp) => bp.product_id === p.id)
-                          )
+                          .filter((p) => {
+                            const matchesCategory = selectedCategory === "all" || p.category_id === selectedCategory;
+                            const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+                            const notInBundle = !bundleProducts.some((bp) => bp.product_id === p.id);
+                            return matchesCategory && matchesSearch && notInBundle;
+                          })
                           .map((product) => (
-                            <SelectItem key={product.id} value={product.id}>
-                              {product.name} - ৳{product.price.toLocaleString()}
-                            </SelectItem>
+                            <div
+                              key={product.id}
+                              className="flex items-center gap-3 p-2 hover:bg-muted rounded-lg cursor-pointer transition-colors"
+                              onClick={() => addProductToBundle(bundle.id, product.id)}
+                            >
+                              {product.images?.[0] && (
+                                <img
+                                  src={product.images[0]}
+                                  alt={product.name}
+                                  className="h-10 w-10 object-cover rounded"
+                                />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{product.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  ৳{product.price.toLocaleString()}
+                                </p>
+                              </div>
+                              <Plus className="h-4 w-4 text-gold" />
+                            </div>
                           ))}
-                      </SelectContent>
-                    </Select>
+                        {products.filter((p) => {
+                          const matchesCategory = selectedCategory === "all" || p.category_id === selectedCategory;
+                          const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+                          const notInBundle = !bundleProducts.some((bp) => bp.product_id === p.id);
+                          return matchesCategory && matchesSearch && notInBundle;
+                        }).length === 0 && (
+                          <p className="text-center text-sm text-muted-foreground py-4">
+                            No products found
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Bundle Summary */}
