@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// NOTE: We intentionally avoid Radix Select here due to a runtime DOM error observed on checkout.
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -364,59 +364,67 @@ const MobileCheckout = () => {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-sm">Division *</Label>
-                <Select value={selectedDivision} onValueChange={(v) => {
-                  setSelectedDivision(v);
-                  setSelectedDistrict("");
-                  setSelectedThana("");
-                }}>
-                  <SelectTrigger className="mt-1.5 h-11">
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {divisions.map(div => (
-                      <SelectItem key={div.name} value={div.name}>{div.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                 <select
+                   value={selectedDivision}
+                   onChange={(e) => {
+                     const v = e.target.value;
+                     setSelectedDivision(v);
+                     setSelectedDistrict("");
+                     setSelectedThana("");
+                   }}
+                   className="mt-1.5 h-11 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                 >
+                   <option value="" disabled>
+                     Select
+                   </option>
+                   {divisions.map((div) => (
+                     <option key={div.name} value={div.name}>
+                       {div.name}
+                     </option>
+                   ))}
+                 </select>
               </div>
               <div>
                 <Label className="text-sm">District *</Label>
-                <Select 
-                  value={selectedDistrict} 
-                  onValueChange={(v) => {
-                    setSelectedDistrict(v);
-                    setSelectedThana("");
-                  }}
-                  disabled={!selectedDivision}
-                >
-                  <SelectTrigger className="mt-1.5 h-11">
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {districts.map(dist => (
-                      <SelectItem key={dist} value={dist}>{dist}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                 <select
+                   value={selectedDistrict}
+                   onChange={(e) => {
+                     const v = e.target.value;
+                     setSelectedDistrict(v);
+                     setSelectedThana("");
+                   }}
+                   disabled={!selectedDivision}
+                   className="mt-1.5 h-11 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                 >
+                   <option value="" disabled>
+                     Select
+                   </option>
+                   {districts.map((dist) => (
+                     <option key={dist} value={dist}>
+                       {dist}
+                     </option>
+                   ))}
+                 </select>
               </div>
             </div>
 
             <div>
               <Label className="text-sm">Thana *</Label>
-              <Select 
-                value={selectedThana} 
-                onValueChange={setSelectedThana}
-                disabled={!selectedDistrict}
-              >
-                <SelectTrigger className="mt-1.5 h-11">
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
-                <SelectContent>
-                  {thanas.map(thana => (
-                    <SelectItem key={thana} value={thana}>{thana}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+             <select
+               value={selectedThana}
+               onChange={(e) => setSelectedThana(e.target.value)}
+               disabled={!selectedDistrict}
+               className="mt-1.5 h-11 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+             >
+               <option value="" disabled>
+                 Select
+               </option>
+               {thanas.map((thana) => (
+                 <option key={thana} value={thana}>
+                   {thana}
+                 </option>
+               ))}
+             </select>
             </div>
 
             <div>
