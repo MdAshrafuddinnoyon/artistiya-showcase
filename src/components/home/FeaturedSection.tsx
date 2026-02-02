@@ -98,9 +98,9 @@ const FeaturedSection = () => {
   if (!sectionData.is_active) return null;
 
   return (
-    <section className="py-24 bg-background">
+    <section className="py-12 md:py-24 bg-background">
       <div className="container mx-auto px-4 lg:px-8">
-        <div className={`grid lg:grid-cols-2 gap-12 items-center ${!isImageLeft ? "lg:flex-row-reverse" : ""}`}>
+        <div className={`grid lg:grid-cols-2 gap-8 md:gap-12 items-center ${!isImageLeft ? "lg:flex-row-reverse" : ""}`}>
           {/* Image */}
           <motion.div
             initial={{ opacity: 0, x: isImageLeft ? -30 : 30 }}
@@ -109,15 +109,15 @@ const FeaturedSection = () => {
             transition={{ duration: 0.8 }}
             className={`relative ${!isImageLeft ? "lg:order-2" : ""}`}
           >
-            <div className="aspect-[4/5] rounded-lg overflow-hidden">
+            <div className="aspect-[4/5] md:aspect-[4/5] rounded-lg overflow-hidden">
               <img
                 src={sectionData.image_url || categoryBags}
                 alt="Featured collection"
                 className="w-full h-full object-cover"
               />
             </div>
-            {/* Decorative Frame */}
-            <div className={`absolute -bottom-6 ${isImageLeft ? "-right-6" : "-left-6"} w-full h-full border-2 border-gold/30 rounded-lg -z-10`} />
+            {/* Decorative Frame - Hidden on mobile */}
+            <div className={`hidden md:block absolute -bottom-6 ${isImageLeft ? "-right-6" : "-left-6"} w-full h-full border-2 border-gold/30 rounded-lg -z-10`} />
           </motion.div>
 
           {/* Content */}
@@ -129,12 +129,12 @@ const FeaturedSection = () => {
             className={`${isImageLeft ? "lg:pl-12" : "lg:pr-12 lg:order-1"}`}
           >
             {sectionData.badge_text && (
-              <span className="text-gold text-sm tracking-[0.3em] uppercase font-body">
+              <span className="text-gold text-[10px] md:text-sm tracking-[0.2em] md:tracking-[0.3em] uppercase font-body">
                 {sectionData.badge_text}
               </span>
             )}
             
-            <h2 className="font-display text-4xl md:text-5xl text-foreground mt-4 mb-6">
+            <h2 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-foreground mt-2 md:mt-4 mb-4 md:mb-6">
               {sectionData.title_line1}
               {sectionData.title_highlight && (
                 <>
@@ -145,32 +145,32 @@ const FeaturedSection = () => {
             </h2>
 
             {sectionData.description && (
-              <p className="text-muted-foreground text-lg mb-6 font-body">
+              <p className="text-muted-foreground text-sm md:text-lg mb-4 md:mb-6 font-body">
                 {sectionData.description}
               </p>
             )}
 
             {sectionData.features && sectionData.features.length > 0 && (
-              <ul className="space-y-3 mb-8">
+              <ul className="space-y-2 md:space-y-3 mb-6 md:mb-8">
                 {sectionData.features.map((feature, index) => (
-                  <li key={index} className="flex items-center gap-3 text-foreground/80">
-                    <span className="h-1.5 w-1.5 rounded-full bg-gold" />
+                  <li key={index} className="flex items-center gap-2 md:gap-3 text-sm md:text-base text-foreground/80">
+                    <span className="h-1 w-1 md:h-1.5 md:w-1.5 rounded-full bg-gold flex-shrink-0" />
                     {feature}
                   </li>
                 ))}
               </ul>
             )}
 
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap items-center gap-3 md:gap-4">
               {sectionData.button_text && sectionData.button_link && (
                 <Link to={sectionData.button_link}>
-                  <Button variant="hero" size="lg">
+                  <Button variant="hero" size="sm" className="md:px-6 md:py-3 md:text-base">
                     {sectionData.button_text}
                   </Button>
                 </Link>
               )}
               {sectionData.price_text && (
-                <span className="flex items-center text-gold font-display text-2xl">
+                <span className="flex items-center text-gold font-display text-lg md:text-2xl">
                   {sectionData.price_text}
                 </span>
               )}

@@ -675,30 +675,68 @@ const Shop = () => {
 
             {/* Main Content */}
             <div className="flex-1">
+              {/* Mobile Sales Banner */}
+              {isMobile && pageSettings.sales_banner_enabled && pageSettings.sales_banner_image && (
+                <a 
+                  href={pageSettings.sales_banner_link || "#"} 
+                  className="block rounded-xl overflow-hidden relative group mb-4"
+                >
+                  <img 
+                    src={pageSettings.sales_banner_image} 
+                    alt={getSalesBannerTitle() || "Sales"} 
+                    className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                  {pageSettings.sales_banner_title && (
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end p-3">
+                      <span className="text-white font-display text-sm">{getSalesBannerTitle()}</span>
+                    </div>
+                  )}
+                </a>
+              )}
+
               {/* Toolbar */}
-              <div className="flex flex-wrap items-center justify-between gap-4 mb-8 pb-6 border-b border-border">
+              <div className="flex flex-wrap items-center justify-between gap-3 md:gap-4 mb-4 md:mb-8 pb-4 md:pb-6 border-b border-border">
                 {/* Mobile Filter Button */}
                 <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
                   <SheetTrigger asChild>
-                    <Button variant="outline" className="lg:hidden">
+                    <Button variant="outline" size="sm" className="lg:hidden h-9">
                       <Filter className="h-4 w-4 mr-2" />
                       {t("shop.filter")}
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="left" className="w-80">
+                  <SheetContent side="left" className="w-[85vw] max-w-80 overflow-y-auto">
                     <SheetHeader>
                       <SheetTitle>{t("shop.filter")}</SheetTitle>
                     </SheetHeader>
-                    <div className="mt-6">
+                    <div className="mt-4 space-y-4">
+                      {/* Sales Banner in Filter Sheet */}
+                      {pageSettings.sales_banner_enabled && pageSettings.sales_banner_image && (
+                        <a 
+                          href={pageSettings.sales_banner_link || "#"} 
+                          className="block rounded-lg overflow-hidden relative group"
+                          onClick={() => setFilterOpen(false)}
+                        >
+                          <img 
+                            src={pageSettings.sales_banner_image} 
+                            alt={getSalesBannerTitle() || "Sales"} 
+                            className="w-full h-auto object-cover"
+                          />
+                          {pageSettings.sales_banner_title && (
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-3">
+                              <span className="text-white font-display text-sm">{getSalesBannerTitle()}</span>
+                            </div>
+                          )}
+                        </a>
+                      )}
                       <FilterContent />
                     </div>
                   </SheetContent>
                 </Sheet>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 md:gap-4">
                   {/* Sort */}
                   <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-[130px] md:w-[180px] h-9 text-xs md:text-sm">
                       <SelectValue placeholder={t("shop.sort")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -729,8 +767,8 @@ const Shop = () => {
                   </div>
                 </div>
 
-                <span className="text-sm text-muted-foreground">
-                  {products.length} products
+                <span className="text-xs md:text-sm text-muted-foreground">
+                  {products.length} {language === "bn" ? "পণ্য" : "products"}
                 </span>
               </div>
 
