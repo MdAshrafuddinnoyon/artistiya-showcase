@@ -77,7 +77,7 @@ const InstagramSection = () => {
   }
 
   return (
-    <section className="py-24 bg-background">
+    <section className="py-12 md:py-24 bg-background">
       <div className="container mx-auto px-4 lg:px-8">
         {/* Section Header */}
         <motion.div
@@ -85,12 +85,12 @@ const InstagramSection = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-12"
+          className="text-center mb-6 md:mb-12"
         >
-          <span className="text-gold text-sm tracking-[0.3em] uppercase font-body">
+          <span className="text-gold text-[10px] md:text-sm tracking-[0.2em] md:tracking-[0.3em] uppercase font-body">
             Follow Our Journey
           </span>
-          <h2 className="font-display text-4xl md:text-5xl text-foreground mt-4">
+          <h2 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-foreground mt-2 md:mt-4">
             {instagramHandle}
           </h2>
         </motion.div>
@@ -134,15 +134,15 @@ const InstagramSection = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="text-center mt-12"
+          className="text-center mt-6 md:mt-12"
         >
           <a
             href="https://instagram.com/artistiya.store"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-gold hover:text-gold-light transition-colors font-body"
+            className="inline-flex items-center gap-2 text-gold hover:text-gold-light transition-colors font-body text-sm md:text-base"
           >
-            <Instagram className="h-5 w-5" />
+            <Instagram className="h-4 w-4 md:h-5 md:w-5" />
             Follow us on Instagram
           </a>
         </motion.div>

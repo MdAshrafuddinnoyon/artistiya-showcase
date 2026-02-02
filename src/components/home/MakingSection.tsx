@@ -108,7 +108,7 @@ const MakingSection = () => {
   ].filter(s => s.number && s.label);
 
   return (
-    <section className="relative py-24 overflow-hidden">
+    <section className="relative py-12 md:py-24 overflow-hidden">
       {/* Background Image */}
       <div className="absolute inset-0">
         <img
@@ -131,7 +131,7 @@ const MakingSection = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
-              className="inline-block text-gold text-sm tracking-[0.3em] uppercase font-body mb-6"
+              className="inline-block text-gold text-[10px] md:text-sm tracking-[0.2em] md:tracking-[0.3em] uppercase font-body mb-3 md:mb-6"
             >
               {sectionData.badge_text}
             </motion.span>
@@ -142,7 +142,7 @@ const MakingSection = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="font-display text-4xl md:text-5xl lg:text-6xl text-foreground mb-6"
+            className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl text-foreground mb-4 md:mb-6"
           >
             {sectionData.title_line1}
             {sectionData.title_highlight && (
@@ -159,7 +159,7 @@ const MakingSection = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-lg text-muted-foreground mb-10 font-body"
+              className="text-sm md:text-lg text-muted-foreground mb-6 md:mb-10 font-body px-2"
             >
               {sectionData.description}
             </motion.p>
@@ -174,7 +174,7 @@ const MakingSection = () => {
               className="flex flex-wrap justify-center gap-4"
             >
               <Link to={sectionData.button_link}>
-                <Button variant="hero" size="lg">
+                <Button variant="hero" size="sm" className="md:px-6 md:py-3 md:text-base">
                   {sectionData.button_text}
                 </Button>
               </Link>
@@ -188,14 +188,14 @@ const MakingSection = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.4 }}
-              className="grid grid-cols-3 gap-8 mt-16 pt-16 border-t border-border/30"
+              className="grid grid-cols-3 gap-4 md:gap-8 mt-8 md:mt-16 pt-8 md:pt-16 border-t border-border/30"
             >
               {stats.map((stat, index) => (
                 <div key={index} className="text-center">
-                  <span className="block font-display text-3xl md:text-4xl text-gold mb-2">
+                  <span className="block font-display text-xl sm:text-2xl md:text-3xl lg:text-4xl text-gold mb-1 md:mb-2">
                     {stat.number}
                   </span>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">
                     {stat.label}
                   </span>
                 </div>

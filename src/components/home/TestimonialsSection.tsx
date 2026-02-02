@@ -107,7 +107,7 @@ const TestimonialsSection = () => {
   }
 
   return (
-    <section className="py-24 bg-charcoal overflow-hidden">
+    <section className="py-12 md:py-24 bg-charcoal overflow-hidden">
       <div className="container mx-auto px-4 lg:px-8">
         {/* Section Header */}
         <motion.div
@@ -115,12 +115,12 @@ const TestimonialsSection = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          className="text-center mb-8 md:mb-16"
         >
-          <span className="text-gold text-sm tracking-[0.3em] uppercase font-body">
+          <span className="text-gold text-[10px] md:text-sm tracking-[0.2em] md:tracking-[0.3em] uppercase font-body">
             Customer Love
           </span>
-          <h2 className="font-display text-4xl md:text-5xl text-foreground mt-4">
+          <h2 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-foreground mt-2 md:mt-4">
             What Our Customers Say
           </h2>
         </motion.div>
