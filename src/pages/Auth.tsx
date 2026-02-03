@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Eye, EyeOff, Mail, Lock, User as UserIcon, Calculator, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,15 @@ import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
+
+interface SiteBranding {
+  logo_url: string | null;
+  logo_text: string;
+  logo_text_secondary: string;
+  show_logo_text: boolean;
+}
 
 const signUpSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters"),
@@ -76,6 +84,12 @@ const Auth = () => {
     email: "",
     password: "",
   });
+  const [branding, setBranding] = useState<SiteBranding>({
+    logo_url: null,
+    logo_text: "artistiya",
+    logo_text_secondary: ".store",
+    show_logo_text: true,
+  });
   const [captchaInput, setCaptchaInput] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -83,6 +97,22 @@ const Auth = () => {
   const { isAdmin, isLoading: isAdminLoading } = useAdmin();
   const navigate = useNavigate();
   const { num1, num2, operator, answer, regenerate } = useMathCaptcha();
+
+  // Fetch site branding
+  useEffect(() => {
+    const fetchBranding = async () => {
+      const { data } = await supabase.from("site_branding").select("logo_url, logo_text, logo_text_secondary, show_logo_text").single();
+      if (data) {
+        setBranding({
+          logo_url: data.logo_url,
+          logo_text: data.logo_text || "artistiya",
+          logo_text_secondary: data.logo_text_secondary || ".store",
+          show_logo_text: data.show_logo_text ?? true,
+        });
+      }
+    };
+    fetchBranding();
+  }, []);
 
   // Role-based redirect: Admin -> /admin, Customer -> /
   useEffect(() => {
@@ -181,11 +211,22 @@ const Auth = () => {
           >
             {/* Logo */}
             <div className="text-center mb-6 md:mb-8">
-              <h1 className="font-display text-2xl md:text-3xl">
-                <span className="text-gold">artistiya</span>
-                <span className="text-foreground">.store</span>
-              </h1>
-              <p className="text-muted-foreground mt-2 font-body text-sm">
+              <Link to="/" className="inline-flex flex-col items-center gap-2">
+                {branding.logo_url && (
+                  <img 
+                    src={branding.logo_url} 
+                    alt="Logo" 
+                    className="h-12 md:h-16 w-auto"
+                  />
+                )}
+                {branding.show_logo_text && (
+                  <h1 className="font-display text-2xl md:text-3xl">
+                    <span className="text-gold">{branding.logo_text}</span>
+                    <span className="text-foreground">{branding.logo_text_secondary}</span>
+                  </h1>
+                )}
+              </Link>
+              <p className="text-muted-foreground mt-3 font-body text-sm">
                 {mode === "signin" ? "Sign in to your account" : "Create a new account"}
               </p>
             </div>
