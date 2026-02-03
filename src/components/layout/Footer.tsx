@@ -456,38 +456,58 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Dynamic Link Groups */}
-          {displayGroups.map((group) => {
-            const groupLinks = linkGroups.length > 0 
-              ? getLinksForGroup(group.id)
-              : defaultLinks[group.id]?.map((l, i) => ({ 
-                  id: `${group.id}-${i}`, 
-                  group_id: group.id, 
-                  ...l, 
-                  display_order: i, 
-                  is_active: true 
-                })) || [];
+          {/* Dynamic Link Groups from Database */}
+          {linkGroups.length > 0 ? (
+            linkGroups.map((group) => {
+              const groupLinks = getLinksForGroup(group.id);
+              if (groupLinks.length === 0) return null;
 
-            return (
-              <div key={group.id}>
-                <h4 className="font-display text-lg text-foreground mb-4">
-                  {group.title}
-                </h4>
-                <ul className="space-y-3">
-                  {groupLinks.map((link) => (
-                    <li key={link.id}>
-                      <Link
-                        to={link.href}
-                        className="text-muted-foreground hover:text-gold transition-colors text-sm"
-                      >
-                        {link.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
+              return (
+                <div key={group.id}>
+                  <h4 className="font-display text-lg text-foreground mb-4">
+                    {group.title}
+                  </h4>
+                  <ul className="space-y-3">
+                    {groupLinks.map((link) => (
+                      <li key={link.id}>
+                        <Link
+                          to={link.href}
+                          className="text-muted-foreground hover:text-gold transition-colors text-sm"
+                        >
+                          {link.name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })
+          ) : (
+            /* Fallback to default links if database is empty */
+            defaultGroups.map((group) => {
+              const groupLinks = defaultLinks[group.id] || [];
+
+              return (
+                <div key={group.id}>
+                  <h4 className="font-display text-lg text-foreground mb-4">
+                    {group.title}
+                  </h4>
+                  <ul className="space-y-3">
+                    {groupLinks.map((link, i) => (
+                      <li key={`${group.id}-${i}`}>
+                        <Link
+                          to={link.href}
+                          className="text-muted-foreground hover:text-gold transition-colors text-sm"
+                        >
+                          {link.name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 

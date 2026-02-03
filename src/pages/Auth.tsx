@@ -13,14 +13,14 @@ import Footer from "@/components/layout/Footer";
 import { z } from "zod";
 
 const signUpSchema = z.object({
-  fullName: z.string().min(2, "নাম অবশ্যই ২ অক্ষরের বেশি হতে হবে"),
-  email: z.string().email("সঠিক ইমেইল দিন"),
-  password: z.string().min(6, "পাসওয়ার্ড অবশ্যই ৬ অক্ষরের বেশি হতে হবে"),
+  fullName: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Please enter a valid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 const signInSchema = z.object({
-  email: z.string().email("সঠিক ইমেইল দিন"),
-  password: z.string().min(1, "পাসওয়ার্ড দিন"),
+  email: z.string().email("Please enter a valid email"),
+  password: z.string().min(1, "Please enter your password"),
 });
 
 // Math CAPTCHA hook
@@ -125,7 +125,7 @@ const Auth = () => {
 
     // Validate CAPTCHA
     if (parseInt(captchaInput) !== answer) {
-      setErrors({ ...errors, captcha: "গণনার উত্তর ভুল হয়েছে" });
+      setErrors({ ...errors, captcha: "Incorrect answer, please try again" });
       regenerate();
       setCaptchaInput("");
       return;
@@ -138,28 +138,28 @@ const Auth = () => {
         const { error } = await signUp(formData.email, formData.password, formData.fullName);
         if (error) {
           if (error.message.includes("already registered")) {
-            toast.error("এই ইমেইল দিয়ে আগেই অ্যাকাউন্ট তৈরি করা হয়েছে");
+            toast.error("An account with this email already exists");
           } else {
             toast.error(error.message);
           }
           regenerate();
           setCaptchaInput("");
         } else {
-          toast.success("অ্যাকাউন্ট তৈরি সফল হয়েছে!");
+          toast.success("Account created successfully!");
           navigate("/");
         }
       } else {
         const { error } = await signIn(formData.email, formData.password);
         if (error) {
           if (error.message.includes("Invalid login credentials")) {
-            toast.error("ইমেইল বা পাসওয়ার্ড ভুল হয়েছে");
+            toast.error("Invalid email or password");
           } else {
             toast.error(error.message);
           }
           regenerate();
           setCaptchaInput("");
         } else {
-          toast.success("স্বাগতম!");
+          toast.success("Welcome back!");
           navigate("/");
         }
       }
@@ -186,7 +186,7 @@ const Auth = () => {
                 <span className="text-foreground">.store</span>
               </h1>
               <p className="text-muted-foreground mt-2 font-body text-sm">
-                {mode === "signin" ? "আপনার অ্যাকাউন্টে প্রবেশ করুন" : "নতুন অ্যাকাউন্ট তৈরি করুন"}
+                {mode === "signin" ? "Sign in to your account" : "Create a new account"}
               </p>
             </div>
 
@@ -200,7 +200,7 @@ const Auth = () => {
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                লগইন
+                Sign In
               </button>
               <button
                 onClick={() => { setMode("signup"); regenerate(); setCaptchaInput(""); }}
@@ -210,7 +210,7 @@ const Auth = () => {
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                সাইন আপ
+                Sign Up
               </button>
             </div>
 
@@ -226,14 +226,14 @@ const Auth = () => {
                     transition={{ duration: 0.2 }}
                   >
                     <Label htmlFor="fullName" className="text-foreground text-sm">
-                      পুরো নাম
+                      Full Name
                     </Label>
                     <div className="relative mt-1">
                       <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="fullName"
                         type="text"
-                        placeholder="আপনার নাম"
+                        placeholder="Your name"
                         value={formData.fullName}
                         onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                         className="pl-9 h-10"
@@ -248,7 +248,7 @@ const Auth = () => {
 
               <div>
                 <Label htmlFor="email" className="text-foreground text-sm">
-                  ইমেইল
+                  Email
                 </Label>
                 <div className="relative mt-1">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -268,7 +268,7 @@ const Auth = () => {
 
               <div>
                 <Label htmlFor="password" className="text-foreground text-sm">
-                  পাসওয়ার্ড
+                  Password
                 </Label>
                 <div className="relative mt-1">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -297,7 +297,7 @@ const Auth = () => {
               <div className="bg-muted/50 rounded-lg p-4 border border-border">
                 <Label className="text-foreground text-sm flex items-center gap-2 mb-2">
                   <Calculator className="h-4 w-4 text-gold" />
-                  নিরাপত্তা যাচাই
+                  Security Verification
                 </Label>
                 <div className="flex items-center gap-3">
                   <div className="flex-1 bg-background rounded-lg px-4 py-2.5 text-center font-mono text-lg border border-border">
@@ -307,7 +307,7 @@ const Auth = () => {
                     type="button"
                     onClick={() => { regenerate(); setCaptchaInput(""); }}
                     className="p-2 hover:bg-muted rounded-lg transition-colors"
-                    title="নতুন প্রশ্ন"
+                    title="New question"
                   >
                     <RefreshCw className="h-4 w-4 text-muted-foreground" />
                   </button>
@@ -315,7 +315,7 @@ const Auth = () => {
                 <div className="relative mt-2">
                   <Input
                     type="number"
-                    placeholder="উত্তর লিখুন"
+                    placeholder="Enter answer"
                     value={captchaInput}
                     onChange={(e) => setCaptchaInput(e.target.value)}
                     className="h-10 text-center font-mono"
@@ -335,12 +335,12 @@ const Auth = () => {
                 {loading ? (
                   <span className="flex items-center gap-2">
                     <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    অপেক্ষা করুন...
+                    Please wait...
                   </span>
                 ) : mode === "signin" ? (
-                  "লগইন করুন"
+                  "Sign In"
                 ) : (
-                  "অ্যাকাউন্ট তৈরি করুন"
+                  "Create Account"
                 )}
               </Button>
             </form>
@@ -348,22 +348,22 @@ const Auth = () => {
             <p className="text-center text-sm text-muted-foreground mt-6">
               {mode === "signin" ? (
                 <>
-                  অ্যাকাউন্ট নেই?{" "}
+                  Don't have an account?{" "}
                   <button
                     onClick={() => { setMode("signup"); regenerate(); }}
                     className="text-gold hover:underline"
                   >
-                    সাইন আপ করুন
+                    Sign Up
                   </button>
                 </>
               ) : (
                 <>
-                  আগে থেকে অ্যাকাউন্ট আছে?{" "}
+                  Already have an account?{" "}
                   <button
                     onClick={() => { setMode("signin"); regenerate(); }}
                     className="text-gold hover:underline"
                   >
-                    লগইন করুন
+                    Sign In
                   </button>
                 </>
               )}
