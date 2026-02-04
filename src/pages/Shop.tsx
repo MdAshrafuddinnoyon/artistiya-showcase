@@ -184,6 +184,8 @@ const Shop = () => {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000]);
   const [showPreorderOnly, setShowPreorderOnly] = useState(false);
   const [showShowcaseOnly, setShowShowcaseOnly] = useState(false);
+  const [showInStockOnly, setShowInStockOnly] = useState(false);
+  const [showCustomOrderOnly, setShowCustomOrderOnly] = useState(false);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("newest");
@@ -369,6 +371,16 @@ const Shop = () => {
         query = query.eq("is_showcase", true);
       }
 
+      // In Stock filter
+      if (showInStockOnly) {
+        query = query.gt("stock_quantity", 0);
+      }
+
+      // Custom Order filter (showcase products that allow custom orders)
+      if (showCustomOrderOnly) {
+        query = query.eq("is_showcase", true);
+      }
+
       // Sorting
       switch (sortBy) {
         case "newest":
@@ -394,7 +406,7 @@ const Shop = () => {
       setLoading(false);
       setSearchLoading(false);
     }
-  }, [searchQuery, selectedCategory, priceRange, showPreorderOnly, showShowcaseOnly, sortBy]);
+  }, [searchQuery, selectedCategory, priceRange, showPreorderOnly, showShowcaseOnly, showInStockOnly, showCustomOrderOnly, sortBy]);
 
   // Debounced search effect with realtime subscription
   useEffect(() => {
@@ -597,6 +609,38 @@ const Shop = () => {
           </div>
         );
 
+      case "in_stock":
+        return (
+          <div key={filterConfig.id} className="flex items-center space-x-2">
+            <Checkbox
+              id="in_stock"
+              checked={showInStockOnly}
+              onCheckedChange={(checked) => {
+                setShowInStockOnly(checked as boolean);
+              }}
+            />
+            <label htmlFor="in_stock" className="text-sm cursor-pointer flex items-center gap-1">
+              {language === "bn" ? "স্টকে আছে" : filterConfig.filter_name}
+            </label>
+          </div>
+        );
+
+      case "custom_order":
+        return (
+          <div key={filterConfig.id} className="flex items-center space-x-2">
+            <Checkbox
+              id="custom_order"
+              checked={showCustomOrderOnly}
+              onCheckedChange={(checked) => {
+                setShowCustomOrderOnly(checked as boolean);
+              }}
+            />
+            <label htmlFor="custom_order" className="text-sm cursor-pointer flex items-center gap-1">
+              {language === "bn" ? "কাস্টম অর্ডার" : filterConfig.filter_name}
+            </label>
+          </div>
+        );
+
       default:
         return null;
     }
@@ -645,6 +689,8 @@ const Shop = () => {
           setPriceRange([shopSettings.min_price, shopSettings.max_price]);
           setShowPreorderOnly(false);
           setShowShowcaseOnly(false);
+          setShowInStockOnly(false);
+          setShowCustomOrderOnly(false);
           setSelectedColors([]);
           setSelectedSizes([]);
           setSearchQuery("");

@@ -64,6 +64,7 @@ interface CartItem {
     stock_quantity: number;
     is_preorderable: boolean;
     production_time: string | null;
+    category_id: string | null;
   };
 }
 
@@ -105,7 +106,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
               images,
               stock_quantity,
               is_preorderable,
-              production_time
+              production_time,
+              category_id
             )
           `)
           .eq("user_id", user.id);
@@ -126,7 +128,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       const { data: products, error: productsError } = await supabase
         .from("products")
         .select(
-          "id,name,name_bn,price,images,stock_quantity,is_preorderable,production_time"
+          "id,name,name_bn,price,images,stock_quantity,is_preorderable,production_time,category_id"
         )
         .in("id", productIds);
 
@@ -150,6 +152,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
               stock_quantity: p.stock_quantity,
               is_preorderable: p.is_preorderable,
               production_time: p.production_time ?? null,
+              category_id: p.category_id ?? null,
             },
           } as CartItem;
         })
