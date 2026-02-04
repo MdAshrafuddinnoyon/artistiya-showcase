@@ -31,6 +31,7 @@ type ProductBundleRow = {
   name: string;
   description: string | null;
   discount_percent: number | null;
+  trigger_category_id: string | null;
   bundle_products?: Array<{
     id: string;
     product?: ProductLite | null;
@@ -66,11 +67,13 @@ function applyOfferTrigger(
 type CheckoutOffersSidebarProps = {
   cartSubtotal: number;
   cartProductIds: string[];
+  cartCategoryIds?: string[];
 };
 
 const CheckoutOffersSidebar = ({
   cartSubtotal,
   cartProductIds,
+  cartCategoryIds = [],
 }: CheckoutOffersSidebarProps) => {
   const { addToCart } = useCart();
   const { language } = useLanguage();
@@ -96,7 +99,7 @@ const CheckoutOffersSidebar = ({
         supabase
           .from("product_bundles")
           .select(
-            "id,name,description,discount_percent,bundle_products(id,product:products(id,slug,name,name_bn,price,images))"
+            "id,name,description,discount_percent,trigger_category_id,bundle_products(id,product:products(id,slug,name,name_bn,price,images,category_id))"
           )
           .eq("is_active", true)
           .order("display_order"),
@@ -134,8 +137,18 @@ const CheckoutOffersSidebar = ({
         bundle_products: (b.bundle_products || []).filter((bp) => bp.product?.id),
       }))
       .filter((b) => (b.bundle_products?.length || 0) > 0)
-      .slice(0, 2);
-  }, [bundles]);
+      // Filter bundles that match cart categories or have no trigger category (show to all)
+      .filter((b) => {
+        if (!b.trigger_category_id) return true; // No trigger = show to everyone
+        return cartCategoryIds.includes(b.trigger_category_id);
+      })
+      // Don't show bundles where all products are already in cart
+      .filter((b) => {
+        const bundleProductIds = (b.bundle_products || []).map(bp => bp.product?.id).filter(Boolean);
+        return !bundleProductIds.every(id => cartProductIds.includes(id as string));
+      })
+      .slice(0, 3);
+  }, [bundles, cartCategoryIds, cartProductIds]);
 
   const handleAddOffer = async (offer: UpsellOfferRow) => {
     if (!offer.product?.id) return;

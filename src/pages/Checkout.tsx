@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { MapPin, Phone, CreditCard, Truck, Loader2, CheckCircle2, MessageCircle, User, ExternalLink, Navigation } from "lucide-react";
+import { MapPin, Phone, CreditCard, Truck, Loader2, CheckCircle2, MessageCircle, User, ExternalLink, Navigation, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +39,18 @@ const Checkout = () => {
   const [paymentMode, setPaymentMode] = useState<"auto" | "manual">("auto");
   const [bkashAvailable, setBkashAvailable] = useState(false);
   const [nagadAvailable, setNagadAvailable] = useState(false);
+  
+  // Promo code state
+  const [promoCode, setPromoCode] = useState("");
+  const [promoDiscount, setPromoDiscount] = useState(0);
+  const [promoError, setPromoError] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<{
+    id: string;
+    code: string;
+    discount_type: string;
+    discount_value: number;
+  } | null>(null);
+  const [applyingPromo, setApplyingPromo] = useState(false);
   
   const [selectedDivision, setSelectedDivision] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
@@ -97,11 +109,97 @@ const Checkout = () => {
     : [];
 
   const shippingCost = selectedDistrict ? calculateShippingCost(selectedDistrict) : 0;
-  const total = subtotal + shippingCost;
+  const total = subtotal + shippingCost - promoDiscount;
+
+  // Get cart category IDs for bundle filtering
+  const cartCategoryIds = [...new Set(items.map(item => item.product.category_id).filter(Boolean))] as string[];
+  const cartProductIds = items.map(item => item.product_id);
 
   const hasPreorderItems = items.some(
     item => item.product.stock_quantity === 0 && item.product.is_preorderable
   );
+
+  // Apply promo code
+  const handleApplyPromo = async () => {
+    if (!promoCode.trim()) {
+      setPromoError(language === "bn" ? "প্রোমো কোড লিখুন" : "Please enter a promo code");
+      return;
+    }
+
+    setApplyingPromo(true);
+    setPromoError("");
+
+    try {
+      const { data: promo, error } = await supabase
+        .from("promo_codes")
+        .select("*")
+        .eq("code", promoCode.toUpperCase().trim())
+        .eq("is_active", true)
+        .single();
+
+      if (error || !promo) {
+        setPromoError(language === "bn" ? "অবৈধ প্রোমো কোড" : "Invalid promo code");
+        setApplyingPromo(false);
+        return;
+      }
+
+      // Check expiry
+      if (promo.expires_at && new Date(promo.expires_at) < new Date()) {
+        setPromoError(language === "bn" ? "প্রোমো কোডের মেয়াদ শেষ" : "Promo code has expired");
+        setApplyingPromo(false);
+        return;
+      }
+
+      // Check min order amount
+      if (promo.min_order_amount && subtotal < promo.min_order_amount) {
+        setPromoError(
+          language === "bn" 
+            ? `সর্বনিম্ন অর্ডার ৳${promo.min_order_amount} প্রয়োজন` 
+            : `Minimum order amount is ৳${promo.min_order_amount}`
+        );
+        setApplyingPromo(false);
+        return;
+      }
+
+      // Check usage limit
+      if (promo.usage_limit && promo.used_count >= promo.usage_limit) {
+        setPromoError(language === "bn" ? "প্রোমো কোড সীমা অতিক্রম করেছে" : "Promo code usage limit reached");
+        setApplyingPromo(false);
+        return;
+      }
+
+      // Calculate discount
+      let discount = 0;
+      if (promo.discount_type === "percentage") {
+        discount = Math.round(subtotal * (promo.discount_value / 100));
+        if (promo.max_discount_amount && discount > promo.max_discount_amount) {
+          discount = promo.max_discount_amount;
+        }
+      } else {
+        discount = promo.discount_value;
+      }
+
+      setPromoDiscount(discount);
+      setAppliedPromo({
+        id: promo.id,
+        code: promo.code,
+        discount_type: promo.discount_type,
+        discount_value: promo.discount_value,
+      });
+      toast.success(language === "bn" ? "প্রোমো কোড প্রয়োগ হয়েছে!" : "Promo code applied!");
+    } catch (err) {
+      setPromoError(language === "bn" ? "কিছু সমস্যা হয়েছে" : "Something went wrong");
+    } finally {
+      setApplyingPromo(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setAppliedPromo(null);
+    setPromoDiscount(0);
+    setPromoCode("");
+    setPromoError("");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -746,6 +844,56 @@ const Checkout = () => {
                     ))}
                   </div>
 
+                  {/* Promo Code Input */}
+                  <div className="border-t border-border pt-4 mb-4">
+                    <Label className="text-sm mb-2 block">
+                      {language === "bn" ? "প্রোমো কোড" : "Promo Code"}
+                    </Label>
+                    {appliedPromo ? (
+                      <div className="flex items-center justify-between p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                        <div>
+                          <span className="font-medium text-green-600">{appliedPromo.code}</span>
+                          <span className="text-sm text-muted-foreground ml-2">
+                            (-৳{promoDiscount.toLocaleString()})
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleRemovePromo}
+                          className="text-red-500 hover:text-red-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input
+                          value={promoCode}
+                          onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                          placeholder={language === "bn" ? "কোড লিখুন" : "Enter code"}
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleApplyPromo}
+                          disabled={applyingPromo}
+                        >
+                          {applyingPromo ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            language === "bn" ? "প্রয়োগ" : "Apply"
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                    {promoError && (
+                      <p className="text-xs text-red-500 mt-1">{promoError}</p>
+                    )}
+                  </div>
+
                   {/* Totals */}
                   <div className="border-t border-border pt-4 space-y-2">
                     <div className="flex justify-between text-sm">
@@ -760,6 +908,12 @@ const Checkout = () => {
                       </span>
                       <span>৳{shippingCost}</span>
                     </div>
+                    {promoDiscount > 0 && (
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span>{language === "bn" ? "প্রোমো ছাড়" : "Promo Discount"}</span>
+                        <span>-৳{promoDiscount.toLocaleString()}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-lg font-semibold pt-2 border-t border-border">
                       <span className={language === "bn" ? "font-bengali" : ""}>
                         {language === "bn" ? "মোট" : "Total"}
@@ -767,6 +921,13 @@ const Checkout = () => {
                       <span className="text-gold">৳{total.toLocaleString()}</span>
                     </div>
                   </div>
+
+                  {/* Bundle Offers */}
+                  <CheckoutOffersSidebar
+                    cartSubtotal={subtotal}
+                    cartProductIds={cartProductIds}
+                    cartCategoryIds={cartCategoryIds}
+                  />
 
                   {hasPreorderItems && (
                     <div className="mt-4 p-3 bg-gold/10 border border-gold/30 rounded-lg">
