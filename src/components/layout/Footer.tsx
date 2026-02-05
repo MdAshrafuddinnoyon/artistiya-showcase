@@ -456,35 +456,40 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Dynamic Link Groups from Database */}
-          {linkGroups.length > 0 ? (
-            linkGroups.map((group) => {
-              const groupLinks = getLinksForGroup(group.id);
-              if (groupLinks.length === 0) return null;
+          {/* Dynamic Link Groups from Database - Fall back to defaults if links are placeholders */}
+          {(() => {
+            // Check if database has properly configured links (not just placeholders)
+            const hasProperLinks = links.some(l => l.name !== "New Link" && l.href !== "/#");
+            
+            if (linkGroups.length > 0 && hasProperLinks) {
+              return linkGroups.map((group) => {
+                const groupLinks = getLinksForGroup(group.id).filter(l => l.name !== "New Link" || l.href !== "/#");
+                if (groupLinks.length === 0) return null;
 
-              return (
-                <div key={group.id}>
-                  <h4 className="font-display text-lg text-foreground mb-4">
-                    {group.title}
-                  </h4>
-                  <ul className="space-y-3">
-                    {groupLinks.map((link) => (
-                      <li key={link.id}>
-                        <Link
-                          to={link.href}
-                          className="text-muted-foreground hover:text-gold transition-colors text-sm"
-                        >
-                          {link.name}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            })
-          ) : (
-            /* Fallback to default links if database is empty */
-            defaultGroups.map((group) => {
+                return (
+                  <div key={group.id}>
+                    <h4 className="font-display text-lg text-foreground mb-4">
+                      {group.title}
+                    </h4>
+                    <ul className="space-y-3">
+                      {groupLinks.map((link) => (
+                        <li key={link.id}>
+                          <Link
+                            to={link.href}
+                            className="text-muted-foreground hover:text-gold transition-colors text-sm"
+                          >
+                            {link.name}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              });
+            }
+            
+            // Fallback to default links if database is empty or has only placeholders
+            return defaultGroups.map((group) => {
               const groupLinks = defaultLinks[group.id] || [];
 
               return (
@@ -506,8 +511,8 @@ const Footer = () => {
                   </ul>
                 </div>
               );
-            })
-          )}
+            });
+          })()}
         </div>
       </div>
 
