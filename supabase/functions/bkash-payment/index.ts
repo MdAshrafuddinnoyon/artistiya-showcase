@@ -57,7 +57,7 @@ class BkashService {
     }
 
     this.token = data.id_token;
-    this.tokenExpiry = now + (data.expires_in * 1000) - 60000; // Refresh 1 min before expiry
+    this.tokenExpiry = now + (data.expires_in * 1000) - 60000;
     return this.token!;
   }
 
@@ -177,6 +177,91 @@ class BkashService {
   }
 }
 
+// Helper function to authenticate user and verify order ownership
+async function authenticateAndVerifyOrder(
+  req: Request,
+  supabase: any,
+  orderId: string,
+  requirePendingStatus: boolean = true
+): Promise<{ user: any; order: any; error?: Response }> {
+  // Check for authorization header
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return {
+      user: null,
+      order: null,
+      error: new Response(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      ),
+    };
+  }
+
+  // Verify JWT token
+  const token = authHeader.replace("Bearer ", "");
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+
+  if (claimsError || !claimsData?.claims) {
+    console.error("Auth error:", claimsError);
+    return {
+      user: null,
+      order: null,
+      error: new Response(
+        JSON.stringify({ success: false, error: "Invalid token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      ),
+    };
+  }
+
+  const userId = claimsData.claims.sub;
+
+  // Verify order exists and belongs to user
+  const { data: order, error: orderError } = await supabase
+    .from("orders")
+    .select("id, user_id, status, total")
+    .eq("id", orderId)
+    .single();
+
+  if (orderError || !order) {
+    console.error("Order not found:", orderError);
+    return {
+      user: null,
+      order: null,
+      error: new Response(
+        JSON.stringify({ success: false, error: "Order not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      ),
+    };
+  }
+
+  // Verify order ownership
+  if (order.user_id !== userId) {
+    console.error("Order ownership mismatch:", { orderUserId: order.user_id, requestUserId: userId });
+    return {
+      user: null,
+      order: null,
+      error: new Response(
+        JSON.stringify({ success: false, error: "Unauthorized access to order" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      ),
+    };
+  }
+
+  // Check order status if required
+  if (requirePendingStatus && order.status !== "pending") {
+    return {
+      user: null,
+      order: null,
+      error: new Response(
+        JSON.stringify({ success: false, error: "Order already processed" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      ),
+    };
+  }
+
+  return { user: { id: userId }, order, error: undefined };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -185,13 +270,22 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    
+    // Create service client for database operations
+    const supabaseService = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Create anon client for auth verification
+    const authHeader = req.headers.get("Authorization") || "";
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
 
     const url = new URL(req.url);
     const action = url.pathname.split("/").pop();
 
     // Get bKash config from database
-    const { data: providerData, error: configError } = await supabase
+    const { data: providerData, error: configError } = await supabaseService
       .from("payment_providers")
       .select("*")
       .eq("provider_type", "bkash")
@@ -246,10 +340,22 @@ serve(async (req) => {
         );
       }
 
+      // Authenticate user and verify order ownership
+      const { order, error: authError } = await authenticateAndVerifyOrder(
+        req,
+        supabaseAuth,
+        orderId,
+        true // Require pending status
+      );
+
+      if (authError) {
+        return authError;
+      }
+
       const payment = await bkash.createPayment(amount, orderId, callbackUrl);
 
       // Save payment initiation to database
-      await supabase.from("payment_transactions").insert({
+      await supabaseService.from("payment_transactions").insert({
         order_id: orderId,
         gateway_code: "bkash",
         transaction_id: payment.paymentID,
@@ -270,7 +376,7 @@ serve(async (req) => {
     }
 
     if (action === "execute" && req.method === "POST") {
-      const { paymentID } = await req.json();
+      const { paymentID, orderId } = await req.json();
 
       if (!paymentID) {
         return new Response(
@@ -279,11 +385,35 @@ serve(async (req) => {
         );
       }
 
+      // If orderId provided, verify ownership; otherwise lookup from transaction
+      let orderIdToVerify = orderId;
+      if (!orderIdToVerify) {
+        const { data: txn } = await supabaseService
+          .from("payment_transactions")
+          .select("order_id")
+          .eq("transaction_id", paymentID)
+          .single();
+        orderIdToVerify = txn?.order_id;
+      }
+
+      if (orderIdToVerify) {
+        const { error: authError } = await authenticateAndVerifyOrder(
+          req,
+          supabaseAuth,
+          orderIdToVerify,
+          false // Don't require pending status for execute
+        );
+
+        if (authError) {
+          return authError;
+        }
+      }
+
       const result = await bkash.executePayment(paymentID);
 
       // Update transaction status
       const status = result.statusCode === "0000" ? "completed" : "failed";
-      await supabase
+      await supabaseService
         .from("payment_transactions")
         .update({
           status,
@@ -294,14 +424,14 @@ serve(async (req) => {
 
       // If successful, update order status
       if (status === "completed") {
-        const { data: txn } = await supabase
+        const { data: txn } = await supabaseService
           .from("payment_transactions")
           .select("order_id")
           .eq("transaction_id", paymentID)
           .single();
 
         if (txn?.order_id) {
-          await supabase
+          await supabaseService
             .from("orders")
             .update({ 
               status: "confirmed",
@@ -323,13 +453,27 @@ serve(async (req) => {
     }
 
     if (action === "query" && req.method === "POST") {
-      const { paymentID } = await req.json();
+      const { paymentID, orderId } = await req.json();
 
       if (!paymentID) {
         return new Response(
           JSON.stringify({ success: false, error: "Missing paymentID" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+
+      // Verify order ownership if orderId provided
+      if (orderId) {
+        const { error: authError } = await authenticateAndVerifyOrder(
+          req,
+          supabaseAuth,
+          orderId,
+          false
+        );
+
+        if (authError) {
+          return authError;
+        }
       }
 
       const result = await bkash.queryPayment(paymentID);
@@ -341,12 +485,42 @@ serve(async (req) => {
     }
 
     if (action === "refund" && req.method === "POST") {
-      const { paymentID, trxID, amount, reason } = await req.json();
+      const { paymentID, trxID, amount, reason, orderId } = await req.json();
 
       if (!paymentID || !trxID || !amount) {
         return new Response(
           JSON.stringify({ success: false, error: "Missing required fields" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Refund requires admin check
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const token = authHeader.replace("Bearer ", "");
+      const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+
+      if (claimsError || !claimsData?.claims) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Invalid token" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const userId = claimsData.claims.sub;
+
+      // Check if user is admin
+      const { data: isAdmin } = await supabaseService.rpc("is_admin", { check_user_id: userId });
+      if (!isAdmin) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Admin access required" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
@@ -361,7 +535,7 @@ serve(async (req) => {
       );
     }
 
-    // Handle callback from bKash
+    // Handle callback from bKash - this remains unauthenticated as it comes from bKash servers
     if (action === "callback") {
       const params = url.searchParams;
       const paymentID = params.get("paymentID");
@@ -374,11 +548,32 @@ serve(async (req) => {
         const result = await bkash.executePayment(paymentID);
         
         // Get the order ID from transaction
-        const { data: txn } = await supabase
+        const { data: txn } = await supabaseService
           .from("payment_transactions")
           .select("order_id")
           .eq("transaction_id", paymentID)
           .single();
+
+        // Update transaction status
+        const txnStatus = result.statusCode === "0000" ? "completed" : "failed";
+        await supabaseService
+          .from("payment_transactions")
+          .update({
+            status: txnStatus,
+            gateway_response: result,
+            completed_at: txnStatus === "completed" ? new Date().toISOString() : null,
+          })
+          .eq("transaction_id", paymentID);
+
+        if (txnStatus === "completed" && txn?.order_id) {
+          await supabaseService
+            .from("orders")
+            .update({ 
+              status: "confirmed",
+              payment_transaction_id: result.trxID,
+            })
+            .eq("id", txn.order_id);
+        }
 
         // Redirect to order success page
         const redirectUrl = result.statusCode === "0000"
@@ -401,7 +596,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error instanceof Error ? error.message : "Payment processing failed" 
+        error: "Payment processing failed" 
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
