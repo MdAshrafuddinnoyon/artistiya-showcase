@@ -641,6 +641,65 @@ const Shop = () => {
           </div>
         );
 
+      case "categories":
+        return (
+          <div key={filterConfig.id}>
+            <h3 className="font-display text-lg mb-4">{language === "bn" ? "ক্যাটাগরি" : filterConfig.filter_name}</h3>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              <button
+                onClick={() => setSelectedCategory("all")}
+                className={`block w-full text-left px-3 py-2 rounded transition-colors ${
+                  selectedCategory === "all" ? "bg-gold/20 text-gold" : "hover:bg-muted"
+                }`}
+              >
+                {language === "bn" ? "সব পণ্য" : "All Products"}
+              </button>
+              {categories.map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`block w-full text-left px-3 py-2 rounded transition-colors ${
+                    selectedCategory === cat.id ? "bg-gold/20 text-gold" : "hover:bg-muted"
+                  }`}
+                >
+                  {getCategoryName(cat)}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+
+      case "sales_banner":
+        if (!shopSettings.show_sales_banner || !shopSettings.sales_banner_text) return null;
+        const bannerText = language === "bn" && shopSettings.sales_banner_text_bn ? shopSettings.sales_banner_text_bn : shopSettings.sales_banner_text;
+        return (
+          <div key={filterConfig.id}>
+            {shopSettings.sales_banner_link ? (
+              <a href={shopSettings.sales_banner_link} className="block">
+                <div 
+                  className="py-3 px-4 text-center font-medium rounded-lg"
+                  style={{ 
+                    backgroundColor: shopSettings.sales_banner_bg_color,
+                    color: shopSettings.sales_banner_text_color,
+                  }}
+                >
+                  {bannerText}
+                </div>
+              </a>
+            ) : (
+              <div 
+                className="py-3 px-4 text-center font-medium rounded-lg"
+                style={{ 
+                  backgroundColor: shopSettings.sales_banner_bg_color,
+                  color: shopSettings.sales_banner_text_color,
+                }}
+              >
+                {bannerText}
+              </div>
+            )}
+          </div>
+        );
+
       default:
         return null;
     }
@@ -648,37 +707,11 @@ const Shop = () => {
 
   const FilterContent = () => (
     <div className="space-y-6">
-      {/* Dynamic Filters - Rendered in display_order */}
+      {/* Dynamic Filters - All rendered in display_order (categories, banners, price, etc.) */}
       {filterConfigs
         .filter(f => f.is_active)
         .sort((a, b) => a.display_order - b.display_order)
         .map(renderFilter)}
-
-      {/* Categories - Always show */}
-      <div>
-        <h3 className="font-display text-lg mb-4">{language === "bn" ? "ক্যাটাগরি" : "Categories"}</h3>
-        <div className="space-y-2 max-h-48 overflow-y-auto">
-          <button
-            onClick={() => setSelectedCategory("all")}
-            className={`block w-full text-left px-3 py-2 rounded transition-colors ${
-              selectedCategory === "all" ? "bg-gold/20 text-gold" : "hover:bg-muted"
-            }`}
-          >
-            {language === "bn" ? "সব পণ্য" : "All Products"}
-          </button>
-          {categories.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`block w-full text-left px-3 py-2 rounded transition-colors ${
-                selectedCategory === cat.id ? "bg-gold/20 text-gold" : "hover:bg-muted"
-              }`}
-            >
-              {getCategoryName(cat)}
-            </button>
-          ))}
-        </div>
-      </div>
 
       {/* Clear Filters */}
       <Button 
@@ -711,36 +744,6 @@ const Shop = () => {
     return language === "bn" && pageSettings.hero_subtitle_bn ? pageSettings.hero_subtitle_bn : pageSettings.hero_subtitle;
   };
 
-  const getSalesBannerTitle = () => {
-    return language === "bn" && pageSettings.sales_banner_title_bn ? pageSettings.sales_banner_title_bn : pageSettings.sales_banner_title;
-  };
-
-  // Get sales banner text from shop_settings
-  const getSalesBannerText = () => {
-    return language === "bn" && shopSettings.sales_banner_text_bn ? shopSettings.sales_banner_text_bn : shopSettings.sales_banner_text;
-  };
-
-  // Sales Banner Component
-  const SalesBanner = () => {
-    if (!shopSettings.show_sales_banner || !shopSettings.sales_banner_text) return null;
-    
-    const bannerContent = (
-      <div 
-        className="py-3 px-4 text-center font-medium rounded-lg mb-4"
-        style={{ 
-          backgroundColor: shopSettings.sales_banner_bg_color,
-          color: shopSettings.sales_banner_text_color,
-        }}
-      >
-        {getSalesBannerText()}
-      </div>
-    );
-
-    if (shopSettings.sales_banner_link) {
-      return <a href={shopSettings.sales_banner_link} className="block">{bannerContent}</a>;
-    }
-    return bannerContent;
-  };
 
   // Promo Image Banner Component
   const PromoBanner = () => {
@@ -764,8 +767,6 @@ const Shop = () => {
 
   // Check if filter should be on left or right
   const isFilterOnRight = shopSettings.filter_position === 'right';
-  const isSalesBannerOnTop = shopSettings.sales_banner_position === 'top';
-  const isSalesBannerOnBottom = shopSettings.sales_banner_position === 'bottom';
 
   return (
     <div className="min-h-screen bg-background">
@@ -834,8 +835,7 @@ const Shop = () => {
             </div>
           )}
 
-          {/* Top Sales Banner */}
-          {isSalesBannerOnTop && <SalesBanner />}
+          {/* Sales banner now rendered dynamically inside FilterContent */}
 
           <div className={`flex gap-8 ${isFilterOnRight ? 'flex-row-reverse' : ''}`}>
             {/* Desktop Sidebar */}
@@ -850,34 +850,6 @@ const Shop = () => {
 
             {/* Main Content */}
             <div className="flex-1">
-              {/* Mobile Sales Banner (always top on mobile) */}
-              {isMobile && shopSettings.show_sales_banner && shopSettings.sales_banner_text && (
-                <div 
-                  className="py-3 px-4 text-center font-medium rounded-lg mb-4"
-                  style={{ 
-                    backgroundColor: shopSettings.sales_banner_bg_color,
-                    color: shopSettings.sales_banner_text_color,
-                  }}
-                >
-                  {shopSettings.sales_banner_link ? (
-                    <a href={shopSettings.sales_banner_link}>{getSalesBannerText()}</a>
-                  ) : getSalesBannerText()}
-                </div>
-              )}
-
-              {/* Mobile Promo Banner */}
-              {isMobile && shopSettings.show_promo_banner && shopSettings.promo_banner_image && (
-                <a 
-                  href={shopSettings.promo_banner_link || "#"} 
-                  className="block rounded-xl overflow-hidden relative group mb-4"
-                >
-                  <img 
-                    src={shopSettings.promo_banner_image} 
-                    alt="Promo" 
-                    className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                </a>
-              )}
 
               {/* Toolbar */}
               <div className="flex flex-wrap items-center justify-between gap-3 md:gap-4 mb-4 md:mb-8 pb-4 md:pb-6 border-b border-border">
@@ -1101,8 +1073,7 @@ const Shop = () => {
                 </div>
               )}
 
-              {/* Bottom Sales Banner */}
-              {isSalesBannerOnBottom && <div className="mt-8"><SalesBanner /></div>}
+              {/* Sales banner now rendered dynamically inside FilterContent */}
             </div>
           </div>
         </div>
