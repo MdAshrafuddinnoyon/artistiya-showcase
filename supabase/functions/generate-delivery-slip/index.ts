@@ -43,12 +43,43 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    
+    // Create service client for database operations
+    const supabaseService = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Authentication check
+    const authHeader = req.headers.get("Authorization") || "";
+    if (!authHeader?.startsWith("Bearer ")) {
+      console.error("Missing or invalid authorization header");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+
+    if (claimsError || !claimsData?.claims) {
+      console.error("Auth error:", claimsError);
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = claimsData.claims.sub;
+    console.log(`Authenticated user: ${userId}`);
 
     const { orderId }: DeliverySlipRequest = await req.json();
     console.log(`Generating delivery slip for order: ${orderId}`);
 
-    const { data: order, error: orderError } = await supabase
+    const { data: order, error: orderError } = await supabaseService
       .from("orders")
       .select(`
         *,
@@ -60,18 +91,34 @@ serve(async (req) => {
 
     if (orderError || !order) {
       console.error("Order fetch error:", orderError);
-      throw new Error("Order not found");
+      return new Response(
+        JSON.stringify({ error: "Order not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
+    // Verify order ownership OR admin access
+    const { data: isAdmin } = await supabaseService.rpc("is_admin", { check_user_id: userId });
+    
+    if (order.user_id !== userId && !isAdmin) {
+      console.error("Order ownership mismatch:", { orderUserId: order.user_id, requestUserId: userId });
+      return new Response(
+        JSON.stringify({ error: "Unauthorized access to order" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    console.log(`Access verified - Admin: ${isAdmin}, Owner: ${order.user_id === userId}`);
+
     // Get invoice settings
-    const { data: settings } = await supabase
+    const { data: settings } = await supabaseService
       .from("invoice_settings")
       .select("*")
       .limit(1)
       .single();
 
     // Get site branding
-    const { data: siteBranding } = await supabase
+    const { data: siteBranding } = await supabaseService
       .from("site_branding")
       .select("logo_url, business_name")
       .limit(1)
