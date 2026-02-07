@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Calendar, ArrowLeft, Share2 } from "lucide-react";
+import DOMPurify from "dompurify";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/layout/Header";
@@ -209,10 +210,11 @@ const BlogPostPage = () => {
             <div
               className="prose prose-sm md:prose-lg max-w-none dark:prose-invert prose-headings:font-display prose-a:text-gold"
               dangerouslySetInnerHTML={{
-                __html:
+                __html: DOMPurify.sanitize(
                   language === "bn" && post.content_bn
                     ? post.content_bn
-                    : post.content,
+                    : post.content
+                ),
               }}
             />
           </motion.article>

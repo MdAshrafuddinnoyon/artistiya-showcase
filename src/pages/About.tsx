@@ -3,12 +3,12 @@ import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { FileText, ExternalLink, Download } from "lucide-react";
+import DOMPurify from "dompurify";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
-
 interface TeamMember {
   id: string;
   name: string;
@@ -176,7 +176,7 @@ const About = () => {
                 isProbablyHtml(content) ? (
                   <div
                     className={`prose prose-invert max-w-none ${language === "bn" ? "font-bengali" : ""}`}
-                    dangerouslySetInnerHTML={{ __html: content }}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
                   />
                 ) : (
                   <div className={`whitespace-pre-wrap text-muted-foreground ${language === "bn" ? "font-bengali" : ""}`}>

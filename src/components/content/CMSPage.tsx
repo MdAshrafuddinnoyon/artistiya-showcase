@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import DOMPurify from "dompurify";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
-
 type ContentPageRow = {
   id: string;
   page_key: string;
@@ -155,7 +155,7 @@ const CMSPage = ({
                 isProbablyHtml(content) ? (
                   <div
                     className="prose prose-invert max-w-none"
-                    dangerouslySetInnerHTML={{ __html: content }}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
                   />
                 ) : (
                   <div className="whitespace-pre-wrap text-muted-foreground">

@@ -482,7 +482,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error("Error generating delivery slip:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: "Failed to generate delivery slip" }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
