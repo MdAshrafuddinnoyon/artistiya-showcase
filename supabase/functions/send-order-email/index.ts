@@ -24,20 +24,64 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    
+    // Create service client for database operations
+    const supabaseService = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Create anon client for auth verification
+    const authHeader = req.headers.get("Authorization") || "";
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
 
     const { orderId, type }: OrderEmailRequest = await req.json();
     console.log(`Processing ${type} email for order: ${orderId}`);
 
+    // Authenticate user
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+
+    if (claimsError || !claimsData?.claims) {
+      console.error("Auth error:", claimsError);
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = claimsData.claims.sub;
+
     // Fetch order
-    const { data: order, error: orderError } = await supabase
+    const { data: order, error: orderError } = await supabaseService
       .from("orders")
       .select(`*, address:addresses (*), order_items (*)`)
       .eq("id", orderId)
       .single();
 
     if (orderError || !order) {
-      throw new Error("Order not found");
+      return new Response(
+        JSON.stringify({ error: "Order not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify order ownership OR admin access
+    const { data: isAdmin } = await supabaseService.rpc("is_admin", { check_user_id: userId });
+    
+    if (order.user_id !== userId && !isAdmin) {
+      console.error("Order ownership mismatch:", { orderUserId: order.user_id, requestUserId: userId });
+      return new Response(
+        JSON.stringify({ error: "Unauthorized access to order" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const customerName = order.address?.full_name || "Customer";
@@ -66,7 +110,7 @@ serve(async (req) => {
     });
   } catch (error: any) {
     console.error("Error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: "Failed to send email" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
