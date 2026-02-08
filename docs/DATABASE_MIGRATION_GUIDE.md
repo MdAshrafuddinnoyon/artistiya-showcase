@@ -240,12 +240,12 @@ certbot certonly --standalone -d your-domain.com
 
 ## ডাটাবেস টেবিল রেফারেন্স
 
-### সম্পূর্ণ টেবিল লিস্ট (৭৫+ টেবিল):
+### সম্পূর্ণ টেবিল লিস্ট (৮০+ টেবিল):
 
 #### 🛒 প্রোডাক্ট ম্যানেজমেন্ট
 | টেবিল | বর্ণনা | প্রধান ফিল্ড |
 |-------|--------|-------------|
-| `products` | পণ্য তালিকা | name, price, images, stock_quantity |
+| `products` | পণ্য তালিকা | name, price, images, stock_quantity, customization_only, advance_payment_percent |
 | `categories` | ক্যাটাগরি | name, slug, image_url, parent_id |
 | `collections` | কালেকশন | name, slug, image_url |
 | `product_variants` | ভ্যারিয়েন্ট | product_id, sku, price, stock |
@@ -259,6 +259,7 @@ certbot certonly --standalone -d your-domain.com
 |-------|--------|-------------|
 | `orders` | অর্ডার | order_number, status, total |
 | `order_items` | অর্ডার আইটেম | order_id, product_id, quantity |
+| `order_fraud_flags` | ফ্রড ফ্ল্যাগ | order_id, flag_type, reason |
 | `addresses` | ঠিকানা | full_name, phone, division, district |
 | `delivery_zones` | ডেলিভারি জোন | division, district, shipping_cost |
 | `delivery_partners` | কুরিয়ার পার্টনার | name, api_key, is_active |
@@ -269,7 +270,9 @@ certbot certonly --standalone -d your-domain.com
 | টেবিল | বর্ণনা | প্রধান ফিল্ড |
 |-------|--------|-------------|
 | `payment_providers` | পেমেন্ট গেটওয়ে | name, provider_type, is_active |
+| `payment_transactions` | পেমেন্ট ট্র্যাকিং | order_id, amount, status, provider |
 | `promo_codes` | প্রোমো কোড | code, discount_type, discount_value |
+| `promo_code_usage` | প্রোমো কোড ব্যবহার | promo_code_id, user_id, order_id |
 | `customer_discount_credits` | কাস্টমার ক্রেডিট | user_id, discount_value |
 
 #### 👥 ইউজার ও CRM
@@ -281,8 +284,11 @@ certbot certonly --standalone -d your-domain.com
 | `blocked_customers` | ব্লক কাস্টমার | phone, email, block_reason |
 | `cart_items` | কার্ট | user_id, product_id, quantity |
 | `wishlist_items` | উইশলিস্ট | user_id, product_id |
-| `custom_order_requests` | কাস্টম অর্ডার | description, reference_image_url |
-| `product_reviews` | রিভিউ | product_id, rating, comment |
+| `custom_order_requests` | কাস্টম অর্ডার | description, reference_image_url, advance_amount, advance_paid |
+| `product_reviews` | প্রোডাক্ট রিভিউ | product_id, rating, comment |
+| `reviews` | জেনারেল রিভিউ | rating, comment, source |
+| `leads` | লিড ম্যানেজমেন্ট | name, email, phone, status |
+| `notifications` | নোটিফিকেশন | user_id, message, type, is_read |
 
 #### 🎨 CMS
 | টেবিল | বর্ণনা | প্রধান ফিল্ড |
@@ -291,6 +297,7 @@ certbot certonly --standalone -d your-domain.com
 | `homepage_sections` | হোমপেজ সেকশন | section_type, config, display_order |
 | `homepage_content` | হোমপেজ কন্টেন্ট | section_key, content |
 | `featured_sections` | ফিচার্ড সেকশন | title, image_url, features |
+| `making_section` | মেকিং প্রসেস | title, description, steps |
 | `blog_posts` | ব্লগ পোস্ট | title, content, slug |
 | `blog_categories` | ব্লগ ক্যাটাগরি | name, slug |
 | `blog_settings` | ব্লগ সেটিংস | posts_per_page, show_banner |
@@ -304,23 +311,31 @@ certbot certonly --standalone -d your-domain.com
 | `content_pages` | স্ট্যাটিক পেজ | page_key, title, content |
 | `announcement_bar` | অ্যানাউন্সমেন্ট | message, background_color |
 | `team_members` | টিম মেম্বার | name, role, image_url |
+| `menu_items` | মেনু আইটেম | label, href, display_order |
+| `menu_sub_items` | সাব-মেনু | parent_id, label, href |
 
 #### ⚙️ সেটিংস
 | টেবিল | বর্ণনা | প্রধান ফিল্ড |
 |-------|--------|-------------|
 | `site_branding` | ব্র্যান্ডিং | logo_url, footer_description |
+| `public_site_branding` | পাবলিক ব্র্যান্ডিং | logo_url, contact_info |
+| `site_settings` | সাইট সেটিংস | key, value |
+| `site_integrations` | থার্ড পার্টি ইন্টিগ্রেশন | provider, config |
 | `theme_settings` | থিম | primary_color, font_family |
 | `shop_settings` | শপ সেটিংস | products_per_page, default_sort |
+| `shop_page_settings` | শপ পেজ সেটিংস | layout, filters_enabled |
 | `checkout_settings` | চেকআউট | cod_enabled, free_shipping_threshold |
 | `checkout_fraud_settings` | ফ্রড সেটিংস | max_orders_per_phone |
 | `email_settings` | ইমেইল | provider, from_email |
 | `email_templates` | ইমেইল টেমপ্লেট | template_key, html_content |
 | `invoice_settings` | ইনভয়েস | company_name, logo_url |
+| `qr_discount_settings` | QR ডিসকাউন্ট | discount_percent, is_active |
 | `newsletter_settings` | নিউজলেটার | title, subtitle |
 | `newsletter_subscribers` | সাবস্ক্রাইবার | email, source |
 | `filter_settings` | ফিল্টার | filter_key, options |
 | `currency_rates` | কারেন্সি | currency_code, rate_to_bdt |
 | `category_display_settings` | ক্যাটাগরি ডিসপ্লে | columns_desktop, enable_slider |
+| `customization_settings` | কাস্টমাইজেশন সেটিংস | custom_order_enabled, header_button_enabled, default_advance_percent |
 | `footer_link_groups` | ফুটার গ্রুপ | title, display_order |
 | `footer_links` | ফুটার লিংক | group_id, name, href |
 | `social_links` | সোশ্যাল লিংক | platform, url |
@@ -338,6 +353,8 @@ products.category_id → categories.id
 categories.parent_id → categories.id
 user_roles.user_id → auth.users.id
 customers.user_id → auth.users.id
+custom_order_requests.product_id → products.id
+custom_order_requests.user_id → auth.users.id
 ```
 
 ---
@@ -388,15 +405,17 @@ psql -d artisan_shop -f lovable_backup.sql
 
 | ফিচার | স্ট্যাটাস | নোট |
 |--------|---------|------|
-| প্রোডাক্ট CRUD | ✅ সফল | 11 সক্রিয় প্রোডাক্ট |
+| প্রোডাক্ট CRUD | ✅ সফল | 10 সক্রিয় প্রোডাক্ট |
 | ক্যাটাগরি ম্যানেজমেন্ট | ✅ সফল | 6 ক্যাটাগরি |
-| অর্ডার সিস্টেম | ✅ সফল | 2 অর্ডার |
-| হোমপেজ সেকশন | ✅ সফল | 7 সক্রিয় সেকশন |
+| অর্ডার সিস্টেম | ✅ সফল | অর্ডার ফ্লো টেস্টেড |
+| হোমপেজ সেকশন | ✅ সফল | ডাইনামিক সেকশন |
 | রিয়েলটাইম সিঙ্ক | ✅ সফল | সব টেবিলে কাজ করছে |
 | অ্যাডমিন RLS | ✅ সফল | is_admin() ফাংশন |
-| মোবাইল/ডেস্কটপ সিঙ্ক | ✅ সফল | ফুটার ফলব্যাক ফিক্সড |
+| মোবাইল/ডেস্কটপ সিঙ্ক | ✅ সফল | রেসপন্সিভ ডিজাইন |
 | ইমেজ স্টোরেজ | ✅ সফল | 4 বাকেট সক্রিয় |
 | CRM ড্যাশবোর্ড | ✅ সফল | ফিল্টার ও এক্সপোর্ট |
+| কাস্টমাইজেশন সিস্টেম | ✅ সফল | কাস্টম অর্ডার + অ্যাডভান্স পেমেন্ট |
+| ডিসকাউন্ট ব্যাজ | ✅ সফল | ডাইনামিক % ক্যালকুলেশন |
 
 ### Storage Buckets:
 - `product-images` (public) - প্রোডাক্ট ছবি
