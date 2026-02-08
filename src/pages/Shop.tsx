@@ -190,56 +190,50 @@ const Shop = () => {
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("newest");
 
-  // Track last sync timestamp for smart polling
-  const [lastSyncTime, setLastSyncTime] = useState<number>(Date.now());
+  // Realtime connection status tracking
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
+  
+  // Track if initial load has happened to prevent overwriting user filter changes
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
-  // Fetch shop settings and filter configs with realtime subscription
+  // Fetch shop settings and filter configs - stable function with no dependencies that cause loops
   const fetchSettings = useCallback(async () => {
     try {
-      // Fetch shop settings
-      const { data: shopData } = await supabase
-        .from("shop_settings")
-        .select("*")
-        .single();
+      // Fetch all settings in parallel for efficiency
+      const [shopResult, pageResult, filterResult] = await Promise.all([
+        supabase.from("shop_settings").select("*").single(),
+        supabase.from("shop_page_settings").select("*").single(),
+        supabase.from("filter_settings").select("*").order("display_order", { ascending: true }),
+      ]);
+
+      const { data: shopData } = shopResult;
+      const { data: pageData } = pageResult;
+      const { data: filterData } = filterResult;
       
       if (shopData) {
         setShopSettings(prev => {
-          // Only update if data actually changed
-          if (JSON.stringify(prev) !== JSON.stringify(shopData)) {
-            return shopData as ShopSettings;
-          }
-          return prev;
+          const newData = shopData as ShopSettings;
+          // Deep compare to prevent unnecessary updates
+          if (JSON.stringify(prev) === JSON.stringify(newData)) return prev;
+          return newData;
         });
-        // Only set price range on initial load
-        if (priceRange[0] === 0 && priceRange[1] === 50000) {
+        
+        // Only set price range and sort on very first load
+        if (!initialLoadDone) {
           setPriceRange([shopData.min_price || 0, shopData.max_price || 50000]);
-        }
-        if (sortBy === 'newest' && shopData.default_sort) {
-          setSortBy(shopData.default_sort);
+          if (shopData.default_sort) {
+            setSortBy(shopData.default_sort);
+          }
+          setInitialLoadDone(true);
         }
       }
 
-      // Fetch page appearance settings
-      const { data: pageData } = await supabase
-        .from("shop_page_settings")
-        .select("*")
-        .single();
-      
       if (pageData) {
         setPageSettings(prev => {
-          if (JSON.stringify(prev) !== JSON.stringify(pageData)) {
-            return pageData as any;
-          }
-          return prev;
+          if (JSON.stringify(prev) === JSON.stringify(pageData)) return prev;
+          return pageData as any;
         });
       }
-
-      // Fetch filter configurations - includes ALL filters, frontend handles is_active
-      const { data: filterData } = await supabase
-        .from("filter_settings")
-        .select("*")
-        .order("display_order", { ascending: true });
 
       if (filterData) {
         const configs: FilterSettingConfig[] = filterData.map((f) => ({
@@ -252,48 +246,47 @@ const Shop = () => {
           options: (typeof f.options === "object" && f.options !== null ? f.options : {}) as Record<string, any>,
         }));
         setFilterConfigs(prev => {
-          if (JSON.stringify(prev) !== JSON.stringify(configs)) {
-            console.log("Filter configs updated:", configs.map(c => `${c.filter_key}: ${c.is_active}`).join(", "));
-            return configs;
-          }
-          return prev;
+          if (JSON.stringify(prev) === JSON.stringify(configs)) return prev;
+          return configs;
         });
       }
-
-      setLastSyncTime(Date.now());
     } catch (error) {
       console.error("Error fetching settings:", error);
     }
-  }, [priceRange, sortBy]);
+  }, [initialLoadDone]);
 
+  // Initial settings load - only runs once on mount
   useEffect(() => {
     fetchSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  // Realtime subscription - separate from initial load to prevent re-subscription loops
+  useEffect(() => {
+    let isSubscribed = true;
+    
     // Subscribe to realtime changes for shop_page_settings, shop_settings, and filter_settings
     const channel = supabase
       .channel('shop_all_settings_realtime')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'shop_page_settings' },
-        (payload) => {
-          console.log("shop_page_settings changed:", payload.eventType);
-          fetchSettings();
+        () => {
+          if (isSubscribed) fetchSettings();
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'shop_settings' },
-        (payload) => {
-          console.log("shop_settings changed:", payload.eventType);
-          fetchSettings();
+        () => {
+          if (isSubscribed) fetchSettings();
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'filter_settings' },
-        (payload) => {
-          console.log("filter_settings changed:", payload.eventType, payload);
-          fetchSettings();
+        () => {
+          if (isSubscribed) fetchSettings();
         }
       )
       .subscribe((status) => {
@@ -306,14 +299,9 @@ const Shop = () => {
         }
       });
 
-    // Smart polling fallback - polls every 10 seconds as a backup
-    const pollingTimer = setInterval(() => {
-      fetchSettings();
-    }, 10000);
-
     return () => {
+      isSubscribed = false;
       supabase.removeChannel(channel);
-      clearInterval(pollingTimer);
     };
   }, [fetchSettings]);
 
