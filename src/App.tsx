@@ -22,6 +22,8 @@ import FAQ from "./pages/FAQ";
 import TrackOrder from "./pages/TrackOrder";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
+import ShippingInfo from "./pages/ShippingInfo";
+import ReturnPolicy from "./pages/ReturnPolicy";
 import NotFound from "./pages/NotFound";
 import OrderSuccess from "./pages/OrderSuccess";
 import OrderDetail from "./pages/OrderDetail";
@@ -69,6 +71,8 @@ const App = () => (
                     <Route path="/track" element={<TrackOrder />} />
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/privacy" element={<Privacy />} />
+                    <Route path="/shipping-info" element={<ShippingInfo />} />
+                    <Route path="/return-policy" element={<ReturnPolicy />} />
                     <Route path="/gallery" element={<Gallery />} />
                     <Route path="/claim-discount" element={<ClaimDiscount />} />
                     <Route path="/blog" element={<Blog />} />
