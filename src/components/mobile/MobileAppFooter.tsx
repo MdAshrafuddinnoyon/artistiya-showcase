@@ -12,6 +12,7 @@ interface SiteBranding {
   logo_text: string;
   logo_text_secondary: string;
   footer_description: string;
+  footer_copyright: string;
   footer_banner_url: string | null;
   footer_banner_link: string | null;
   footer_banner_height: number;
@@ -80,6 +81,7 @@ const MobileAppFooter = () => {
     logo_text: "artistiya",
     logo_text_secondary: ".store",
     footer_description: "Where every piece tells a story of tradition, artistry, and elegance.",
+    footer_copyright: "© 2026 artistiya.store. All rights reserved.",
     footer_banner_url: null,
     footer_banner_link: null,
     footer_banner_height: 60,
@@ -465,10 +467,26 @@ const MobileAppFooter = () => {
         </div>
       </div>
 
-      {/* Copyright */}
-      <div className="text-center py-3">
+      {/* Copyright & Bottom Links */}
+      <div className="px-4 py-4 text-center space-y-3">
+        {/* Quick Legal Links */}
+        <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground">
+          <Link to="/terms" className="hover:text-gold transition-colors">
+            {language === "bn" ? "শর্তাবলী" : "Terms"}
+          </Link>
+          <span>•</span>
+          <Link to="/privacy" className="hover:text-gold transition-colors">
+            {language === "bn" ? "গোপনীয়তা" : "Privacy"}
+          </Link>
+          <span>•</span>
+          <Link to="/gallery" className="hover:text-gold transition-colors">
+            {language === "bn" ? "গ্যালারি" : "Gallery"}
+          </Link>
+        </div>
+        
+        {/* Copyright Text */}
         <p className="text-[10px] text-muted-foreground">
-          © {new Date().getFullYear()} {branding.logo_text}{branding.logo_text_secondary}. {language === "bn" ? "সর্বস্বত্ব সংরক্ষিত।" : "All rights reserved."}
+          {branding.footer_copyright || `© ${new Date().getFullYear()} ${branding.logo_text}${branding.logo_text_secondary}. ${language === "bn" ? "সর্বস্বত্ব সংরক্ষিত।" : "All rights reserved."}`}
         </p>
       </div>
     </footer>
