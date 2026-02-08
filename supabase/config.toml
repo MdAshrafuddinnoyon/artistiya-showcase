@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.nagad-payment]
 verify_jwt = false
+
+[functions.encrypt-credentials]
+verify_jwt = false

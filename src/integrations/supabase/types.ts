@@ -3539,6 +3539,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      decrypt_credential: {
+        Args: { encrypted_text: string; encryption_key: string }
+        Returns: string
+      }
+      encrypt_credential: { Args: { plaintext: string }; Returns: string }
+      encrypt_credential_value: {
+        Args: { encryption_key: string; plaintext: string }
+        Returns: string
+      }
       is_admin: { Args: { check_user_id: string }; Returns: boolean }
     }
     Enums: {
