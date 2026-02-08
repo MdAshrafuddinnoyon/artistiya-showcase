@@ -153,11 +153,23 @@ const NewArrivalsSection = () => {
                 <Link to={`/product/${product.slug}`} className="block">
                   {/* Image Container */}
                   <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-muted mb-3 md:mb-4">
+                    {/* Primary image */}
                     <img
                       src={product.images?.[0] || "/placeholder.svg"}
                       alt={product.name}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 group-hover:scale-105 ${
+                        product.images?.[1] ? "group-hover:opacity-0" : ""
+                      }`}
                     />
+
+                    {/* Secondary/Gallery image on hover */}
+                    {product.images?.[1] && (
+                      <img
+                        src={product.images[1]}
+                        alt={`${product.name} - alternate view`}
+                        className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
+                      />
+                    )}
                     
                     {/* Wishlist Button */}
                     <button

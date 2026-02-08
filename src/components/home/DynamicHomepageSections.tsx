@@ -162,7 +162,8 @@ const DynamicHomepageSections = () => {
           .from("products")
           .select("id, name, slug, price, compare_at_price, images, is_featured, category_id")
           .eq("is_active", true)
-          .limit(200),
+          .order("created_at", { ascending: false })
+          .limit(500),
         supabase
           .from("categories")
           .select("id, name, slug"),

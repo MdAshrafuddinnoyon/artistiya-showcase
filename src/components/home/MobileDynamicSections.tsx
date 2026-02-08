@@ -152,7 +152,12 @@ const MobileDynamicSections = () => {
     try {
       const [sectionsRes, productsRes, categoriesRes, youtubeRes, blogRes, faqRes, testimonialRes, featuredRes, makingRes] = await Promise.all([
         supabase.from("homepage_sections").select("*").eq("is_active", true).order("display_order"),
-        supabase.from("products").select("id, name, name_bn, slug, price, compare_at_price, images, is_featured, is_new_arrival, category_id").eq("is_active", true).limit(100),
+        supabase
+          .from("products")
+          .select("id, name, name_bn, slug, price, compare_at_price, images, is_featured, is_new_arrival, category_id")
+          .eq("is_active", true)
+          .order("created_at", { ascending: false })
+          .limit(500),
         supabase.from("categories").select("id, name, name_bn, slug, icon_emoji, mobile_image_url, image_url").order("display_order"),
         supabase.from("youtube_videos").select("id, title, title_bn, video_id, thumbnail_url").eq("is_active", true).order("display_order").limit(10),
         supabase.from("blog_posts").select("id, title, title_bn, slug, excerpt, excerpt_bn, featured_image, published_at").eq("is_published", true).order("published_at", { ascending: false }).limit(10),
@@ -1008,13 +1013,15 @@ const MobileDynamicSections = () => {
         return <MobileCategories key={section.id} />;
 
       case "new_arrivals": {
-        const newProducts = products.filter(p => p.is_new_arrival).slice(0, 12);
+        const limit = section.config.limit || 8;
+        const newProducts = products.filter(p => p.is_new_arrival).slice(0, limit);
         return <MobileProductSlider key={section.id} items={newProducts} title={section.title} />;
       }
 
       case "best_selling":
       case "featured_static": {
-        const featuredProducts = products.filter(p => p.is_featured).slice(0, 12);
+        const limit = section.config.limit || 8;
+        const featuredProducts = products.filter(p => p.is_featured).slice(0, limit);
         return <MobileProductSlider key={section.id} items={featuredProducts} title={section.title} />;
       }
 
@@ -1025,17 +1032,23 @@ const MobileDynamicSections = () => {
       }
 
       case "category": {
-        const categoryProducts = products.filter(p => p.category_id === section.config.category_id).slice(0, 12);
+        const limit = section.config.limit || 8;
+        const categoryProducts = products
+          .filter(p => p.category_id === section.config.category_id)
+          .slice(0, limit);
         if (categoryProducts.length === 0) return null;
         return <MobileProductSlider key={section.id} items={categoryProducts} title={section.title} />;
       }
 
       case "discount": {
-        const discountProducts = products.filter(p => {
-          if (!p.compare_at_price || p.compare_at_price <= p.price) return false;
-          const discount = Math.round(((p.compare_at_price - p.price) / p.compare_at_price) * 100);
-          return discount >= (section.config.min_discount || 10);
-        }).slice(0, 12);
+        const limit = section.config.limit || 8;
+        const discountProducts = products
+          .filter(p => {
+            if (!p.compare_at_price || p.compare_at_price <= p.price) return false;
+            const discount = Math.round(((p.compare_at_price - p.price) / p.compare_at_price) * 100);
+            return discount >= (section.config.min_discount || 10);
+          })
+          .slice(0, limit);
         if (discountProducts.length === 0) return null;
         return <MobileProductSlider key={section.id} items={discountProducts} title={section.title} />;
       }
