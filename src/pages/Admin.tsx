@@ -157,7 +157,7 @@ const menuSections = [
       { id: "featured-section", name: "Signature Collection", icon: Package },
       { id: "making-section", name: "Behind the Craft", icon: Star },
       { id: "homepage", name: "Sections CMS", icon: Layers },
-      { id: "homepage-sections", name: "Product Sections", icon: Package },
+      { id: "homepage-sections", name: "Homepage Sections", icon: Package },
       { id: "category-settings", name: "Category Display", icon: FolderTree },
       { id: "instagram", name: "Instagram Feed", icon: Instagram },
       { id: "youtube", name: "YouTube Videos", icon: Youtube },
