@@ -905,23 +905,10 @@ const Shop = () => {
                   </SheetTrigger>
                   <SheetContent side="left" className="w-[85vw] max-w-80 overflow-y-auto">
                     <SheetHeader>
-                      <SheetTitle>{t("shop.filter")}</SheetTitle>
+                      <SheetTitle>{language === "bn" ? "ফিল্টার" : t("shop.filter")}</SheetTitle>
                     </SheetHeader>
                     <div className="mt-4 space-y-4">
-                      {/* Promo Banner in Filter Sheet */}
-                      {shopSettings.show_promo_banner && shopSettings.promo_banner_image && (
-                        <a 
-                          href={shopSettings.promo_banner_link || "#"} 
-                          className="block rounded-lg overflow-hidden relative group"
-                          onClick={() => setFilterOpen(false)}
-                        >
-                          <img 
-                            src={shopSettings.promo_banner_image} 
-                            alt="Promo" 
-                            className="w-full h-auto object-cover"
-                          />
-                        </a>
-                      )}
+                      {/* Same FilterContent as Desktop - fully synchronized */}
                       <FilterContent />
                     </div>
                   </SheetContent>
