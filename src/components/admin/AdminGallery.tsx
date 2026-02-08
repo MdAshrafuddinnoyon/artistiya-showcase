@@ -101,12 +101,13 @@ const AdminGallery = () => {
       const albumItems = items.filter((i) => i.album_id === albumId);
       const { error } = await supabase.from("gallery_items").insert({
         album_id: albumId,
-        media_url: "https://placehold.co/400x400/1a1a1a/d4af37?text=Upload+Image",
+        media_url: "/placeholder.svg",
         display_order: albumItems.length,
+        is_active: true,
       });
 
       if (error) throw error;
-      toast.success("Item added");
+      toast.success("Item added - Please upload an image");
       fetchData();
     } catch (error) {
       console.error("Error adding item:", error);

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Plus, Trash2, Save, Upload, Eye, EyeOff, GripVertical, Layers, Package, Image as ImageIcon, FolderTree, X, Library, ZoomIn, ZoomOut } from "lucide-react";
+import { Plus, Trash2, Save, Upload, Eye, EyeOff, GripVertical, Layers, Package, Image as ImageIcon, FolderTree, X, Library, ZoomIn, ZoomOut, Youtube, FileText, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +43,9 @@ const sectionTypes = [
   { value: "banner", label: "Promotional Banner", icon: ImageIcon, description: "Full-width banner" },
   { value: "dual_banner", label: "Dual Banner", icon: ImageIcon, description: "Two side-by-side banners" },
   { value: "featured", label: "Featured Collection", icon: Layers, description: "Highlight a collection" },
+  { value: "youtube", label: "YouTube Videos", icon: Youtube, description: "Display YouTube videos" },
+  { value: "blog", label: "Blog Posts", icon: FileText, description: "Recent blog posts" },
+  { value: "faq", label: "FAQ Section", icon: HelpCircle, description: "Frequently asked questions" },
 ];
 
 const AdminHomepageSections = () => {
@@ -138,6 +141,9 @@ const AdminHomepageSections = () => {
           banner2_image: "", banner2_link: "", banner2_title: "" 
         },
         featured: { collection_id: null },
+        youtube: { limit: 3, auto_play: false },
+        blog: { limit: 3, show_excerpt: true },
+        faq: { limit: 5, page_type: "homepage" },
       };
 
       const { error } = await supabase.from("homepage_sections").insert({
@@ -770,6 +776,120 @@ const AdminHomepageSections = () => {
                                 />
                               </div>
                             </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {section.section_type === "youtube" && (
+                      <div className="space-y-4">
+                        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+                          <p className="text-red-600 dark:text-red-400 text-sm flex items-center gap-2">
+                            <Youtube className="h-4 w-4" />
+                            <span>Videos from YouTube Videos section will be displayed here. Add videos in Content → YouTube Videos.</span>
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-xs">Videos to Show</Label>
+                            <Select
+                              value={String(section.config.limit || 3)}
+                              onValueChange={(v) => updateSectionConfig(section.id, { limit: parseInt(v) })}
+                            >
+                              <SelectTrigger className="mt-1">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="2">2 Videos</SelectItem>
+                                <SelectItem value="3">3 Videos</SelectItem>
+                                <SelectItem value="4">4 Videos</SelectItem>
+                                <SelectItem value="6">6 Videos</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {section.section_type === "blog" && (
+                      <div className="space-y-4">
+                        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                          <p className="text-blue-600 dark:text-blue-400 text-sm flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            <span>Published blog posts will be displayed here. Manage posts in Content → Blog Posts.</span>
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-xs">Posts to Show</Label>
+                            <Select
+                              value={String(section.config.limit || 3)}
+                              onValueChange={(v) => updateSectionConfig(section.id, { limit: parseInt(v) })}
+                            >
+                              <SelectTrigger className="mt-1">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="2">2 Posts</SelectItem>
+                                <SelectItem value="3">3 Posts</SelectItem>
+                                <SelectItem value="4">4 Posts</SelectItem>
+                                <SelectItem value="6">6 Posts</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex items-center gap-2 pt-6">
+                            <Switch
+                              checked={section.config.show_excerpt !== false}
+                              onCheckedChange={(checked) => updateSectionConfig(section.id, { show_excerpt: checked })}
+                            />
+                            <Label className="text-xs">Show Excerpt</Label>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {section.section_type === "faq" && (
+                      <div className="space-y-4">
+                        <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">
+                          <p className="text-purple-600 dark:text-purple-400 text-sm flex items-center gap-2">
+                            <HelpCircle className="h-4 w-4" />
+                            <span>FAQs will be displayed from the FAQ section. Manage FAQs in Content → FAQs.</span>
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-xs">FAQs to Show</Label>
+                            <Select
+                              value={String(section.config.limit || 5)}
+                              onValueChange={(v) => updateSectionConfig(section.id, { limit: parseInt(v) })}
+                            >
+                              <SelectTrigger className="mt-1">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="3">3 FAQs</SelectItem>
+                                <SelectItem value="5">5 FAQs</SelectItem>
+                                <SelectItem value="8">8 FAQs</SelectItem>
+                                <SelectItem value="10">10 FAQs</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-xs">FAQ Category</Label>
+                            <Select
+                              value={section.config.page_type || "homepage"}
+                              onValueChange={(v) => updateSectionConfig(section.id, { page_type: v })}
+                            >
+                              <SelectTrigger className="mt-1">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="homepage">Homepage FAQs</SelectItem>
+                                <SelectItem value="checkout">Checkout FAQs</SelectItem>
+                                <SelectItem value="about">About FAQs</SelectItem>
+                                <SelectItem value="general">General FAQs</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
                       </div>
