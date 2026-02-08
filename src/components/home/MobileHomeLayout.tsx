@@ -1,10 +1,6 @@
 import { useIsMobile } from "@/hooks/use-mobile";
 import MobileHeroSlider from "./MobileHeroSlider";
-import MobileCategorySlider from "./MobileCategorySlider";
-import MobileProductSlider from "./MobileProductSlider";
-import MobileRecentlyViewed from "./MobileRecentlyViewed";
-import MobileTestimonialsSlider from "./MobileTestimonialsSlider";
-import DynamicHomepageSections from "./DynamicHomepageSections";
+import MobileDynamicSections from "./MobileDynamicSections";
 
 const MobileHomeLayout = () => {
   const isMobile = useIsMobile();
@@ -16,38 +12,9 @@ const MobileHomeLayout = () => {
       {/* Hero Slider - Dynamic from hero_slides table */}
       <MobileHeroSlider />
 
-      {/* Category Slider with Images/Icons - Dynamic from categories table */}
-      <MobileCategorySlider />
-
-      {/* Featured Products (Hot Sales) - Dynamic with Slider */}
-      <MobileProductSlider 
-        title="Hot Sales" 
-        queryType="featured" 
-        showViewAll={true}
-      />
-
-      {/* New Arrivals - Dynamic with Slider */}
-      <MobileProductSlider 
-        title="New Arrivals" 
-        queryType="new_arrivals" 
-        showViewAll={true}
-      />
-
-      {/* Testimonials Slider - Dynamic */}
-      <MobileTestimonialsSlider />
-
-      {/* Recently Viewed / Featured Grid - Dynamic */}
-      <MobileRecentlyViewed />
-
-      {/* All Products Section with Slider */}
-      <MobileProductSlider 
-        title="Explore More" 
-        queryType="all" 
-        showViewAll={true}
-      />
-
-      {/* Dynamic Sections - YouTube, Blog, FAQ etc. from admin panel */}
-      <DynamicHomepageSections />
+      {/* All Dynamic Sections - Categories, Products, Testimonials, Blog, YouTube, FAQ etc. */}
+      {/* Ordered by display_order from homepage_sections table in admin panel */}
+      <MobileDynamicSections />
     </div>
   );
 };

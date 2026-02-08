@@ -89,6 +89,7 @@ interface FAQItem {
 
 const DynamicHomepageSections = () => {
   const { language } = useLanguage();
+  const isMobile = useIsMobile();
   const [sections, setSections] = useState<HomepageSection[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -145,6 +146,9 @@ const DynamicHomepageSections = () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  // Skip rendering on mobile - handled by MobileDynamicSections
+  if (isMobile) return null;
 
   const fetchData = async () => {
     try {
