@@ -76,7 +76,26 @@ const ProductDetail = () => {
         const { data, error } = await supabase
           .from("products")
           .select(`
-            *,
+            id,
+            name,
+            name_bn,
+            slug,
+            description,
+            story,
+            price,
+            compare_at_price,
+            stock_quantity,
+            images,
+            is_preorderable,
+            production_time,
+            allow_customization,
+            customization_only,
+            advance_payment_percent,
+            customization_instructions,
+            materials,
+            dimensions,
+            care_instructions,
+            category_id,
             category:categories (
               name,
               name_bn,
