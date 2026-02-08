@@ -216,12 +216,47 @@ const MobileAppFooter = () => {
   };
 
   const getLinksForGroup = (groupId: string) => {
-    return links.filter(l => l.group_id === groupId);
+    // Filter out placeholder "New Link" entries just like desktop
+    return links.filter(l => l.group_id === groupId && l.name !== "New Link" && l.href !== "/#");
   };
 
   const getIconForPlatform = (platform: string) => {
     return platformIcons[platform] || Globe;
   };
+
+  // Check if database has properly configured links (not just placeholders)
+  const hasProperLinks = links.some(l => l.name !== "New Link" && l.href !== "/#");
+
+  // Fallback links matching desktop footer
+  const defaultGroups: FooterLinkGroup[] = [
+    { id: "shop", title: "Shop", display_order: 0 },
+    { id: "help", title: "Help", display_order: 1 },
+    { id: "company", title: "Company", display_order: 2 },
+  ];
+
+  const defaultLinkData: Record<string, { name: string; href: string }[]> = {
+    shop: [
+      { name: "Jewelry", href: "/shop/jewelry" },
+      { name: "Hand-painted Bags", href: "/shop/bags" },
+      { name: "Woven Tales", href: "/shop/woven" },
+      { name: "Fine Art", href: "/shop/art" },
+    ],
+    help: [
+      { name: "Shipping Info", href: "/shipping" },
+      { name: "Return Policy", href: "/returns" },
+      { name: "Track Order", href: "/track" },
+      { name: "FAQs", href: "/faq" },
+    ],
+    company: [
+      { name: "Our Story", href: "/about" },
+      { name: "Contact Us", href: "/contact" },
+      { name: "Terms of Service", href: "/terms" },
+      { name: "Privacy Policy", href: "/privacy" },
+    ],
+  };
+
+  // Use database groups if they have proper links, otherwise use defaults
+  const displayGroups = (linkGroups.length > 0 && hasProperLinks) ? linkGroups : defaultGroups;
 
   const getPaymentColor = (method: string) => {
     const colors: Record<string, string> = {
@@ -314,17 +349,27 @@ const MobileAppFooter = () => {
         </div>
       )}
 
-      {/* Dynamic Link Groups */}
-      {linkGroups.length > 0 && (
-        <div className="px-4 py-4 border-b border-border">
-          <div className="grid grid-cols-2 gap-4">
-            {linkGroups.slice(0, 4).map((group) => (
+      {/* Dynamic Link Groups - with fallback like desktop */}
+      <div className="px-4 py-4 border-b border-border">
+        <div className="grid grid-cols-2 gap-4">
+          {displayGroups.slice(0, 4).map((group) => {
+            // Get links from database or use defaults
+            const groupLinks = (linkGroups.length > 0 && hasProperLinks) 
+              ? getLinksForGroup(group.id) 
+              : (defaultLinkData[group.id] || []).map((l, idx) => ({ 
+                  ...l, 
+                  id: `${group.id}-${idx}` 
+                }));
+            
+            if (groupLinks.length === 0) return null;
+
+            return (
               <div key={group.id}>
                 <h4 className="text-xs font-semibold text-gold uppercase tracking-wider mb-2">
                   {group.title}
                 </h4>
                 <div className="space-y-1.5">
-                  {getLinksForGroup(group.id).slice(0, 4).map((link) => (
+                  {groupLinks.slice(0, 4).map((link: any) => (
                     <Link
                       key={link.id}
                       to={link.href}
@@ -335,27 +380,10 @@ const MobileAppFooter = () => {
                   ))}
                 </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
-      )}
-
-      {/* Quick Links (Fallback if no dynamic groups) */}
-      {linkGroups.length === 0 && (
-        <div className="px-4 py-4 border-b border-border">
-          <div className="grid grid-cols-3 gap-3 text-center">
-            {defaultQuickLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                className="text-xs text-muted-foreground hover:text-gold transition-colors py-1.5"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+      </div>
 
       {/* Social & Brand */}
       <div className="px-4 py-5 text-center border-b border-border">
