@@ -819,48 +819,95 @@ export type Database = {
       }
       custom_order_requests: {
         Row: {
+          address_line: string | null
           admin_notes: string | null
+          advance_amount: number | null
+          advance_paid: boolean | null
           budget_max: number | null
           budget_min: number | null
           created_at: string
+          delivery_notes: string | null
           description: string
+          district: string | null
+          division: string | null
+          email: string | null
           estimated_price: number | null
           estimated_time: string | null
+          full_name: string | null
           id: string
+          payment_method: string | null
+          payment_transaction_id: string | null
+          phone: string | null
+          product_id: string | null
           reference_image_url: string
           status: Database["public"]["Enums"]["custom_order_status"] | null
+          thana: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          address_line?: string | null
           admin_notes?: string | null
+          advance_amount?: number | null
+          advance_paid?: boolean | null
           budget_max?: number | null
           budget_min?: number | null
           created_at?: string
+          delivery_notes?: string | null
           description: string
+          district?: string | null
+          division?: string | null
+          email?: string | null
           estimated_price?: number | null
           estimated_time?: string | null
+          full_name?: string | null
           id?: string
+          payment_method?: string | null
+          payment_transaction_id?: string | null
+          phone?: string | null
+          product_id?: string | null
           reference_image_url: string
           status?: Database["public"]["Enums"]["custom_order_status"] | null
+          thana?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          address_line?: string | null
           admin_notes?: string | null
+          advance_amount?: number | null
+          advance_paid?: boolean | null
           budget_max?: number | null
           budget_min?: number | null
           created_at?: string
+          delivery_notes?: string | null
           description?: string
+          district?: string | null
+          division?: string | null
+          email?: string | null
           estimated_price?: number | null
           estimated_time?: string | null
+          full_name?: string | null
           id?: string
+          payment_method?: string | null
+          payment_transaction_id?: string | null
+          phone?: string | null
+          product_id?: string | null
           reference_image_url?: string
           status?: Database["public"]["Enums"]["custom_order_status"] | null
+          thana?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "custom_order_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       customer_discount_credits: {
         Row: {
@@ -964,6 +1011,39 @@ export type Database = {
           total_spent?: number | null
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      customization_settings: {
+        Row: {
+          created_at: string
+          custom_order_enabled: boolean | null
+          default_advance_percent: number | null
+          header_button_enabled: boolean | null
+          id: string
+          max_advance_percent: number | null
+          min_advance_percent: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          custom_order_enabled?: boolean | null
+          default_advance_percent?: number | null
+          header_button_enabled?: boolean | null
+          id?: string
+          max_advance_percent?: number | null
+          min_advance_percent?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          custom_order_enabled?: boolean | null
+          default_advance_percent?: number | null
+          header_button_enabled?: boolean | null
+          id?: string
+          max_advance_percent?: number | null
+          min_advance_percent?: number | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -2560,12 +2640,15 @@ export type Database = {
       }
       products: {
         Row: {
+          advance_payment_percent: number | null
           allow_customization: boolean | null
           care_instructions: string | null
           care_instructions_bn: string | null
           category_id: string | null
           compare_at_price: number | null
           created_at: string
+          customization_instructions: string | null
+          customization_only: boolean | null
           description: string | null
           dimensions: string | null
           featured_section: string | null
@@ -2593,12 +2676,15 @@ export type Database = {
           video_url: string | null
         }
         Insert: {
+          advance_payment_percent?: number | null
           allow_customization?: boolean | null
           care_instructions?: string | null
           care_instructions_bn?: string | null
           category_id?: string | null
           compare_at_price?: number | null
           created_at?: string
+          customization_instructions?: string | null
+          customization_only?: boolean | null
           description?: string | null
           dimensions?: string | null
           featured_section?: string | null
@@ -2626,12 +2712,15 @@ export type Database = {
           video_url?: string | null
         }
         Update: {
+          advance_payment_percent?: number | null
           allow_customization?: boolean | null
           care_instructions?: string | null
           care_instructions_bn?: string | null
           category_id?: string | null
           compare_at_price?: number | null
           created_at?: string
+          customization_instructions?: string | null
+          customization_only?: boolean | null
           description?: string | null
           dimensions?: string | null
           featured_section?: string | null

@@ -67,6 +67,7 @@ const Header = () => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [customOrderOpen, setCustomOrderOpen] = useState(false);
+  const [headerButtonEnabled, setHeaderButtonEnabled] = useState(true);
   
   const [branding, setBranding] = useState<SiteBranding>({
     logo_url: null,
@@ -86,7 +87,23 @@ const Header = () => {
 
   useEffect(() => {
     fetchData();
+    fetchCustomizationSettings();
   }, []);
+
+  const fetchCustomizationSettings = async () => {
+    try {
+      const { data } = await supabase
+        .from("customization_settings")
+        .select("header_button_enabled")
+        .single();
+      
+      if (data) {
+        setHeaderButtonEnabled(data.header_button_enabled ?? true);
+      }
+    } catch (error) {
+      console.error("Error fetching customization settings:", error);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -255,16 +272,18 @@ const Header = () => {
 
             {/* Right Icons */}
             <div className="flex items-center gap-1">
-              {/* Custom Order Button - Desktop */}
-              <Button 
-                variant="gold-outline" 
-                size="sm" 
-                className="hidden md:flex items-center gap-2"
-                onClick={() => setCustomOrderOpen(true)}
-              >
-                <Palette className="h-4 w-4" />
-                Custom Design
-              </Button>
+              {/* Custom Order Button - Desktop (conditionally shown) */}
+              {headerButtonEnabled && (
+                <Button 
+                  variant="gold-outline" 
+                  size="sm" 
+                  className="hidden md:flex items-center gap-2"
+                  onClick={() => setCustomOrderOpen(true)}
+                >
+                  <Palette className="h-4 w-4" />
+                  Custom Design
+                </Button>
+              )}
 
               {/* Inline Search - Desktop */}
               <div className="hidden lg:block w-64">

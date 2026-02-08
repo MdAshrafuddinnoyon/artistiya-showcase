@@ -47,6 +47,9 @@ interface ProductFormData {
   is_new_arrival: boolean;
   is_preorderable: boolean;
   allow_customization: boolean;
+  customization_only: boolean;
+  advance_payment_percent: string;
+  customization_instructions: string;
   is_showcase: boolean;
   showcase_description: string;
   showcase_description_bn: string;
@@ -250,11 +253,12 @@ const EnhancedProductForm = ({
               { id: "is_new_arrival", label: "New Arrival" },
               { id: "is_preorderable", label: "Pre-orderable" },
               { id: "allow_customization", label: "Allow Customization" },
+              { id: "customization_only", label: "Customization Only (No Cart)" },
               { id: "is_showcase", label: "Showcase Only (No Sale)" },
             ].map((toggle) => (
               <div key={toggle.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <Label htmlFor={toggle.id} className={toggle.id === "is_showcase" ? "text-gold" : ""}>
-                  {toggle.id === "is_showcase" && <Sparkles className="h-3 w-3 inline mr-1" />}
+                <Label htmlFor={toggle.id} className={toggle.id === "is_showcase" || toggle.id === "customization_only" ? "text-gold" : ""}>
+                  {(toggle.id === "is_showcase" || toggle.id === "customization_only") && <Sparkles className="h-3 w-3 inline mr-1" />}
                   {toggle.label}
                 </Label>
                 <Switch
@@ -267,6 +271,39 @@ const EnhancedProductForm = ({
               </div>
             ))}
           </div>
+
+          {/* Customization Only Settings */}
+          {formData.customization_only && (
+            <div className="p-4 bg-gold/10 border border-gold/30 rounded-lg space-y-4">
+              <div className="flex items-center gap-2 text-gold">
+                <Sparkles className="h-4 w-4" />
+                <span className="font-medium">Customization Order Settings</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="advance_percent">Advance Payment %</Label>
+                  <Input
+                    id="advance_percent"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.advance_payment_percent}
+                    onChange={(e) => setFormData({ ...formData, advance_payment_percent: e.target.value })}
+                    placeholder="50"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="custom_instructions">Customization Instructions</Label>
+                  <Input
+                    id="custom_instructions"
+                    value={formData.customization_instructions}
+                    onChange={(e) => setFormData({ ...formData, customization_instructions: e.target.value })}
+                    placeholder="e.g., Specify colors, size..."
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Showcase Description */}
           {formData.is_showcase && (

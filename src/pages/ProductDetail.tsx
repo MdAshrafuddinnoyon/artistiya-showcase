@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
   ShoppingBag, Heart, Share2, Truck, Clock, Palette, 
-  ChevronLeft, ChevronRight, Star, Minus, Plus, Check
+  ChevronLeft, ChevronRight, Star, Minus, Plus, Check, Send
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +16,8 @@ import WhatsAppOrderButton from "@/components/common/WhatsAppOrderButton";
 import MobileProductDetail from "@/components/mobile/MobileProductDetail";
 import MobileAppHeader from "@/components/mobile/MobileAppHeader";
 import MobileAppBottomNav from "@/components/mobile/MobileAppBottomNav";
+import ProductCustomOrderModal from "@/components/modals/ProductCustomOrderModal";
+import ProductDiscountBadge from "@/components/product/ProductDiscountBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
@@ -36,6 +38,9 @@ interface Product {
   is_preorderable: boolean;
   production_time: string | null;
   allow_customization: boolean;
+  customization_only: boolean;
+  advance_payment_percent: number | null;
+  customization_instructions: string | null;
   materials: string | null;
   dimensions: string | null;
   care_instructions: string | null;
@@ -60,6 +65,7 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
   const [wishlisted, setWishlisted] = useState(false);
+  const [customOrderOpen, setCustomOrderOpen] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -148,6 +154,7 @@ const ProductDetail = () => {
 
   const isOutOfStock = product?.stock_quantity === 0;
   const canPreorder = isOutOfStock && product?.is_preorderable;
+  const isCustomizationOnly = product?.customization_only === true;
   const discount = product?.compare_at_price 
     ? Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100)
     : 0;
@@ -370,37 +377,50 @@ const ProductDetail = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Add to Cart Button */}
-                  <Button
-                    variant="gold-outline"
-                    size="lg"
-                    onClick={handleAddToCart}
-                    disabled={addingToCart || (isOutOfStock && !canPreorder)}
-                  >
-                    {addingToCart ? (
-                      <span className="flex items-center gap-2">
-                        <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                        Loading...
-                      </span>
-                    ) : (
-                      <>
-                        <ShoppingBag className="h-5 w-5 mr-2" />
-                        Add to Cart
-                      </>
-                    )}
-                  </Button>
-
-                  {/* Buy Now Button */}
+                {isCustomizationOnly ? (
+                  /* Custom Order Request Button for customization-only products */
                   <Button
                     variant="gold"
                     size="lg"
-                    onClick={handleBuyNow}
-                    disabled={addingToCart || (isOutOfStock && !canPreorder)}
+                    onClick={() => setCustomOrderOpen(true)}
+                    className="w-full"
                   >
-                    {canPreorder ? "Pre-Order Now" : "Buy Now"}
+                    <Send className="h-5 w-5 mr-2" />
+                    Request Custom Order
                   </Button>
-                </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Add to Cart Button */}
+                    <Button
+                      variant="gold-outline"
+                      size="lg"
+                      onClick={handleAddToCart}
+                      disabled={addingToCart || (isOutOfStock && !canPreorder)}
+                    >
+                      {addingToCart ? (
+                        <span className="flex items-center gap-2">
+                          <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                          Loading...
+                        </span>
+                      ) : (
+                        <>
+                          <ShoppingBag className="h-5 w-5 mr-2" />
+                          Add to Cart
+                        </>
+                      )}
+                    </Button>
+
+                    {/* Buy Now Button */}
+                    <Button
+                      variant="gold"
+                      size="lg"
+                      onClick={handleBuyNow}
+                      disabled={addingToCart || (isOutOfStock && !canPreorder)}
+                    >
+                      {canPreorder ? "Pre-Order Now" : "Buy Now"}
+                    </Button>
+                  </div>
+                )}
 
                 {/* WhatsApp Order Button */}
                 <WhatsAppOrderButton
@@ -531,6 +551,22 @@ const ProductDetail = () => {
         </div>
       </main>
       <Footer />
+      
+      {/* Custom Order Modal */}
+      {product && (
+        <ProductCustomOrderModal
+          open={customOrderOpen}
+          onOpenChange={setCustomOrderOpen}
+          product={{
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            images: product.images,
+            advance_payment_percent: product.advance_payment_percent || undefined,
+            customization_instructions: product.customization_instructions || undefined,
+          }}
+        />
+      )}
     </div>
   );
 };

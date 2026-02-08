@@ -3,13 +3,15 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ChevronLeft, Heart, Share2, Star, Minus, Plus, 
-  ShoppingBag, ChevronRight, Truck, Clock, Palette 
+  ShoppingBag, ChevronRight, Truck, Clock, Palette, Send
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/useCart";
 import { useWishlist } from "@/hooks/useWishlist";
 import WhatsAppOrderButton from "@/components/product/WhatsAppOrderButton";
 import RelatedProducts from "@/components/product/RelatedProducts";
+import ProductCustomOrderModal from "@/components/modals/ProductCustomOrderModal";
+import ProductDiscountBadge from "@/components/product/ProductDiscountBadge";
 import { toast } from "sonner";
 
 interface Product {
@@ -26,6 +28,9 @@ interface Product {
   is_preorderable: boolean;
   production_time: string | null;
   allow_customization: boolean;
+  customization_only?: boolean;
+  advance_payment_percent?: number | null;
+  customization_instructions?: string | null;
   materials: string | null;
   dimensions: string | null;
   care_instructions: string | null;
@@ -52,6 +57,7 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [customOrderOpen, setCustomOrderOpen] = useState(false);
   
   // Swipe handling for image gallery
   const [isDragging, setIsDragging] = useState(false);
@@ -111,6 +117,7 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
 
   const isOutOfStock = product.stock_quantity === 0 && !product.is_preorderable;
   const canPreorder = product.stock_quantity === 0 && product.is_preorderable;
+  const isCustomizationOnly = product.customization_only === true;
 
   // Swipe handlers for image gallery
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -404,33 +411,45 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
         />
 
         {/* Add to Cart & Buy Now - Below WhatsApp */}
-        <div className="flex gap-3 mt-3">
-          <Button
-            variant="outline"
-            size="lg"
-            className="flex-1 h-12 bg-charcoal-deep hover:bg-charcoal-deep/90 border-border text-foreground font-semibold"
-            onClick={handleAddToCart}
-            disabled={addingToCart || isOutOfStock}
-          >
-            {addingToCart ? (
-              <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <>
-                <ShoppingBag className="h-5 w-5 mr-2" />
-                Add to Cart
-              </>
-            )}
-          </Button>
-          
+        {isCustomizationOnly ? (
+          /* Custom Order Request Button for customization-only products */
           <Button
             size="lg"
-            className="flex-1 h-12 bg-gold hover:bg-gold/90 text-charcoal-deep font-semibold"
-            onClick={handleBuyNow}
-            disabled={addingToCart || isOutOfStock}
+            className="w-full h-12 mt-3 bg-gold hover:bg-gold/90 text-charcoal-deep font-semibold"
+            onClick={() => setCustomOrderOpen(true)}
           >
-            {canPreorder ? "Pre-Order" : "Buy Now"}
+            <Send className="h-5 w-5 mr-2" />
+            Request Custom Order
           </Button>
-        </div>
+        ) : (
+          <div className="flex gap-3 mt-3">
+            <Button
+              variant="outline"
+              size="lg"
+              className="flex-1 h-12 bg-charcoal-deep hover:bg-charcoal-deep/90 border-border text-foreground font-semibold"
+              onClick={handleAddToCart}
+              disabled={addingToCart || isOutOfStock}
+            >
+              {addingToCart ? (
+                <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <ShoppingBag className="h-5 w-5 mr-2" />
+                  Add to Cart
+                </>
+              )}
+            </Button>
+            
+            <Button
+              size="lg"
+              className="flex-1 h-12 bg-gold hover:bg-gold/90 text-charcoal-deep font-semibold"
+              onClick={handleBuyNow}
+              disabled={addingToCart || isOutOfStock}
+            >
+              {canPreorder ? "Pre-Order" : "Buy Now"}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Related Products Section */}
@@ -440,6 +459,20 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
           categoryId={product.category_id}
         />
       </div>
+
+      {/* Custom Order Modal */}
+      <ProductCustomOrderModal
+        open={customOrderOpen}
+        onOpenChange={setCustomOrderOpen}
+        product={{
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          images: product.images,
+          advance_payment_percent: product.advance_payment_percent || undefined,
+          customization_instructions: product.customization_instructions || undefined,
+        }}
+      />
     </div>
   );
 };
