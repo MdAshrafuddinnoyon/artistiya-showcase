@@ -6,6 +6,70 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const ENCRYPTION_PREFIX = "enc:";
+
+/**
+ * Decrypt an encrypted credential value
+ */
+async function decryptCredential(encryptedText: string): Promise<string> {
+  if (!encryptedText || encryptedText.trim() === "") {
+    return encryptedText;
+  }
+
+  // If not encrypted (no prefix), return as-is for backwards compatibility
+  if (!encryptedText.startsWith(ENCRYPTION_PREFIX)) {
+    return encryptedText;
+  }
+
+  const encryptionKey = Deno.env.get("CREDENTIALS_ENCRYPTION_KEY");
+  if (!encryptionKey) {
+    console.error("CREDENTIALS_ENCRYPTION_KEY not set, cannot decrypt");
+    return "";
+  }
+
+  try {
+    const base64 = encryptedText.slice(ENCRYPTION_PREFIX.length);
+    const combined = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+
+    const salt = combined.slice(0, 16);
+    const iv = combined.slice(16, 28);
+    const ciphertext = combined.slice(28);
+
+    const encoder = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(encryptionKey),
+      { name: "PBKDF2" },
+      false,
+      ["deriveKey"]
+    );
+
+    const key = await crypto.subtle.deriveKey(
+      {
+        name: "PBKDF2",
+        salt: salt,
+        iterations: 100000,
+        hash: "SHA-256",
+      },
+      keyMaterial,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["decrypt"]
+    );
+
+    const decrypted = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: iv },
+      key,
+      ciphertext
+    );
+
+    return new TextDecoder().decode(decrypted);
+  } catch (error) {
+    console.error("Decryption error:", error);
+    return "";
+  }
+}
+
 interface BkashConfig {
   app_key: string;
   app_secret: string;
@@ -306,12 +370,12 @@ serve(async (req) => {
       );
     }
 
-    // Parse config from database
+    // Parse and decrypt config from database
     const config: BkashConfig = {
-      app_key: providerData.store_id || "",
-      app_secret: providerData.store_password || "",
-      username: providerData.config?.username || "",
-      password: providerData.config?.password || "",
+      app_key: await decryptCredential(providerData.store_id || ""),
+      app_secret: await decryptCredential(providerData.store_password || ""),
+      username: await decryptCredential(providerData.config?.username || ""),
+      password: await decryptCredential(providerData.config?.password || ""),
       sandbox: providerData.is_sandbox ?? true,
     };
 

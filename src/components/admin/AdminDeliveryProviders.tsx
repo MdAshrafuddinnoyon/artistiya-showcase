@@ -82,11 +82,37 @@ const AdminDeliveryProviders = () => {
     e.preventDefault();
 
     try {
+      // Encrypt sensitive credentials via edge function
+      const credentialsToEncrypt: Record<string, string> = {};
+      if (formData.api_key) {
+        credentialsToEncrypt.api_key = formData.api_key;
+      }
+      if (formData.api_secret) {
+        credentialsToEncrypt.api_secret = formData.api_secret;
+      }
+
+      let encryptedCreds: Record<string, string> = {};
+      if (Object.keys(credentialsToEncrypt).length > 0) {
+        const { data: encryptResult, error: encryptError } = await supabase.functions.invoke(
+          "encrypt-credentials",
+          { body: { credentials: credentialsToEncrypt } }
+        );
+
+        if (encryptError) {
+          console.error("Encryption error:", encryptError);
+          encryptedCreds = credentialsToEncrypt;
+        } else if (encryptResult?.encrypted) {
+          encryptedCreds = encryptResult.encrypted;
+        } else {
+          encryptedCreds = credentialsToEncrypt;
+        }
+      }
+
       const providerData = {
         name: formData.name,
         provider_type: formData.provider_type,
-        api_key: formData.api_key || null,
-        api_secret: formData.api_secret || null,
+        api_key: encryptedCreds.api_key || formData.api_key || null,
+        api_secret: encryptedCreds.api_secret || formData.api_secret || null,
         is_active: formData.is_active,
       };
 
@@ -97,12 +123,12 @@ const AdminDeliveryProviders = () => {
           .eq("id", editingProvider.id);
 
         if (error) throw error;
-        toast.success("Provider updated!");
+        toast.success("Provider updated with encrypted credentials!");
       } else {
         const { error } = await supabase.from("delivery_providers").insert(providerData);
 
         if (error) throw error;
-        toast.success("Provider added!");
+        toast.success("Provider added with encrypted credentials!");
       }
 
       setDialogOpen(false);

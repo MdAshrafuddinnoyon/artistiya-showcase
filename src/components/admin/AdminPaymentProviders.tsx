@@ -118,17 +118,63 @@ const AdminPaymentProviders = () => {
     e.preventDefault();
 
     try {
+      // Collect credentials that need encryption
+      const credentialsToEncrypt: Record<string, string> = {};
+      
+      if (formData.store_id) {
+        credentialsToEncrypt.store_id = formData.store_id;
+      }
+      if (formData.store_password) {
+        credentialsToEncrypt.store_password = formData.store_password;
+      }
+      
       // Build config based on provider type
       let config: Record<string, string> = {};
       if (formData.provider_type === "bkash" && formData.payment_mode === "api") {
+        if (formData.bkash_username) {
+          credentialsToEncrypt.bkash_username = formData.bkash_username;
+        }
+        if (formData.bkash_password) {
+          credentialsToEncrypt.bkash_password = formData.bkash_password;
+        }
+      } else if (formData.provider_type === "nagad" && formData.payment_mode === "api") {
+        if (formData.nagad_public_key) {
+          credentialsToEncrypt.nagad_public_key = formData.nagad_public_key;
+        }
+        if (formData.nagad_private_key) {
+          credentialsToEncrypt.nagad_private_key = formData.nagad_private_key;
+        }
+      }
+
+      // Encrypt credentials via edge function
+      let encryptedCreds: Record<string, string> = {};
+      if (Object.keys(credentialsToEncrypt).length > 0) {
+        const { data: encryptResult, error: encryptError } = await supabase.functions.invoke(
+          "encrypt-credentials",
+          { body: { credentials: credentialsToEncrypt } }
+        );
+
+        if (encryptError) {
+          console.error("Encryption error:", encryptError);
+          // Fall back to unencrypted if encryption fails
+          encryptedCreds = credentialsToEncrypt;
+        } else if (encryptResult?.encrypted) {
+          encryptedCreds = encryptResult.encrypted;
+        } else {
+          encryptedCreds = credentialsToEncrypt;
+        }
+      }
+
+      // Build encrypted config
+      if (formData.provider_type === "bkash" && formData.payment_mode === "api") {
         config = {
-          username: formData.bkash_username,
-          password: formData.bkash_password,
+          username: encryptedCreds.bkash_username || formData.bkash_username,
+          password: encryptedCreds.bkash_password || formData.bkash_password,
         };
       } else if (formData.provider_type === "nagad" && formData.payment_mode === "api") {
         config = {
-          public_key: formData.nagad_public_key,
-          private_key: formData.nagad_private_key,
+          public_key: encryptedCreds.nagad_public_key || formData.nagad_public_key,
+          private_key: encryptedCreds.nagad_private_key || formData.nagad_private_key,
         };
       }
 
@@ -136,8 +182,8 @@ const AdminPaymentProviders = () => {
         name: formData.name,
         provider_type: formData.provider_type,
         payment_mode: formData.payment_mode,
-        store_id: formData.store_id || null,
-        store_password: formData.store_password || null,
+        store_id: encryptedCreds.store_id || formData.store_id || null,
+        store_password: encryptedCreds.store_password || formData.store_password || null,
         is_active: formData.is_active,
         is_sandbox: formData.is_sandbox,
         qr_code_image: formData.qr_code_image || null,
@@ -155,12 +201,12 @@ const AdminPaymentProviders = () => {
           .eq("id", editingProvider.id);
 
         if (error) throw error;
-        toast.success("Provider updated!");
+        toast.success("Provider updated with encrypted credentials!");
       } else {
         const { error } = await supabase.from("payment_providers").insert(providerData);
 
         if (error) throw error;
-        toast.success("Provider added!");
+        toast.success("Provider added with encrypted credentials!");
       }
 
       setDialogOpen(false);

@@ -89,19 +89,45 @@ const AdminEmailSettings = () => {
 
     setSaving(true);
     try {
+      // Encrypt sensitive credentials via edge function
+      const credentialsToEncrypt: Record<string, string> = {};
+      if (settings.smtp_password) {
+        credentialsToEncrypt.smtp_password = settings.smtp_password;
+      }
+      if (settings.resend_api_key) {
+        credentialsToEncrypt.resend_api_key = settings.resend_api_key;
+      }
+
+      let encryptedCreds: Record<string, string> = {};
+      if (Object.keys(credentialsToEncrypt).length > 0) {
+        const { data: encryptResult, error: encryptError } = await supabase.functions.invoke(
+          "encrypt-credentials",
+          { body: { credentials: credentialsToEncrypt } }
+        );
+
+        if (encryptError) {
+          console.error("Encryption error:", encryptError);
+          encryptedCreds = credentialsToEncrypt;
+        } else if (encryptResult?.encrypted) {
+          encryptedCreds = encryptResult.encrypted;
+        } else {
+          encryptedCreds = credentialsToEncrypt;
+        }
+      }
+
       const { error } = await supabase
         .from("email_settings")
         .update({
           smtp_host: settings.smtp_host,
           smtp_port: settings.smtp_port,
           smtp_user: settings.smtp_user,
-          smtp_password: settings.smtp_password,
+          smtp_password: encryptedCreds.smtp_password || settings.smtp_password,
           from_email: settings.from_email,
           from_name: settings.from_name,
           reply_to_email: settings.reply_to_email,
           is_enabled: settings.is_enabled,
           provider: settings.provider,
-          resend_api_key: settings.resend_api_key,
+          resend_api_key: encryptedCreds.resend_api_key || settings.resend_api_key,
           send_order_confirmation: settings.send_order_confirmation,
           send_shipping_update: settings.send_shipping_update,
           send_delivery_notification: settings.send_delivery_notification,
@@ -109,7 +135,7 @@ const AdminEmailSettings = () => {
         .eq("id", settings.id);
 
       if (error) throw error;
-      toast.success("Email settings saved!");
+      toast.success("Email settings saved with encrypted credentials!");
     } catch (error: any) {
       console.error("Error saving email settings:", error);
       toast.error(error.message || "Failed to save settings");
