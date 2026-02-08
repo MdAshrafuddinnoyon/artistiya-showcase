@@ -4,6 +4,7 @@ import MobileCategorySlider from "./MobileCategorySlider";
 import MobileProductSlider from "./MobileProductSlider";
 import MobileRecentlyViewed from "./MobileRecentlyViewed";
 import MobileTestimonialsSlider from "./MobileTestimonialsSlider";
+import DynamicHomepageSections from "./DynamicHomepageSections";
 
 const MobileHomeLayout = () => {
   const isMobile = useIsMobile();
@@ -44,6 +45,9 @@ const MobileHomeLayout = () => {
         queryType="all" 
         showViewAll={true}
       />
+
+      {/* Dynamic Sections - YouTube, Blog, FAQ etc. from admin panel */}
+      <DynamicHomepageSections />
     </div>
   );
 };
