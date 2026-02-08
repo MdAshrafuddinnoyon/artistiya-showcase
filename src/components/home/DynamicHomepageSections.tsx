@@ -23,6 +23,7 @@ interface Product {
   compare_at_price: number | null;
   images: string[] | null;
   is_featured: boolean;
+  is_new_arrival: boolean;
   category_id: string | null;
 }
 
@@ -160,7 +161,7 @@ const DynamicHomepageSections = () => {
           .order("display_order"),
         supabase
           .from("products")
-          .select("id, name, slug, price, compare_at_price, images, is_featured, category_id")
+          .select("id, name, slug, price, compare_at_price, images, is_featured, is_new_arrival, category_id")
           .eq("is_active", true)
           .order("created_at", { ascending: false })
           .limit(500),
@@ -792,8 +793,40 @@ const DynamicHomepageSections = () => {
       case "categories":
         return <CategorySection key={section.id} />;
 
-      case "new_arrivals":
-        return <NewArrivalsSection key={section.id} />;
+      case "new_arrivals": {
+        const limit = section.config.limit || 8;
+        const newProducts = products.filter(p => p.is_new_arrival).slice(0, limit);
+        if (newProducts.length === 0) return null;
+
+        return (
+          <section key={section.id} className="py-10 md:py-16 bg-charcoal">
+            <div className="container mx-auto px-4 lg:px-8">
+              <div className="text-center mb-6 md:mb-10">
+                <span className="text-gold text-xs md:text-sm tracking-[0.3em] uppercase font-body">
+                  Just Arrived
+                </span>
+                <h2 className="font-display text-2xl md:text-3xl lg:text-4xl text-foreground mt-2">
+                  {section.title}
+                </h2>
+                {section.subtitle && section.subtitle !== "Add a subtitle" && (
+                  <p className="text-muted-foreground mt-2 text-sm md:text-base">{section.subtitle}</p>
+                )}
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+                {newProducts.map(p => renderProductCard(p, "New"))}
+              </div>
+              <div className="text-center mt-8">
+                <Link to="/shop">
+                  <Button variant="gold-outline" className="group">
+                    {language === "bn" ? "সব দেখুন" : "View All"}
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </section>
+        );
+      }
 
       case "featured_static":
         return <FeaturedSection key={section.id} />;
