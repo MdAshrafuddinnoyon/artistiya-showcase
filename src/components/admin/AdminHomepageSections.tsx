@@ -36,16 +36,22 @@ interface Product {
 }
 
 const sectionTypes = [
-  { value: "products", label: "Products Grid", icon: Package, description: "Display selected products" },
-  { value: "category", label: "Category Products", icon: FolderTree, description: "Products from a category" },
-  { value: "best_selling", label: "Best Selling", icon: Package, description: "Top selling products" },
-  { value: "discount", label: "Discount Products", icon: Package, description: "Products on sale" },
-  { value: "banner", label: "Promotional Banner", icon: ImageIcon, description: "Full-width banner" },
-  { value: "dual_banner", label: "Dual Banner", icon: ImageIcon, description: "Two side-by-side banners" },
-  { value: "featured", label: "Featured Collection", icon: Layers, description: "Highlight a collection" },
-  { value: "youtube", label: "YouTube Videos", icon: Youtube, description: "Display YouTube videos" },
-  { value: "blog", label: "Blog Posts", icon: FileText, description: "Recent blog posts" },
-  { value: "faq", label: "FAQ Section", icon: HelpCircle, description: "Frequently asked questions" },
+  { value: "categories", label: "Shop by Category", icon: FolderTree, description: "Category cards grid", editable: "/admin?tab=categories" },
+  { value: "new_arrivals", label: "New Arrivals", icon: Package, description: "Latest products", editable: null },
+  { value: "featured_static", label: "Signature Collection", icon: Layers, description: "Featured collection showcase", editable: "/admin?tab=featured" },
+  { value: "making", label: "Behind the Craft", icon: Layers, description: "Artisan story section", editable: "/admin?tab=making" },
+  { value: "testimonials", label: "Testimonials", icon: Layers, description: "Customer reviews carousel", editable: "/admin?tab=testimonials" },
+  { value: "instagram", label: "Instagram Feed", icon: ImageIcon, description: "Social media posts", editable: "/admin?tab=instagram" },
+  { value: "youtube", label: "YouTube Videos", icon: Youtube, description: "Display YouTube videos", editable: "/admin?tab=youtube" },
+  { value: "blog", label: "Blog Posts", icon: FileText, description: "Recent blog posts", editable: "/admin?tab=blog" },
+  { value: "faq", label: "FAQ Section", icon: HelpCircle, description: "Frequently asked questions", editable: "/admin?tab=faqs" },
+  { value: "products", label: "Products Grid", icon: Package, description: "Display selected products", editable: null },
+  { value: "category", label: "Category Products", icon: FolderTree, description: "Products from a category", editable: null },
+  { value: "best_selling", label: "Best Selling", icon: Package, description: "Top selling products", editable: null },
+  { value: "discount", label: "Discount Products", icon: Package, description: "Products on sale", editable: null },
+  { value: "banner", label: "Promotional Banner", icon: ImageIcon, description: "Full-width banner", editable: null },
+  { value: "dual_banner", label: "Dual Banner", icon: ImageIcon, description: "Two side-by-side banners", editable: null },
+  { value: "featured", label: "Featured Collection", icon: Layers, description: "Highlight a collection", editable: null },
 ];
 
 const AdminHomepageSections = () => {
@@ -454,6 +460,21 @@ const AdminHomepageSections = () => {
                         )}
                       </div>
                       <div className="flex items-center gap-2">
+                        {/* Edit Content Link for editable sections */}
+                        {(() => {
+                          const typeInfo = sectionTypes.find(t => t.value === section.section_type);
+                          if (typeInfo?.editable) {
+                            return (
+                              <a
+                                href={typeInfo.editable}
+                                className="text-xs text-gold hover:underline flex items-center gap-1"
+                              >
+                                Edit Content →
+                              </a>
+                            );
+                          }
+                          return null;
+                        })()}
                         <Switch
                           checked={section.is_active}
                           onCheckedChange={(checked) => updateSection(section.id, { is_active: checked })}
