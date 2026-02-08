@@ -742,6 +742,23 @@ const Shop = () => {
           </div>
         );
 
+      // Note: promo_banner not in filter_settings yet, render from shop_settings
+      case "promo_banner":
+        if (!shopSettings.show_promo_banner || !shopSettings.promo_banner_image) return null;
+        const promoContent = (
+          <div className="rounded-xl overflow-hidden relative group">
+            <img 
+              src={shopSettings.promo_banner_image} 
+              alt="Promo" 
+              className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+          </div>
+        );
+        if (shopSettings.promo_banner_link) {
+          return <a key={filterConfig.id} href={shopSettings.promo_banner_link} className="block">{promoContent}</a>;
+        }
+        return <div key={filterConfig.id}>{promoContent}</div>;
+
       default:
         return null;
     }
@@ -889,9 +906,7 @@ const Shop = () => {
             {/* Desktop Sidebar */}
             <aside className="hidden lg:block w-64 flex-shrink-0">
               <div className="sticky top-32 space-y-4">
-                {/* Promo Image Banner */}
-                <PromoBanner />
-                
+                {/* All filters including sales banner rendered by display_order */}
                 <FilterContent />
               </div>
             </aside>
