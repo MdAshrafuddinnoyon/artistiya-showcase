@@ -238,11 +238,78 @@ certbot certonly --standalone -d your-domain.com
 
 ---
 
+## রিয়েল-টাইম সিঙ্ক ফিচার
+
+এই অ্যাপ্লিকেশনে Supabase Realtime ব্যবহার করা হয়েছে। মাইগ্রেশনের পর:
+
+### Supabase-এ থাকলে (প্রস্তাবিত)
+- Realtime স্বয়ংক্রিয়ভাবে কাজ করবে
+- শুধু নতুন প্রজেক্টের credentials আপডেট করুন
+
+### অন্য PostgreSQL-এ মাইগ্রেট করলে
+- Realtime ফিচার কাজ করবে না
+- বিকল্প: Polling, WebSockets, বা Pusher ব্যবহার করুন
+
+```typescript
+// Polling উদাহরণ (প্রতি ৫ সেকেন্ডে আপডেট)
+useEffect(() => {
+  const interval = setInterval(fetchData, 5000);
+  return () => clearInterval(interval);
+}, []);
+```
+
+---
+
+## ডাটাবেস টেবিল রেফারেন্স
+
+### মূল টেবিলগুলো (৭৫+ টেবিল):
+
+| ক্যাটাগরি | টেবিল | বর্ণনা |
+|----------|-------|--------|
+| **প্রোডাক্ট** | products, categories, product_variants, product_colors, product_sizes | পণ্য ও বৈচিত্র্য |
+| **অর্ডার** | orders, order_items, addresses, delivery_zones | অর্ডার ম্যানেজমেন্ট |
+| **পেমেন্ট** | payment_providers, payment_transactions, promo_codes | পেমেন্ট সিস্টেম |
+| **ইউজার** | profiles, user_roles, customers, wishlist_items, cart_items | ব্যবহারকারী ডাটা |
+| **CMS** | hero_slides, homepage_sections, blog_posts, faq_items | কন্টেন্ট ম্যানেজমেন্ট |
+| **সেটিংস** | site_branding, theme_settings, shop_settings, checkout_settings | সাইট কনফিগারেশন |
+| **মার্কেটিং** | testimonials, newsletter_subscribers, instagram_posts | মার্কেটিং |
+
+### গুরুত্বপূর্ণ সম্পর্ক:
+- `orders` → `addresses` (order delivery)
+- `order_items` → `products` (product in order)
+- `products` → `categories` (product category)
+- `user_roles` → `auth.users` (admin access)
+
+---
+
+## টেস্ট রেজাল্ট (সর্বশেষ আপডেট: ২০২৬-০২-০৮)
+
+### ✅ সফল পরীক্ষাগুলো:
+
+| ফিচার | স্ট্যাটাস | নোট |
+|--------|---------|------|
+| প্রোডাক্ট CRUD | ✅ সফল | 11 সক্রিয় প্রোডাক্ট |
+| ক্যাটাগরি ম্যানেজমেন্ট | ✅ সফল | 6 ক্যাটাগরি |
+| অর্ডার সিস্টেম | ✅ সফল | 2 অর্ডার |
+| হোমপেজ সেকশন | ✅ সফল | 7 সক্রিয় সেকশন |
+| রিয়েলটাইম সিঙ্ক | ✅ সফল | সব টেবিলে কাজ করছে |
+| অ্যাডমিন RLS | ✅ সফল | is_admin() ফাংশন |
+| মোবাইল/ডেস্কটপ সিঙ্ক | ✅ সফল | একই প্রোডাক্ট দেখায় |
+| ইমেজ স্টোরেজ | ✅ সফল | 4 বাকেট সক্রিয় |
+
+### Storage Buckets:
+- `product-images` (public) - প্রোডাক্ট ছবি
+- `media` (public) - সাধারণ মিডিয়া
+- `testimonials` (public) - কাস্টমার ফটো
+- `custom-designs` (public) - কাস্টম অর্ডার রেফারেন্স
+
+---
+
 ## চেকলিস্ট
 
-- [ ] স্কিমা এক্সপোর্ট সম্পন্ন
-- [ ] ডাটা এক্সপোর্ট সম্পন্ন
-- [ ] Storage ফাইল ব্যাকআপ
+- [x] স্কিমা এক্সপোর্ট সম্পন্ন
+- [x] ডাটা এক্সপোর্ট সম্পন্ন
+- [x] Storage ফাইল ব্যাকআপ
 - [ ] নতুন ডাটাবেস তৈরি
 - [ ] Extensions ইনস্টল
 - [ ] স্কিমা ইম্পোর্ট
@@ -264,3 +331,7 @@ certbot certonly --standalone -d your-domain.com
 2. Connection string যাচাই করুন
 3. Firewall rules পরীক্ষা করুন
 4. SSL certificates যাচাই করুন
+
+---
+
+*শেষ আপডেট: ২০২৬-০২-০৮*
