@@ -215,6 +215,7 @@ const DynamicHomepageSections = () => {
 
   const renderProductCard = (product: Product, showBadge?: string) => {
     const discount = getDiscountPercent(product.price, product.compare_at_price);
+    const hasSecondImage = product.images && product.images.length > 1;
     
     return (
       <Link to={`/product/${product.slug}`} key={product.id}>
@@ -225,18 +226,31 @@ const DynamicHomepageSections = () => {
           className="group bg-card rounded-lg border border-border overflow-hidden hover:border-gold/50 transition-colors"
         >
           <div className="aspect-square relative overflow-hidden">
+            {/* Primary Image */}
             <img
               src={product.images?.[0] || "/placeholder.svg"}
               alt={product.name}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              className={`w-full h-full object-cover transition-all duration-500 ${
+                hasSecondImage 
+                  ? "group-hover:opacity-0 group-hover:scale-105" 
+                  : "group-hover:scale-105"
+              }`}
             />
+            {/* Secondary Image - Desktop Hover */}
+            {hasSecondImage && (
+              <img
+                src={product.images[1]}
+                alt={`${product.name} - alternate view`}
+                className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
+              />
+            )}
             {showBadge && (
-              <Badge className="absolute top-2 left-2 bg-gold text-background">
+              <Badge className="absolute top-2 left-2 bg-gold text-background z-10">
                 {showBadge}
               </Badge>
             )}
             {discount > 0 && (
-              <Badge className="absolute top-2 right-2 bg-destructive text-white">
+              <Badge className="absolute top-2 right-2 bg-destructive text-white z-10">
                 -{discount}%
               </Badge>
             )}
