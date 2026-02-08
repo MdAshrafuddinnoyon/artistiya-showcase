@@ -16,7 +16,8 @@ interface GalleryAlbum {
   description: string | null;
   description_bn: string | null;
   cover_image_url: string | null;
-  published_at: string;
+  published_at: string | null;
+  display_order: number | null;
   is_active: boolean;
 }
 
@@ -26,6 +27,7 @@ interface GalleryItem {
   title: string | null;
   title_bn: string | null;
   media_url: string;
+  display_order: number | null;
   is_active: boolean;
 }
 
@@ -49,7 +51,7 @@ const Gallery = () => {
         .from("gallery_albums")
         .select("*")
         .eq("is_active", true)
-        .order("published_at", { ascending: false });
+        .order("display_order", { ascending: true });
       if (error) throw error;
       return data as GalleryAlbum[];
     },
@@ -114,10 +116,12 @@ const Gallery = () => {
                   {language === "bn" && selectedAlbum.title_bn ? selectedAlbum.title_bn : selectedAlbum.title}
                 </h2>
                 <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    {new Date(selectedAlbum.published_at).toLocaleDateString()}
-                  </span>
+                  {selectedAlbum.published_at && (
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      {new Date(selectedAlbum.published_at).toLocaleDateString()}
+                    </span>
+                  )}
                   <span className="flex items-center gap-1">
                     <Image className="h-4 w-4" />
                     {items.length} {language === "bn" ? "টি আইটেম" : "items"}
@@ -178,10 +182,12 @@ const Gallery = () => {
                   <h3 className={`font-display text-lg text-foreground group-hover:text-gold transition-colors ${language === "bn" ? "font-bengali" : ""}`}>
                     {language === "bn" && album.title_bn ? album.title_bn : album.title}
                   </h3>
-                  <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    {new Date(album.published_at).toLocaleDateString()}
-                  </div>
+                  {album.published_at && (
+                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                      <Calendar className="h-3 w-3" />
+                      {new Date(album.published_at).toLocaleDateString()}
+                    </div>
+                  )}
                 </motion.div>
               ))}
             </div>

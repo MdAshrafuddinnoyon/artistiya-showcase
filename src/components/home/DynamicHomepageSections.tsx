@@ -4,6 +4,9 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useLanguage } from "@/hooks/useLanguage";
+import { Play, Calendar, ArrowRight } from "lucide-react";
 
 interface Product {
   id: string;
@@ -48,11 +51,44 @@ interface FeaturedSection {
   is_active: boolean;
 }
 
+interface YouTubeVideo {
+  id: string;
+  title: string;
+  title_bn: string | null;
+  video_id: string;
+  thumbnail_url: string | null;
+  is_active: boolean;
+}
+
+interface BlogPost {
+  id: string;
+  title: string;
+  title_bn: string | null;
+  slug: string;
+  excerpt: string | null;
+  excerpt_bn: string | null;
+  featured_image: string | null;
+  published_at: string | null;
+}
+
+interface FAQItem {
+  id: string;
+  question: string;
+  question_bn: string | null;
+  answer: string;
+  answer_bn: string | null;
+  category: string;
+}
+
 const DynamicHomepageSections = () => {
+  const { language } = useLanguage();
   const [sections, setSections] = useState<HomepageSection[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [featuredSections, setFeaturedSections] = useState<FeaturedSection[]>([]);
+  const [youtubeVideos, setYoutubeVideos] = useState<YouTubeVideo[]>([]);
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  const [faqItems, setFaqItems] = useState<FAQItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -81,6 +117,21 @@ const DynamicHomepageSections = () => {
         { event: '*', schema: 'public', table: 'featured_sections' },
         () => fetchData()
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'youtube_videos' },
+        () => fetchData()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'blog_posts' },
+        () => fetchData()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'faq_items' },
+        () => fetchData()
+      )
       .subscribe();
 
     return () => {
@@ -90,7 +141,7 @@ const DynamicHomepageSections = () => {
 
   const fetchData = async () => {
     try {
-      const [sectionsRes, productsRes, categoriesRes, featuredRes] = await Promise.all([
+      const [sectionsRes, productsRes, categoriesRes, featuredRes, youtubeRes, blogRes, faqRes] = await Promise.all([
         supabase
           .from("homepage_sections")
           .select("*")
@@ -108,6 +159,24 @@ const DynamicHomepageSections = () => {
           .from("featured_sections")
           .select("*")
           .eq("is_active", true),
+        supabase
+          .from("youtube_videos")
+          .select("id, title, title_bn, video_id, thumbnail_url, is_active")
+          .eq("is_active", true)
+          .order("display_order")
+          .limit(10),
+        supabase
+          .from("blog_posts")
+          .select("id, title, title_bn, slug, excerpt, excerpt_bn, featured_image, published_at")
+          .eq("is_published", true)
+          .order("published_at", { ascending: false })
+          .limit(10),
+        supabase
+          .from("faq_items")
+          .select("id, question, question_bn, answer, answer_bn, category")
+          .eq("is_active", true)
+          .order("display_order")
+          .limit(20),
       ]);
 
       if (sectionsRes.error) throw sectionsRes.error;
@@ -118,6 +187,9 @@ const DynamicHomepageSections = () => {
       setProducts(productsRes.data || []);
       setCategories(categoriesRes.data || []);
       setFeaturedSections(featuredRes.data || []);
+      setYoutubeVideos(youtubeRes.data || []);
+      setBlogPosts(blogRes.data || []);
+      setFaqItems(faqRes.data || []);
     } catch (error) {
       console.error("Error fetching homepage sections:", error);
     } finally {
@@ -497,6 +569,194 @@ const DynamicHomepageSections = () => {
                     </Link>
                   )}
                 </motion.div>
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      case "youtube": {
+        const limit = section.config.limit || 3;
+        const videos = youtubeVideos.slice(0, limit);
+        if (videos.length === 0) return null;
+
+        return (
+          <section key={section.id} className="py-10 md:py-16 bg-muted/30">
+            <div className="container mx-auto px-4 lg:px-8">
+              <div className="text-center mb-6 md:mb-10">
+                <h2 className="font-display text-2xl md:text-3xl lg:text-4xl text-foreground">
+                  {section.title}
+                </h2>
+                {section.subtitle && section.subtitle !== "Add a subtitle" && (
+                  <p className="text-muted-foreground mt-2 text-sm md:text-base">{section.subtitle}</p>
+                )}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {videos.map((video, index) => (
+                  <motion.div
+                    key={video.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.1 }}
+                    className="group"
+                  >
+                    <a
+                      href={`https://www.youtube.com/watch?v=${video.video_id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <div className="relative aspect-video rounded-xl overflow-hidden bg-muted">
+                        <img
+                          src={video.thumbnail_url || `https://img.youtube.com/vi/${video.video_id}/maxresdefault.jpg`}
+                          alt={video.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-background/30 flex items-center justify-center group-hover:bg-background/10 transition-colors">
+                          <div className="w-16 h-16 rounded-full bg-destructive flex items-center justify-center">
+                            <Play className="h-6 w-6 text-white fill-white ml-1" />
+                          </div>
+                        </div>
+                      </div>
+                      <h3 className={`font-medium text-foreground mt-3 group-hover:text-gold transition-colors line-clamp-2 ${language === "bn" ? "font-bengali" : ""}`}>
+                        {language === "bn" && video.title_bn ? video.title_bn : video.title}
+                      </h3>
+                    </a>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      case "blog": {
+        const limit = section.config.limit || 3;
+        const posts = blogPosts.slice(0, limit);
+        if (posts.length === 0) return null;
+
+        return (
+          <section key={section.id} className="py-10 md:py-16 bg-background">
+            <div className="container mx-auto px-4 lg:px-8">
+              <div className="text-center mb-6 md:mb-10">
+                <h2 className="font-display text-2xl md:text-3xl lg:text-4xl text-foreground">
+                  {section.title}
+                </h2>
+                {section.subtitle && section.subtitle !== "Add a subtitle" && (
+                  <p className="text-muted-foreground mt-2 text-sm md:text-base">{section.subtitle}</p>
+                )}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {posts.map((post, index) => (
+                  <motion.div
+                    key={post.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <Link to={`/blog/${post.slug}`} className="group block">
+                      <div className="aspect-video rounded-xl overflow-hidden bg-muted mb-4">
+                        {post.featured_image ? (
+                          <img
+                            src={post.featured_image}
+                            alt={post.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-muted">
+                            <span className="text-4xl">📝</span>
+                          </div>
+                        )}
+                      </div>
+                      {post.published_at && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                          <Calendar className="h-3 w-3" />
+                          {new Date(post.published_at).toLocaleDateString()}
+                        </div>
+                      )}
+                      <h3 className={`font-display text-lg text-foreground group-hover:text-gold transition-colors line-clamp-2 ${language === "bn" ? "font-bengali" : ""}`}>
+                        {language === "bn" && post.title_bn ? post.title_bn : post.title}
+                      </h3>
+                      {section.config.show_excerpt !== false && (
+                        <p className={`text-muted-foreground text-sm mt-2 line-clamp-2 ${language === "bn" ? "font-bengali" : ""}`}>
+                          {language === "bn" && post.excerpt_bn ? post.excerpt_bn : post.excerpt}
+                        </p>
+                      )}
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+              <div className="text-center mt-8">
+                <Link to="/blog">
+                  <Button variant="outline" className="border-gold text-gold hover:bg-gold hover:text-background">
+                    {language === "bn" ? "সব পোস্ট দেখুন" : "View All Posts"}
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      case "faq": {
+        const limit = section.config.limit || 5;
+        const pageType = section.config.page_type || "homepage";
+        const filteredFaqs = faqItems
+          .filter(faq => !pageType || faq.category?.toLowerCase().includes(pageType.toLowerCase()) || pageType === "general")
+          .slice(0, limit);
+        
+        if (filteredFaqs.length === 0) {
+          // If no category match, show first N FAQs
+          const fallbackFaqs = faqItems.slice(0, limit);
+          if (fallbackFaqs.length === 0) return null;
+        }
+
+        const displayFaqs = filteredFaqs.length > 0 ? filteredFaqs : faqItems.slice(0, limit);
+        if (displayFaqs.length === 0) return null;
+
+        return (
+          <section key={section.id} className="py-10 md:py-16 bg-muted/30">
+            <div className="container mx-auto px-4 lg:px-8">
+              <div className="text-center mb-6 md:mb-10">
+                <h2 className="font-display text-2xl md:text-3xl lg:text-4xl text-foreground">
+                  {section.title}
+                </h2>
+                {section.subtitle && section.subtitle !== "Add a subtitle" && (
+                  <p className="text-muted-foreground mt-2 text-sm md:text-base">{section.subtitle}</p>
+                )}
+              </div>
+              <div className="max-w-3xl mx-auto">
+                <Accordion type="single" collapsible className="w-full">
+                  {displayFaqs.map((faq, index) => (
+                    <motion.div
+                      key={faq.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <AccordionItem value={faq.id} className="border-border">
+                        <AccordionTrigger className={`text-left text-foreground hover:text-gold ${language === "bn" ? "font-bengali" : ""}`}>
+                          {language === "bn" && faq.question_bn ? faq.question_bn : faq.question}
+                        </AccordionTrigger>
+                        <AccordionContent className={`text-muted-foreground ${language === "bn" ? "font-bengali" : ""}`}>
+                          {language === "bn" && faq.answer_bn ? faq.answer_bn : faq.answer}
+                        </AccordionContent>
+                      </AccordionItem>
+                    </motion.div>
+                  ))}
+                </Accordion>
+                <div className="text-center mt-8">
+                  <Link to="/faq">
+                    <Button variant="outline" className="border-gold text-gold hover:bg-gold hover:text-background">
+                      {language === "bn" ? "সব প্রশ্ন দেখুন" : "View All FAQs"}
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </div>
           </section>
