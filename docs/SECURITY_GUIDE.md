@@ -53,11 +53,16 @@ SELECT decrypt_credential(api_key, key) FROM payment_providers;
 - [x] Edge function error masking
 - [x] Fraud detection system
 - [x] Blocked customer management
+- [x] Rate limiting on leads form (max 3/5min)
+- [x] Rate limiting on newsletter (no duplicates)
+- [x] Google API key hidden in secure view
+- [x] Guest user isolation (addresses, orders)
+- [x] Admin-only access to payment/email/delivery credentials
 
 ### ⚠️ ম্যানুয়াল অ্যাকশন প্রয়োজন
 
 - [ ] **Leaked Password Protection** সক্রিয় করুন:
-  1. Supabase Dashboard → Authentication → Providers
+  1. Lovable Cloud View → Authentication → Settings
   2. "Leaked Password Protection" Enable করুন
 
 ---

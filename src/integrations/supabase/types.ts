@@ -3668,6 +3668,7 @@ export type Database = {
         Args: { p_email: string; p_phone: string }
         Returns: boolean
       }
+      can_subscribe_newsletter: { Args: { p_email: string }; Returns: boolean }
       decrypt_credential: {
         Args: { encrypted_text: string; encryption_key: string }
         Returns: string
