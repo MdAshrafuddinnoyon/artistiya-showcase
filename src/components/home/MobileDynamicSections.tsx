@@ -184,14 +184,30 @@ const MobileDynamicSections = () => {
     await toggleWishlist(productId);
   };
 
-  // Mobile Product Slider Component with Touch Support
+  // Navigation scroll helper
+  const scrollSlider = (ref: React.RefObject<HTMLDivElement>, direction: 'left' | 'right', itemWidth: number = 150) => {
+    if (!ref.current) return;
+    const scrollAmount = direction === 'left' ? -itemWidth : itemWidth;
+    ref.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+  };
+
+  // Mobile Product Slider Component with Touch Support and Navigation Buttons
   const MobileProductSlider = ({ items, title, showViewAll = true }: { items: Product[], title: string, showViewAll?: boolean }) => {
     const sliderRef = useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     const [startX, setStartX] = useState(0);
     const [scrollLeft, setScrollLeft] = useState(0);
+    const [canScrollLeft, setCanScrollLeft] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(true);
     
     if (items.length === 0) return null;
+
+    const checkScrollButtons = () => {
+      if (!sliderRef.current) return;
+      const { scrollLeft, scrollWidth, clientWidth } = sliderRef.current;
+      setCanScrollLeft(scrollLeft > 5);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 5);
+    };
 
     const handleMouseDown = (e: React.MouseEvent) => {
       setIsDragging(true);
@@ -209,7 +225,10 @@ const MobileDynamicSections = () => {
       }
     };
 
-    const handleMouseUp = () => setIsDragging(false);
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      checkScrollButtons();
+    };
 
     const handleTouchStart = (e: React.TouchEvent) => {
       setIsDragging(true);
@@ -226,7 +245,10 @@ const MobileDynamicSections = () => {
       }
     };
 
-    const handleTouchEnd = () => setIsDragging(false);
+    const handleTouchEnd = () => {
+      setIsDragging(false);
+      checkScrollButtons();
+    };
 
     return (
       <section className="px-4 py-4">
@@ -234,11 +256,38 @@ const MobileDynamicSections = () => {
           <h2 className="text-base font-display text-foreground">
             {language === "bn" ? (title === "New Arrivals" ? "নতুন পণ্য" : title === "Hot Sales" ? "জনপ্রিয়" : title) : title}
           </h2>
-          {showViewAll && (
-            <Link to="/shop" className="text-gold text-xs font-medium">
-              {language === "bn" ? "সব দেখুন →" : "View All →"}
-            </Link>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Navigation Buttons */}
+            <div className="flex gap-1">
+              <button
+                onClick={() => { scrollSlider(sliderRef, 'left', 140); setTimeout(checkScrollButtons, 300); }}
+                disabled={!canScrollLeft}
+                className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all ${
+                  canScrollLeft 
+                    ? "border-gold/50 bg-gold/10 text-gold active:bg-gold active:text-charcoal-deep" 
+                    : "border-border bg-muted/50 text-muted-foreground opacity-40"
+                }`}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => { scrollSlider(sliderRef, 'right', 140); setTimeout(checkScrollButtons, 300); }}
+                disabled={!canScrollRight}
+                className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all ${
+                  canScrollRight 
+                    ? "border-gold/50 bg-gold/10 text-gold active:bg-gold active:text-charcoal-deep" 
+                    : "border-border bg-muted/50 text-muted-foreground opacity-40"
+                }`}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+            {showViewAll && (
+              <Link to="/shop" className="text-gold text-xs font-medium">
+                {language === "bn" ? "সব →" : "All →"}
+              </Link>
+            )}
+          </div>
         </div>
 
         <div 
@@ -252,6 +301,7 @@ const MobileDynamicSections = () => {
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
+          onScroll={checkScrollButtons}
         >
           {items.map((product) => (
             <div key={product.id} className="flex-shrink-0 w-32" style={{ scrollSnapAlign: "start" }}>
@@ -372,14 +422,23 @@ const MobileDynamicSections = () => {
     );
   };
 
-  // Mobile YouTube Section with Touch Support
+  // Mobile YouTube Section with Touch Support and Navigation Buttons
   const MobileYouTube = ({ videos, title, subtitle }: { videos: YouTubeVideo[], title: string, subtitle?: string }) => {
     const ytSliderRef = useRef<HTMLDivElement>(null);
     const [ytDragging, setYtDragging] = useState(false);
     const [ytStartX, setYtStartX] = useState(0);
     const [ytScrollLeft, setYtScrollLeft] = useState(0);
+    const [canScrollLeft, setCanScrollLeft] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(true);
 
     if (videos.length === 0) return null;
+
+    const checkScrollButtons = () => {
+      if (!ytSliderRef.current) return;
+      const { scrollLeft, scrollWidth, clientWidth } = ytSliderRef.current;
+      setCanScrollLeft(scrollLeft > 5);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 5);
+    };
 
     const handleYtTouchStart = (e: React.TouchEvent) => {
       setYtDragging(true);
@@ -396,13 +455,43 @@ const MobileDynamicSections = () => {
       }
     };
 
-    const handleYtTouchEnd = () => setYtDragging(false);
+    const handleYtTouchEnd = () => {
+      setYtDragging(false);
+      checkScrollButtons();
+    };
 
     return (
       <section className="px-4 py-5 bg-muted/30">
-        <div className="mb-3">
-          <h2 className="text-base font-display text-foreground">{title}</h2>
-          {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-base font-display text-foreground">{title}</h2>
+            {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
+          </div>
+          {/* Navigation Buttons */}
+          <div className="flex gap-1">
+            <button
+              onClick={() => { scrollSlider(ytSliderRef, 'left', 200); setTimeout(checkScrollButtons, 300); }}
+              disabled={!canScrollLeft}
+              className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all ${
+                canScrollLeft 
+                  ? "border-gold/50 bg-gold/10 text-gold active:bg-gold active:text-charcoal-deep" 
+                  : "border-border bg-muted/50 text-muted-foreground opacity-40"
+              }`}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => { scrollSlider(ytSliderRef, 'right', 200); setTimeout(checkScrollButtons, 300); }}
+              disabled={!canScrollRight}
+              className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all ${
+                canScrollRight 
+                  ? "border-gold/50 bg-gold/10 text-gold active:bg-gold active:text-charcoal-deep" 
+                  : "border-border bg-muted/50 text-muted-foreground opacity-40"
+              }`}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <div 
@@ -412,6 +501,7 @@ const MobileDynamicSections = () => {
           onTouchStart={handleYtTouchStart}
           onTouchMove={handleYtTouchMove}
           onTouchEnd={handleYtTouchEnd}
+          onScroll={checkScrollButtons}
         >
           {videos.map((video) => (
             <a
@@ -446,14 +536,23 @@ const MobileDynamicSections = () => {
     );
   };
 
-  // Mobile Blog Section with Touch Support
+  // Mobile Blog Section with Touch Support and Navigation Buttons
   const MobileBlog = ({ posts, title, subtitle }: { posts: BlogPost[], title: string, subtitle?: string }) => {
     const blogSliderRef = useRef<HTMLDivElement>(null);
     const [blogDragging, setBlogDragging] = useState(false);
     const [blogStartX, setBlogStartX] = useState(0);
     const [blogScrollLeft, setBlogScrollLeft] = useState(0);
+    const [canScrollLeft, setCanScrollLeft] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(true);
 
     if (posts.length === 0) return null;
+
+    const checkScrollButtons = () => {
+      if (!blogSliderRef.current) return;
+      const { scrollLeft, scrollWidth, clientWidth } = blogSliderRef.current;
+      setCanScrollLeft(scrollLeft > 5);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 5);
+    };
 
     const handleBlogTouchStart = (e: React.TouchEvent) => {
       setBlogDragging(true);
@@ -470,7 +569,10 @@ const MobileDynamicSections = () => {
       }
     };
 
-    const handleBlogTouchEnd = () => setBlogDragging(false);
+    const handleBlogTouchEnd = () => {
+      setBlogDragging(false);
+      checkScrollButtons();
+    };
 
     return (
       <section className="px-4 py-5">
@@ -479,9 +581,36 @@ const MobileDynamicSections = () => {
             <h2 className="text-base font-display text-foreground">{title}</h2>
             {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
           </div>
-          <Link to="/blog" className="text-gold text-xs">
-            {language === "bn" ? "সব →" : "All →"}
-          </Link>
+          <div className="flex items-center gap-2">
+            {/* Navigation Buttons */}
+            <div className="flex gap-1">
+              <button
+                onClick={() => { scrollSlider(blogSliderRef, 'left', 160); setTimeout(checkScrollButtons, 300); }}
+                disabled={!canScrollLeft}
+                className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all ${
+                  canScrollLeft 
+                    ? "border-gold/50 bg-gold/10 text-gold active:bg-gold active:text-charcoal-deep" 
+                    : "border-border bg-muted/50 text-muted-foreground opacity-40"
+                }`}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => { scrollSlider(blogSliderRef, 'right', 160); setTimeout(checkScrollButtons, 300); }}
+                disabled={!canScrollRight}
+                className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all ${
+                  canScrollRight 
+                    ? "border-gold/50 bg-gold/10 text-gold active:bg-gold active:text-charcoal-deep" 
+                    : "border-border bg-muted/50 text-muted-foreground opacity-40"
+                }`}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+            <Link to="/blog" className="text-gold text-xs">
+              {language === "bn" ? "সব →" : "All →"}
+            </Link>
+          </div>
         </div>
 
         <div 
@@ -491,6 +620,7 @@ const MobileDynamicSections = () => {
           onTouchStart={handleBlogTouchStart}
           onTouchMove={handleBlogTouchMove}
           onTouchEnd={handleBlogTouchEnd}
+          onScroll={checkScrollButtons}
         >
           {posts.map((post) => (
             <Link 
@@ -559,15 +689,24 @@ const MobileDynamicSections = () => {
     );
   };
 
-  // Mobile Category Slider with Touch Support
+  // Mobile Category Slider with Touch Support and Navigation Buttons
   const MobileCategories = () => {
     const catSliderRef = useRef<HTMLDivElement>(null);
     const [catDragging, setCatDragging] = useState(false);
     const [catStartX, setCatStartX] = useState(0);
     const [catScrollLeft, setCatScrollLeft] = useState(0);
     const [activeCategory, setActiveCategory] = useState<string | null>(null);
+    const [canScrollLeft, setCanScrollLeft] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(true);
 
     if (categories.length === 0) return null;
+
+    const checkScrollButtons = () => {
+      if (!catSliderRef.current) return;
+      const { scrollLeft, scrollWidth, clientWidth } = catSliderRef.current;
+      setCanScrollLeft(scrollLeft > 5);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 5);
+    };
 
     const handleCatMouseDown = (e: React.MouseEvent) => {
       setCatDragging(true);
@@ -585,7 +724,10 @@ const MobileDynamicSections = () => {
       }
     };
 
-    const handleCatMouseUp = () => setCatDragging(false);
+    const handleCatMouseUp = () => {
+      setCatDragging(false);
+      checkScrollButtons();
+    };
 
     const handleCatTouchStart = (e: React.TouchEvent) => {
       setCatDragging(true);
@@ -602,7 +744,10 @@ const MobileDynamicSections = () => {
       }
     };
 
-    const handleCatTouchEnd = () => setCatDragging(false);
+    const handleCatTouchEnd = () => {
+      setCatDragging(false);
+      checkScrollButtons();
+    };
 
     // Default category icons
     const getCategoryIcon = (slug: string) => {
@@ -618,7 +763,34 @@ const MobileDynamicSections = () => {
           <h2 className="text-base font-display text-foreground">
             {language === "bn" ? "ক্যাটাগরি" : "Shop by Category"}
           </h2>
-          <Link to="/shop" className="text-gold text-xs">{language === "bn" ? "সব →" : "All →"}</Link>
+          <div className="flex items-center gap-2">
+            {/* Navigation Buttons */}
+            <div className="flex gap-1">
+              <button
+                onClick={() => { scrollSlider(catSliderRef, 'left', 80); setTimeout(checkScrollButtons, 300); }}
+                disabled={!canScrollLeft}
+                className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all ${
+                  canScrollLeft 
+                    ? "border-gold/50 bg-gold/10 text-gold active:bg-gold active:text-charcoal-deep" 
+                    : "border-border bg-muted/50 text-muted-foreground opacity-40"
+                }`}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => { scrollSlider(catSliderRef, 'right', 80); setTimeout(checkScrollButtons, 300); }}
+                disabled={!canScrollRight}
+                className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all ${
+                  canScrollRight 
+                    ? "border-gold/50 bg-gold/10 text-gold active:bg-gold active:text-charcoal-deep" 
+                    : "border-border bg-muted/50 text-muted-foreground opacity-40"
+                }`}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+            <Link to="/shop" className="text-gold text-xs">{language === "bn" ? "সব →" : "All →"}</Link>
+          </div>
         </div>
 
         <div 
@@ -632,6 +804,7 @@ const MobileDynamicSections = () => {
           onTouchStart={handleCatTouchStart}
           onTouchMove={handleCatTouchMove}
           onTouchEnd={handleCatTouchEnd}
+          onScroll={checkScrollButtons}
         >
           {/* All Products Button */}
           <Link 
