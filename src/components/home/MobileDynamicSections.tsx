@@ -303,44 +303,59 @@ const MobileDynamicSections = () => {
           onTouchEnd={handleTouchEnd}
           onScroll={checkScrollButtons}
         >
-          {items.map((product) => (
-            <div key={product.id} className="flex-shrink-0 w-32" style={{ scrollSnapAlign: "start" }}>
-              <Link 
-                to={`/product/${product.slug}`} 
-                className="block"
-                onClick={(e) => isDragging && e.preventDefault()}
-              >
-                <div className="relative aspect-square bg-card rounded-lg overflow-hidden mb-1.5 border border-border/50">
-                  <img
-                    src={product.images?.[0] || "/placeholder.svg"}
-                    alt={product.name}
-                    className="w-full h-full object-cover"
-                    draggable={false}
-                  />
-                  <button
-                    onClick={(e) => handleWishlistClick(e, product.id)}
-                    className="absolute top-1 right-1 w-6 h-6 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center"
-                  >
-                    <Heart className={`h-3 w-3 ${isInWishlist(product.id) ? "fill-gold text-gold" : "text-muted-foreground"}`} />
-                  </button>
-                  {product.is_new_arrival && (
-                    <span className="absolute top-1 left-1 px-1.5 py-0.5 bg-gold text-charcoal-deep text-[8px] font-semibold rounded">
-                      {language === "bn" ? "নতুন" : "NEW"}
-                    </span>
-                  )}
-                </div>
-                <h3 className="text-[11px] text-foreground font-medium line-clamp-1">
-                  {language === "bn" && product.name_bn ? product.name_bn : product.name}
-                </h3>
-                <div className="flex items-center gap-1 mt-0.5">
-                  <span className="text-xs font-semibold text-gold">৳{product.price.toLocaleString()}</span>
-                  {product.compare_at_price && product.compare_at_price > product.price && (
-                    <span className="text-[9px] text-muted-foreground line-through">৳{product.compare_at_price.toLocaleString()}</span>
-                  )}
-                </div>
-              </Link>
-            </div>
-          ))}
+          {items.map((product) => {
+            const hasSecondImage = product.images && product.images.length > 1;
+            return (
+              <div key={product.id} className="flex-shrink-0 w-32" style={{ scrollSnapAlign: "start" }}>
+                <Link 
+                  to={`/product/${product.slug}`} 
+                  className="block group"
+                  onClick={(e) => isDragging && e.preventDefault()}
+                >
+                  <div className="relative aspect-square bg-card rounded-lg overflow-hidden mb-1.5 border border-border/50">
+                    {/* Primary Image */}
+                    <img
+                      src={product.images?.[0] || "/placeholder.svg"}
+                      alt={product.name}
+                      className={`w-full h-full object-cover absolute inset-0 transition-opacity duration-300 ${
+                        hasSecondImage ? "group-hover:opacity-0 group-active:opacity-0" : ""
+                      }`}
+                      draggable={false}
+                    />
+                    {/* Secondary/Gallery Image on Hover */}
+                    {hasSecondImage && (
+                      <img
+                        src={product.images![1]}
+                        alt={`${product.name} - Gallery`}
+                        className="w-full h-full object-cover absolute inset-0 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-300"
+                        draggable={false}
+                      />
+                    )}
+                    <button
+                      onClick={(e) => handleWishlistClick(e, product.id)}
+                      className="absolute top-1 right-1 w-6 h-6 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center z-10"
+                    >
+                      <Heart className={`h-3 w-3 ${isInWishlist(product.id) ? "fill-gold text-gold" : "text-muted-foreground"}`} />
+                    </button>
+                    {product.is_new_arrival && (
+                      <span className="absolute top-1 left-1 px-1.5 py-0.5 bg-gold text-charcoal-deep text-[8px] font-semibold rounded z-10">
+                        {language === "bn" ? "নতুন" : "NEW"}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-[11px] text-foreground font-medium line-clamp-1">
+                    {language === "bn" && product.name_bn ? product.name_bn : product.name}
+                  </h3>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="text-xs font-semibold text-gold">৳{product.price.toLocaleString()}</span>
+                    {product.compare_at_price && product.compare_at_price > product.price && (
+                      <span className="text-[9px] text-muted-foreground line-through">৳{product.compare_at_price.toLocaleString()}</span>
+                    )}
+                  </div>
+                </Link>
+              </div>
+            );
+          })}
         </div>
       </section>
     );
