@@ -297,7 +297,6 @@ const Shop = () => {
         }
       )
       .subscribe((status) => {
-        console.log("Realtime subscription status:", status);
         if (status === 'SUBSCRIBED') {
           setConnectionStatus('connected');
         } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
@@ -307,27 +306,16 @@ const Shop = () => {
         }
       });
 
-    // Smart polling fallback - polls less frequently when realtime is working
-    let pollingInterval = 5000; // Start with 5 seconds
-    const maxPollingInterval = 30000; // Max 30 seconds
-    
-    const pollForUpdates = async () => {
-      if (connectionStatus === 'disconnected') {
-        await fetchSettings();
-        pollingInterval = 5000; // Reset when disconnected
-      } else {
-        // When connected, increase polling interval (exponential backoff)
-        pollingInterval = Math.min(pollingInterval * 1.5, maxPollingInterval);
-      }
-    };
-
-    const pollingTimer = setInterval(pollForUpdates, pollingInterval);
+    // Smart polling fallback - polls every 10 seconds as a backup
+    const pollingTimer = setInterval(() => {
+      fetchSettings();
+    }, 10000);
 
     return () => {
       supabase.removeChannel(channel);
       clearInterval(pollingTimer);
     };
-  }, [fetchSettings, connectionStatus]);
+  }, [fetchSettings]);
 
   // Fetch categories and variant options
   useEffect(() => {
