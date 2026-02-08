@@ -190,9 +190,13 @@ const Shop = () => {
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("newest");
 
+  // Track last sync timestamp for smart polling
+  const [lastSyncTime, setLastSyncTime] = useState<number>(Date.now());
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
+
   // Fetch shop settings and filter configs with realtime subscription
-  useEffect(() => {
-    const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
+    try {
       // Fetch shop settings
       const { data: shopData } = await supabase
         .from("shop_settings")
@@ -200,9 +204,20 @@ const Shop = () => {
         .single();
       
       if (shopData) {
-        setShopSettings(shopData as ShopSettings);
-        setPriceRange([shopData.min_price || 0, shopData.max_price || 50000]);
-        setSortBy(shopData.default_sort || 'newest');
+        setShopSettings(prev => {
+          // Only update if data actually changed
+          if (JSON.stringify(prev) !== JSON.stringify(shopData)) {
+            return shopData as ShopSettings;
+          }
+          return prev;
+        });
+        // Only set price range on initial load
+        if (priceRange[0] === 0 && priceRange[1] === 50000) {
+          setPriceRange([shopData.min_price || 0, shopData.max_price || 50000]);
+        }
+        if (sortBy === 'newest' && shopData.default_sort) {
+          setSortBy(shopData.default_sort);
+        }
       }
 
       // Fetch page appearance settings
@@ -212,14 +227,18 @@ const Shop = () => {
         .single();
       
       if (pageData) {
-        setPageSettings(pageData as any);
+        setPageSettings(prev => {
+          if (JSON.stringify(prev) !== JSON.stringify(pageData)) {
+            return pageData as any;
+          }
+          return prev;
+        });
       }
 
-      // Fetch filter configurations
+      // Fetch filter configurations - includes ALL filters, frontend handles is_active
       const { data: filterData } = await supabase
         .from("filter_settings")
         .select("*")
-        .eq("is_active", true)
         .order("display_order", { ascending: true });
 
       if (filterData) {
@@ -232,10 +251,22 @@ const Shop = () => {
           display_order: f.display_order ?? 0,
           options: (typeof f.options === "object" && f.options !== null ? f.options : {}) as Record<string, any>,
         }));
-        setFilterConfigs(configs);
+        setFilterConfigs(prev => {
+          if (JSON.stringify(prev) !== JSON.stringify(configs)) {
+            console.log("Filter configs updated:", configs.map(c => `${c.filter_key}: ${c.is_active}`).join(", "));
+            return configs;
+          }
+          return prev;
+        });
       }
-    };
-    
+
+      setLastSyncTime(Date.now());
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+    }
+  }, [priceRange, sortBy]);
+
+  useEffect(() => {
     fetchSettings();
 
     // Subscribe to realtime changes for shop_page_settings, shop_settings, and filter_settings
@@ -244,24 +275,59 @@ const Shop = () => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'shop_page_settings' },
-        () => fetchSettings()
+        (payload) => {
+          console.log("shop_page_settings changed:", payload.eventType);
+          fetchSettings();
+        }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'shop_settings' },
-        () => fetchSettings()
+        (payload) => {
+          console.log("shop_settings changed:", payload.eventType);
+          fetchSettings();
+        }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'filter_settings' },
-        () => fetchSettings()
+        (payload) => {
+          console.log("filter_settings changed:", payload.eventType, payload);
+          fetchSettings();
+        }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Realtime subscription status:", status);
+        if (status === 'SUBSCRIBED') {
+          setConnectionStatus('connected');
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          setConnectionStatus('disconnected');
+        } else {
+          setConnectionStatus('connecting');
+        }
+      });
+
+    // Smart polling fallback - polls less frequently when realtime is working
+    let pollingInterval = 5000; // Start with 5 seconds
+    const maxPollingInterval = 30000; // Max 30 seconds
+    
+    const pollForUpdates = async () => {
+      if (connectionStatus === 'disconnected') {
+        await fetchSettings();
+        pollingInterval = 5000; // Reset when disconnected
+      } else {
+        // When connected, increase polling interval (exponential backoff)
+        pollingInterval = Math.min(pollingInterval * 1.5, maxPollingInterval);
+      }
+    };
+
+    const pollingTimer = setInterval(pollForUpdates, pollingInterval);
 
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(pollingTimer);
     };
-  }, []);
+  }, [fetchSettings, connectionStatus]);
 
   // Fetch categories and variant options
   useEffect(() => {
@@ -705,13 +771,19 @@ const Shop = () => {
     }
   };
 
+  // Get active filters sorted by display order with memoization
+  const activeFilters = useMemo(() => {
+    const active = filterConfigs
+      .filter(f => f.is_active === true)
+      .sort((a, b) => a.display_order - b.display_order);
+    console.log("Active filters:", active.map(f => f.filter_key).join(", "));
+    return active;
+  }, [filterConfigs]);
+
   const FilterContent = () => (
     <div className="space-y-6">
-      {/* Dynamic Filters - All rendered in display_order (categories, banners, price, etc.) */}
-      {filterConfigs
-        .filter(f => f.is_active)
-        .sort((a, b) => a.display_order - b.display_order)
-        .map(renderFilter)}
+      {/* Dynamic Filters - All rendered in display_order (only active ones) */}
+      {activeFilters.map(renderFilter)}
 
       {/* Clear Filters */}
       <Button 

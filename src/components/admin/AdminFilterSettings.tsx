@@ -162,20 +162,28 @@ const AdminFilterSettings = () => {
     fetchFilters();
     fetchShopSettings();
 
-    // Realtime subscription
+    // Realtime subscription with better error handling
     const channel = supabase
       .channel("filter_settings_admin")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "filter_settings" },
-        () => fetchFilters()
+        (payload) => {
+          console.log("Admin: filter_settings changed:", payload.eventType, payload);
+          fetchFilters();
+        }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "shop_settings" },
-        () => fetchShopSettings()
+        (payload) => {
+          console.log("Admin: shop_settings changed:", payload.eventType);
+          fetchShopSettings();
+        }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Admin realtime subscription status:", status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -271,15 +279,21 @@ const AdminFilterSettings = () => {
   };
 
   const handleToggleActive = async (id: string, currentState: boolean) => {
+    console.log(`Toggling filter ${id} from ${currentState} to ${!currentState}`);
+    
     const { error } = await supabase
       .from("filter_settings")
       .update({ is_active: !currentState })
       .eq("id", id);
 
     if (error) {
+      console.error("Toggle error:", error);
       toast.error("Failed to update filter status");
     } else {
+      console.log("Filter toggled successfully");
       toast.success(`Filter ${!currentState ? "enabled" : "disabled"}`);
+      // Force immediate refetch
+      fetchFilters();
     }
   };
 
