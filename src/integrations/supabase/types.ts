@@ -3536,7 +3536,132 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_site_branding: {
+        Row: {
+          auto_sync_google_reviews: boolean | null
+          business_hours: string | null
+          business_hours_bn: string | null
+          contact_address: string | null
+          contact_address_bn: string | null
+          contact_page_subtitle: string | null
+          contact_page_subtitle_bn: string | null
+          contact_page_title: string | null
+          contact_page_title_bn: string | null
+          contact_phone: string | null
+          created_at: string | null
+          favicon_url: string | null
+          footer_banner_height: number | null
+          footer_banner_link: string | null
+          footer_banner_url: string | null
+          footer_copyright: string | null
+          footer_description: string | null
+          footer_left_logo_link: string | null
+          footer_left_logo_url: string | null
+          footer_logo_size: string | null
+          footer_right_logo_link: string | null
+          footer_right_logo_url: string | null
+          google_maps_embed_url: string | null
+          header_announcement_active: boolean | null
+          header_announcement_text: string | null
+          hide_manual_reviews_when_api_active: boolean | null
+          id: string | null
+          logo_text: string | null
+          logo_text_secondary: string | null
+          logo_url: string | null
+          payment_methods: Json | null
+          show_logo_text: boolean | null
+          signup_discount_enabled: boolean | null
+          signup_discount_percent: number | null
+          social_email: string | null
+          social_facebook: string | null
+          social_instagram: string | null
+          social_whatsapp: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          auto_sync_google_reviews?: boolean | null
+          business_hours?: string | null
+          business_hours_bn?: string | null
+          contact_address?: string | null
+          contact_address_bn?: string | null
+          contact_page_subtitle?: string | null
+          contact_page_subtitle_bn?: string | null
+          contact_page_title?: string | null
+          contact_page_title_bn?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          favicon_url?: string | null
+          footer_banner_height?: number | null
+          footer_banner_link?: string | null
+          footer_banner_url?: string | null
+          footer_copyright?: string | null
+          footer_description?: string | null
+          footer_left_logo_link?: string | null
+          footer_left_logo_url?: string | null
+          footer_logo_size?: string | null
+          footer_right_logo_link?: string | null
+          footer_right_logo_url?: string | null
+          google_maps_embed_url?: string | null
+          header_announcement_active?: boolean | null
+          header_announcement_text?: string | null
+          hide_manual_reviews_when_api_active?: boolean | null
+          id?: string | null
+          logo_text?: string | null
+          logo_text_secondary?: string | null
+          logo_url?: string | null
+          payment_methods?: Json | null
+          show_logo_text?: boolean | null
+          signup_discount_enabled?: boolean | null
+          signup_discount_percent?: number | null
+          social_email?: string | null
+          social_facebook?: string | null
+          social_instagram?: string | null
+          social_whatsapp?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          auto_sync_google_reviews?: boolean | null
+          business_hours?: string | null
+          business_hours_bn?: string | null
+          contact_address?: string | null
+          contact_address_bn?: string | null
+          contact_page_subtitle?: string | null
+          contact_page_subtitle_bn?: string | null
+          contact_page_title?: string | null
+          contact_page_title_bn?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          favicon_url?: string | null
+          footer_banner_height?: number | null
+          footer_banner_link?: string | null
+          footer_banner_url?: string | null
+          footer_copyright?: string | null
+          footer_description?: string | null
+          footer_left_logo_link?: string | null
+          footer_left_logo_url?: string | null
+          footer_logo_size?: string | null
+          footer_right_logo_link?: string | null
+          footer_right_logo_url?: string | null
+          google_maps_embed_url?: string | null
+          header_announcement_active?: boolean | null
+          header_announcement_text?: string | null
+          hide_manual_reviews_when_api_active?: boolean | null
+          id?: string | null
+          logo_text?: string | null
+          logo_text_secondary?: string | null
+          logo_url?: string | null
+          payment_methods?: Json | null
+          show_logo_text?: boolean | null
+          signup_discount_enabled?: boolean | null
+          signup_discount_percent?: number | null
+          social_email?: string | null
+          social_facebook?: string | null
+          social_instagram?: string | null
+          social_whatsapp?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       decrypt_credential: {
