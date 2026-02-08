@@ -47,6 +47,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 
+// Import new CRM tab components
+import CRMProductsTab from "./crm/CRMProductsTab";
+import CRMCustomersTab from "./crm/CRMCustomersTab";
+import CRMOrdersTab from "./crm/CRMOrdersTab";
+import CRMPartnersTab from "./crm/CRMPartnersTab";
+import CRMPaymentsTab from "./crm/CRMPaymentsTab";
+import CRMExportTools from "./crm/CRMExportTools";
+
 interface CRMStats {
   totalOrders: number;
   deliveredOrders: number;
@@ -726,295 +734,36 @@ const AdminCRM = () => {
         </TabsContent>
 
         <TabsContent value="products" className="space-y-4">
-          <div className="grid md:grid-cols-3 gap-4 mb-4">
-            <Card className="border-blue-500/30">
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className="h-12 w-12 bg-blue-500/10 rounded-lg flex items-center justify-center">
-                  <Package className="h-6 w-6 text-blue-500" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.totalProducts}</p>
-                  <p className="text-sm text-muted-foreground">Active Products</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-yellow-500/30">
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className="h-12 w-12 bg-yellow-500/10 rounded-lg flex items-center justify-center">
-                  <AlertTriangle className="h-6 w-6 text-yellow-500" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-yellow-500">{stats.lowStockProducts}</p>
-                  <p className="text-sm text-muted-foreground">Low Stock (≤5)</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-red-500/30">
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className="h-12 w-12 bg-red-500/10 rounded-lg flex items-center justify-center">
-                  <XCircle className="h-6 w-6 text-red-500" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-red-500">{stats.outOfStockProducts}</p>
-                  <p className="text-sm text-muted-foreground">Out of Stock</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Top Selling Products</CardTitle>
-              <CardDescription>Products ranked by revenue</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {topProducts.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No sales data available</p>
-              ) : (
-                <div className="space-y-3">
-                  {topProducts.map((product, index) => (
-                    <div key={product.id} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
-                      <span className="text-lg font-bold text-gold w-6">#{index + 1}</span>
-                      <div className="h-12 w-12 rounded bg-muted overflow-hidden flex-shrink-0">
-                        {product.images[0] && (
-                          <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{product.name}</p>
-                        <p className="text-xs text-muted-foreground">{product.totalSold} sold</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-gold">৳{product.revenue.toLocaleString()}</p>
-                        <p className={`text-xs ${product.stockQuantity <= 5 ? 'text-red-500' : 'text-muted-foreground'}`}>
-                          Stock: {product.stockQuantity}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <CRMProductsTab 
+            products={topProducts}
+            stats={{
+              totalProducts: stats.totalProducts,
+              lowStockProducts: stats.lowStockProducts,
+              outOfStockProducts: stats.outOfStockProducts,
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="customers">
-          <Card>
-            <CardHeader>
-              <CardTitle>Top Customers</CardTitle>
-              <CardDescription>Customers ranked by total spending</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {topCustomers.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No customer data available</p>
-              ) : (
-                <div className="space-y-3">
-                  {topCustomers.map((customer, index) => (
-                    <div key={customer.id} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
-                      <span className="text-lg font-bold text-gold w-6">#{index + 1}</span>
-                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                        <Users className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium truncate">{customer.fullName}</p>
-                          {customer.isPremium && (
-                            <Badge className="bg-gold/20 text-gold border-gold/30">
-                              <Star className="h-3 w-3 mr-1" /> Premium
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground">{customer.email}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-gold">৳{customer.totalSpent.toLocaleString()}</p>
-                        <p className="text-xs text-muted-foreground">{customer.totalOrders} orders</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <CRMCustomersTab customers={topCustomers} />
         </TabsContent>
 
         <TabsContent value="orders">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Recent Orders</CardTitle>
-                <CardDescription>Latest orders in selected period</CardDescription>
-              </div>
-              <Button variant="outline" size="sm" onClick={exportOrdersReport}>
-                <Download className="h-4 w-4 mr-2" />
-                Export CSV
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {recentOrders.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No orders found</p>
-              ) : (
-                <div className="space-y-2">
-                  {recentOrders.map((order) => (
-                    <Link 
-                      key={order.id} 
-                      to={`/order/${order.id}`}
-                      className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{order.orderNumber}</p>
-                          <Badge className={`text-xs ${getStatusColor(order.status)}`}>
-                            {order.status}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">{order.customerName}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold">৳{order.total.toLocaleString()}</p>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          {new Date(order.createdAt).toLocaleDateString()}
-                        </div>
-                      </div>
-                      <Eye className="h-4 w-4 text-muted-foreground" />
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <CRMOrdersTab orders={recentOrders} allOrders={orders} />
         </TabsContent>
 
         <TabsContent value="partners">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Delivery Partner Performance</CardTitle>
-                <CardDescription>Orders by delivery company</CardDescription>
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => exportToCSV(partnerStats.map(p => ({
-                  partner: p.partnerName,
-                  total_orders: p.totalSent,
-                  delivered: p.delivered,
-                  returned: p.returned,
-                  success_rate: `${p.successRate.toFixed(1)}%`,
-                  pending_payment: p.pendingPayment,
-                  received_payment: p.receivedPayment,
-                })), "partner_report")}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export CSV
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {partnerStats.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No delivery partners configured</p>
-              ) : (
-                <div className="space-y-4">
-                  {partnerStats.map((partner) => (
-                    <div key={partner.partnerId} className="bg-muted/50 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <Building2 className="h-5 w-5 text-gold" />
-                          <span className="font-medium">{partner.partnerName}</span>
-                        </div>
-                        <Badge variant="outline">{partner.totalSent} orders</Badge>
-                      </div>
-                      <div className="grid grid-cols-5 gap-4 text-center text-sm mb-3">
-                        <div>
-                          <p className="font-semibold text-green-500">{partner.delivered}</p>
-                          <p className="text-xs text-muted-foreground">Delivered</p>
-                        </div>
-                        <div>
-                          <p className="font-semibold text-orange-500">{partner.returned}</p>
-                          <p className="text-xs text-muted-foreground">Returned</p>
-                        </div>
-                        <div>
-                          <p className="font-semibold text-blue-500">{partner.successRate.toFixed(1)}%</p>
-                          <p className="text-xs text-muted-foreground">Success</p>
-                        </div>
-                        <div>
-                          <p className="font-semibold text-yellow-500">৳{partner.pendingPayment.toLocaleString()}</p>
-                          <p className="text-xs text-muted-foreground">Pending</p>
-                        </div>
-                        <div>
-                          <p className="font-semibold text-green-500">৳{partner.receivedPayment.toLocaleString()}</p>
-                          <p className="text-xs text-muted-foreground">Received</p>
-                        </div>
-                      </div>
-                      <Progress value={partner.successRate} className="h-2" />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <CRMPartnersTab partners={partnerStats} />
         </TabsContent>
 
         <TabsContent value="payments">
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card className="border-yellow-500/30">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="h-14 w-14 bg-yellow-500/10 rounded-xl flex items-center justify-center">
-                    <DollarSign className="h-7 w-7 text-yellow-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Pending Payments</p>
-                    <p className="text-3xl font-bold text-yellow-500">৳{stats.pendingPayments.toLocaleString()}</p>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground">Payments expected from delivery partners for delivered orders</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-green-500/30">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="h-14 w-14 bg-green-500/10 rounded-xl flex items-center justify-center">
-                    <CheckCircle className="h-7 w-7 text-green-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Received Payments</p>
-                    <p className="text-3xl font-bold text-green-500">৳{stats.receivedPayments.toLocaleString()}</p>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground">Total payments received from delivery partners</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="mt-4">
-            <CardHeader>
-              <CardTitle>Payment Collection Rate</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span>Collection Progress</span>
-                  <span className="font-bold text-green-500">
-                    {(stats.pendingPayments + stats.receivedPayments) > 0 
-                      ? ((stats.receivedPayments / (stats.pendingPayments + stats.receivedPayments)) * 100).toFixed(1)
-                      : 0}%
-                  </span>
-                </div>
-                <Progress 
-                  value={(stats.pendingPayments + stats.receivedPayments) > 0 
-                    ? (stats.receivedPayments / (stats.pendingPayments + stats.receivedPayments)) * 100 
-                    : 0} 
-                  className="h-3" 
-                />
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>Received: ৳{stats.receivedPayments.toLocaleString()}</span>
-                  <span>Pending: ৳{stats.pendingPayments.toLocaleString()}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <CRMPaymentsTab 
+            stats={{
+              pendingPayments: stats.pendingPayments,
+              receivedPayments: stats.receivedPayments,
+            }}
+            orders={orders}
+          />
         </TabsContent>
       </Tabs>
     </div>
