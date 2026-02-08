@@ -8,14 +8,20 @@ import {
   RotateCcw,
   DollarSign,
   Download,
-  FileText,
-  Calendar,
-  Filter,
   TrendingUp,
+  TrendingDown,
   Users,
   Building2,
   ShoppingCart,
   UserPlus,
+  Eye,
+  AlertTriangle,
+  Star,
+  BarChart3,
+  Clock,
+  RefreshCw,
+  ArrowUpRight,
+  ArrowDownRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,8 +41,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
 
 interface CRMStats {
   totalOrders: number;
@@ -44,6 +53,9 @@ interface CRMStats {
   cancelledOrders: number;
   returnedOrders: number;
   pendingOrders: number;
+  confirmedOrders: number;
+  processingOrders: number;
+  shippedOrders: number;
   totalRevenue: number;
   pendingPayments: number;
   receivedPayments: number;
@@ -51,6 +63,13 @@ interface CRMStats {
   newCustomersThisPeriod: number;
   abandonedCarts: number;
   abandonedValue: number;
+  avgOrderValue: number;
+  totalProducts: number;
+  lowStockProducts: number;
+  outOfStockProducts: number;
+  conversionRate: number;
+  previousPeriodRevenue: number;
+  previousPeriodOrders: number;
 }
 
 interface DeliveryPartnerStats {
@@ -61,6 +80,41 @@ interface DeliveryPartnerStats {
   returned: number;
   pendingPayment: number;
   receivedPayment: number;
+  successRate: number;
+}
+
+interface TopProduct {
+  id: string;
+  name: string;
+  images: string[];
+  totalSold: number;
+  revenue: number;
+  stockQuantity: number;
+}
+
+interface TopCustomer {
+  id: string;
+  fullName: string;
+  email: string;
+  totalOrders: number;
+  totalSpent: number;
+  isPremium: boolean;
+}
+
+interface RecentOrder {
+  id: string;
+  orderNumber: string;
+  customerName: string;
+  total: number;
+  status: string;
+  paymentMethod: string;
+  createdAt: string;
+}
+
+interface DailyRevenue {
+  date: string;
+  revenue: number;
+  orders: number;
 }
 
 const AdminCRM = () => {
@@ -70,6 +124,9 @@ const AdminCRM = () => {
     cancelledOrders: 0,
     returnedOrders: 0,
     pendingOrders: 0,
+    confirmedOrders: 0,
+    processingOrders: 0,
+    shippedOrders: 0,
     totalRevenue: 0,
     pendingPayments: 0,
     receivedPayments: 0,
@@ -77,19 +134,40 @@ const AdminCRM = () => {
     newCustomersThisPeriod: 0,
     abandonedCarts: 0,
     abandonedValue: 0,
+    avgOrderValue: 0,
+    totalProducts: 0,
+    lowStockProducts: 0,
+    outOfStockProducts: 0,
+    conversionRate: 0,
+    previousPeriodRevenue: 0,
+    previousPeriodOrders: 0,
   });
   const [partnerStats, setPartnerStats] = useState<DeliveryPartnerStats[]>([]);
+  const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
+  const [topCustomers, setTopCustomers] = useState<TopCustomer[]>([]);
+  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
+  const [dailyRevenue, setDailyRevenue] = useState<DailyRevenue[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [dateFrom, setDateFrom] = useState(
     new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
   );
   const [dateTo, setDateTo] = useState(new Date().toISOString().split("T")[0]);
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    
     try {
+      // Calculate previous period for comparison
+      const currentFrom = new Date(dateFrom);
+      const currentTo = new Date(dateTo);
+      const periodDays = Math.ceil((currentTo.getTime() - currentFrom.getTime()) / (1000 * 60 * 60 * 24));
+      const previousFrom = new Date(currentFrom.getTime() - periodDays * 24 * 60 * 60 * 1000);
+      const previousTo = new Date(currentFrom.getTime() - 1);
+
       // Fetch orders with date filter
       let query = supabase
         .from("orders")
@@ -106,52 +184,83 @@ const AdminCRM = () => {
         query = query.eq("status", statusFilter as any);
       }
 
-      const { data: ordersData, error } = await query;
+      const [ordersResult, previousOrdersResult, customersResult, abandonedResult, productsResult, orderItemsResult] = await Promise.all([
+        query,
+        supabase
+          .from("orders")
+          .select("id, total, status")
+          .gte("created_at", previousFrom.toISOString())
+          .lte("created_at", previousTo.toISOString()),
+        supabase.from("customers").select("*").order("total_spent", { ascending: false }),
+        supabase.from("abandoned_carts").select("*").eq("is_recovered", false),
+        supabase.from("products").select("id, name, images, stock_quantity, price, is_active"),
+        supabase.from("order_items").select("product_id, quantity, product_price"),
+      ]);
 
-      if (error) throw error;
+      if (ordersResult.error) throw ordersResult.error;
 
-      setOrders(ordersData || []);
+      const ordersData = ordersResult.data || [];
+      const previousOrdersData = previousOrdersResult.data || [];
+      const customersData = customersResult.data || [];
+      const abandonedData = abandonedResult.data || [];
+      const productsData = productsResult.data || [];
+      const orderItemsData = orderItemsResult.data || [];
+
+      setOrders(ordersData);
 
       // Calculate stats
-      const allOrders = ordersData || [];
-      const delivered = allOrders.filter((o) => o.status === "delivered");
-      const cancelled = allOrders.filter((o) => o.status === "cancelled");
-      const returned = allOrders.filter((o) => o.return_requested_at);
-      const pending = allOrders.filter((o) => o.status === "pending");
+      const delivered = ordersData.filter((o) => o.status === "delivered");
+      const cancelled = ordersData.filter((o) => o.status === "cancelled");
+      const returned = ordersData.filter((o) => o.return_requested_at);
+      const pending = ordersData.filter((o) => o.status === "pending");
+      const confirmed = ordersData.filter((o) => o.status === "confirmed");
+      const processing = ordersData.filter((o) => o.status === "processing");
+      const shipped = ordersData.filter((o) => o.status === "shipped");
 
-      const totalRevenue = delivered.reduce((sum, o) => sum + o.total, 0);
-      const pendingPayments = allOrders
+      const totalRevenue = delivered.reduce((sum, o) => sum + (o.total || 0), 0);
+      const pendingPayments = ordersData
         .filter((o) => o.partner_payment_status === "pending" && o.status === "delivered")
-        .reduce((sum, o) => sum + (o.partner_payment_amount || o.total), 0);
-      const receivedPayments = allOrders
+        .reduce((sum, o) => sum + (o.partner_payment_amount || o.total || 0), 0);
+      const receivedPayments = ordersData
         .filter((o) => o.partner_payment_status === "received")
         .reduce((sum, o) => sum + (o.partner_payment_amount || 0), 0);
 
-      // Fetch customer stats
-      const { data: customersData } = await supabase
-        .from("customers")
-        .select("id, created_at");
-      
-      const totalCustomers = customersData?.length || 0;
-      const newCustomersThisPeriod = customersData?.filter(
-        (c) => new Date(c.created_at) >= new Date(`${dateFrom}T00:00:00`)
-      ).length || 0;
+      // Previous period comparison
+      const prevDelivered = previousOrdersData.filter((o) => o.status === "delivered");
+      const previousPeriodRevenue = prevDelivered.reduce((sum, o) => sum + (o.total || 0), 0);
+      const previousPeriodOrders = previousOrdersData.length;
 
-      // Fetch abandoned cart stats
-      const { data: abandonedData } = await supabase
-        .from("abandoned_carts")
-        .select("id, cart_total, is_recovered")
-        .eq("is_recovered", false);
-      
-      const abandonedCarts = abandonedData?.length || 0;
-      const abandonedValue = abandonedData?.reduce((sum, c) => sum + (c.cart_total || 0), 0) || 0;
+      // Customer stats
+      const totalCustomers = customersData.length;
+      const newCustomersThisPeriod = customersData.filter(
+        (c) => new Date(c.created_at) >= new Date(`${dateFrom}T00:00:00`)
+      ).length;
+
+      // Abandoned cart stats
+      const abandonedCarts = abandonedData.length;
+      const abandonedValue = abandonedData.reduce((sum, c) => sum + (c.cart_total || 0), 0);
+
+      // Product stats
+      const activeProducts = productsData.filter(p => p.is_active);
+      const lowStock = activeProducts.filter(p => p.stock_quantity > 0 && p.stock_quantity <= 5);
+      const outOfStock = activeProducts.filter(p => p.stock_quantity === 0);
+
+      // Calculate conversion rate (orders / abandoned carts + orders)
+      const totalAttempts = ordersData.length + abandonedCarts;
+      const conversionRate = totalAttempts > 0 ? (ordersData.length / totalAttempts) * 100 : 0;
+
+      // Average order value
+      const avgOrderValue = ordersData.length > 0 ? totalRevenue / delivered.length : 0;
 
       setStats({
-        totalOrders: allOrders.length,
+        totalOrders: ordersData.length,
         deliveredOrders: delivered.length,
         cancelledOrders: cancelled.length,
         returnedOrders: returned.length,
         pendingOrders: pending.length,
+        confirmedOrders: confirmed.length,
+        processingOrders: processing.length,
+        shippedOrders: shipped.length,
         totalRevenue,
         pendingPayments,
         receivedPayments,
@@ -159,7 +268,82 @@ const AdminCRM = () => {
         newCustomersThisPeriod,
         abandonedCarts,
         abandonedValue,
+        avgOrderValue: isNaN(avgOrderValue) ? 0 : avgOrderValue,
+        totalProducts: activeProducts.length,
+        lowStockProducts: lowStock.length,
+        outOfStockProducts: outOfStock.length,
+        conversionRate,
+        previousPeriodRevenue,
+        previousPeriodOrders,
       });
+
+      // Calculate top products by sales
+      const productSales: Record<string, { quantity: number; revenue: number }> = {};
+      orderItemsData.forEach((item: any) => {
+        if (!productSales[item.product_id]) {
+          productSales[item.product_id] = { quantity: 0, revenue: 0 };
+        }
+        productSales[item.product_id].quantity += item.quantity || 0;
+        productSales[item.product_id].revenue += (item.quantity || 0) * (item.product_price || 0);
+      });
+
+      const topProductsList: TopProduct[] = productsData
+        .filter(p => productSales[p.id])
+        .map((p) => ({
+          id: p.id,
+          name: p.name,
+          images: p.images || [],
+          totalSold: productSales[p.id]?.quantity || 0,
+          revenue: productSales[p.id]?.revenue || 0,
+          stockQuantity: p.stock_quantity || 0,
+        }))
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 10);
+
+      setTopProducts(topProductsList);
+
+      // Top customers
+      const topCustomersList: TopCustomer[] = customersData
+        .slice(0, 10)
+        .map((c) => ({
+          id: c.id,
+          fullName: c.full_name,
+          email: c.email,
+          totalOrders: c.total_orders || 0,
+          totalSpent: c.total_spent || 0,
+          isPremium: c.is_premium_member || false,
+        }));
+      setTopCustomers(topCustomersList);
+
+      // Recent orders
+      const recentOrdersList: RecentOrder[] = ordersData.slice(0, 10).map((o) => ({
+        id: o.id,
+        orderNumber: o.order_number,
+        customerName: o.address?.full_name || "N/A",
+        total: o.total,
+        status: o.status,
+        paymentMethod: o.payment_method,
+        createdAt: o.created_at,
+      }));
+      setRecentOrders(recentOrdersList);
+
+      // Calculate daily revenue for chart
+      const revenueByDay: Record<string, { revenue: number; orders: number }> = {};
+      ordersData.forEach((o) => {
+        const date = new Date(o.created_at).toISOString().split("T")[0];
+        if (!revenueByDay[date]) {
+          revenueByDay[date] = { revenue: 0, orders: 0 };
+        }
+        if (o.status === "delivered") {
+          revenueByDay[date].revenue += o.total || 0;
+        }
+        revenueByDay[date].orders += 1;
+      });
+
+      const dailyRevenueList = Object.entries(revenueByDay)
+        .map(([date, data]) => ({ date, ...data }))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      setDailyRevenue(dailyRevenueList);
 
       // Calculate partner stats
       const { data: partners } = await supabase
@@ -169,22 +353,23 @@ const AdminCRM = () => {
 
       if (partners) {
         const pStats: DeliveryPartnerStats[] = partners.map((p) => {
-          const partnerOrders = allOrders.filter(
+          const partnerOrders = ordersData.filter(
             (o) => o.delivery_partner_id === p.id
           );
+          const deliveredCount = partnerOrders.filter((o) => o.status === "delivered").length;
           return {
             partnerId: p.id,
             partnerName: p.name,
             totalSent: partnerOrders.length,
-            delivered: partnerOrders.filter((o) => o.status === "delivered")
-              .length,
+            delivered: deliveredCount,
             returned: partnerOrders.filter((o) => o.return_requested_at).length,
             pendingPayment: partnerOrders
               .filter((o) => o.partner_payment_status === "pending")
-              .reduce((sum, o) => sum + (o.partner_payment_amount || o.total), 0),
+              .reduce((sum, o) => sum + (o.partner_payment_amount || o.total || 0), 0),
             receivedPayment: partnerOrders
               .filter((o) => o.partner_payment_status === "received")
               .reduce((sum, o) => sum + (o.partner_payment_amount || 0), 0),
+            successRate: partnerOrders.length > 0 ? (deliveredCount / partnerOrders.length) * 100 : 0,
           };
         });
         setPartnerStats(pStats);
@@ -194,6 +379,7 @@ const AdminCRM = () => {
       toast.error("Failed to fetch CRM data");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -202,17 +388,11 @@ const AdminCRM = () => {
 
     // Subscribe to realtime changes
     const channel = supabase
-      .channel('crm_realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders' },
-        () => fetchData()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'delivery_partners' },
-        () => fetchData()
-      )
+      .channel('crm_realtime_v2')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchData(true))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, () => fetchData(true))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => fetchData(true))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'abandoned_carts' }, () => fetchData(true))
       .subscribe();
 
     return () => {
@@ -261,85 +441,30 @@ const AdminCRM = () => {
     exportToCSV(exportData, "orders_report");
   };
 
-  const exportPartnerReport = () => {
-    const exportData = partnerStats.map((p) => ({
-      partner_name: p.partnerName,
-      total_orders: p.totalSent,
-      delivered: p.delivered,
-      returned: p.returned,
-      pending_payment: p.pendingPayment,
-      received_payment: p.receivedPayment,
-    }));
-    exportToCSV(exportData, "partner_report");
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "pending": return "bg-yellow-500/20 text-yellow-600 border-yellow-500/30";
+      case "confirmed": return "bg-blue-500/20 text-blue-600 border-blue-500/30";
+      case "processing": return "bg-purple-500/20 text-purple-600 border-purple-500/30";
+      case "shipped": return "bg-cyan-500/20 text-cyan-600 border-cyan-500/30";
+      case "delivered": return "bg-green-500/20 text-green-600 border-green-500/30";
+      case "cancelled": return "bg-red-500/20 text-red-600 border-red-500/30";
+      default: return "bg-muted text-muted-foreground";
+    }
   };
 
-  const statCards = [
-    {
-      title: "Total Orders",
-      value: stats.totalOrders,
-      icon: Package,
-      color: "text-blue-500",
-      bg: "bg-blue-500/10",
-    },
-    {
-      title: "Delivered",
-      value: stats.deliveredOrders,
-      icon: CheckCircle,
-      color: "text-green-500",
-      bg: "bg-green-500/10",
-    },
-    {
-      title: "Cancelled",
-      value: stats.cancelledOrders,
-      icon: XCircle,
-      color: "text-red-500",
-      bg: "bg-red-500/10",
-    },
-    {
-      title: "Returned",
-      value: stats.returnedOrders,
-      icon: RotateCcw,
-      color: "text-orange-500",
-      bg: "bg-orange-500/10",
-    },
-    {
-      title: "Pending",
-      value: stats.pendingOrders,
-      icon: Truck,
-      color: "text-yellow-500",
-      bg: "bg-yellow-500/10",
-    },
-    {
-      title: "Revenue",
-      value: `৳${stats.totalRevenue.toLocaleString()}`,
-      icon: TrendingUp,
-      color: "text-gold",
-      bg: "bg-gold/10",
-    },
-    {
-      title: "Customers",
-      value: stats.totalCustomers,
-      icon: Users,
-      color: "text-purple-500",
-      bg: "bg-purple-500/10",
-    },
-    {
-      title: "Abandoned",
-      value: stats.abandonedCarts,
-      icon: ShoppingCart,
-      color: "text-orange-500",
-      bg: "bg-orange-500/10",
-    },
-  ];
+  const revenueChange = stats.previousPeriodRevenue > 0 
+    ? ((stats.totalRevenue - stats.previousPeriodRevenue) / stats.previousPeriodRevenue) * 100 
+    : 0;
+  const ordersChange = stats.previousPeriodOrders > 0 
+    ? ((stats.totalOrders - stats.previousPeriodOrders) / stats.previousPeriodOrders) * 100 
+    : 0;
 
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[...Array(6)].map((_, i) => (
-          <div
-            key={i}
-            className="bg-card border border-border rounded-xl p-6 animate-pulse"
-          >
+          <div key={i} className="bg-card border border-border rounded-xl p-6 animate-pulse">
             <div className="h-12 w-12 bg-muted rounded-lg mb-4" />
             <div className="h-4 bg-muted rounded w-1/2 mb-2" />
             <div className="h-8 bg-muted rounded w-1/3" />
@@ -351,21 +476,30 @@ const AdminCRM = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="font-display text-2xl text-foreground">CRM Dashboard</h1>
-          <p className="text-muted-foreground">Track orders, deliveries, and payments</p>
+          <p className="text-muted-foreground">Complete business overview and analytics</p>
         </div>
 
-        {/* Date Filters */}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-3 items-center">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => fetchData(true)}
+            disabled={refreshing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <div className="flex items-center gap-2">
             <Label className="text-sm">From:</Label>
             <Input
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="w-40"
+              className="w-36"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -374,7 +508,7 @@ const AdminCRM = () => {
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="w-40"
+              className="w-36"
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -394,106 +528,272 @@ const AdminCRM = () => {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-        {statCards.map((stat, index) => (
-          <motion.div
-            key={stat.title}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-            className="bg-card border border-border rounded-xl p-4"
-          >
-            <div
-              className={`h-10 w-10 ${stat.bg} rounded-lg flex items-center justify-center mb-3`}
-            >
-              <stat.icon className={`h-5 w-5 ${stat.color}`} />
+      {/* Key Metrics */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="border-gold/30">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Revenue</p>
+                <p className="text-2xl font-bold text-gold">৳{stats.totalRevenue.toLocaleString()}</p>
+                <div className={`flex items-center text-xs mt-1 ${revenueChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {revenueChange >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                  {Math.abs(revenueChange).toFixed(1)}% vs previous
+                </div>
+              </div>
+              <div className="h-12 w-12 bg-gold/10 rounded-lg flex items-center justify-center">
+                <TrendingUp className="h-6 w-6 text-gold" />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mb-1">{stat.title}</p>
-            <p className="text-xl font-bold text-foreground">{stat.value}</p>
-          </motion.div>
-        ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Orders</p>
+                <p className="text-2xl font-bold">{stats.totalOrders}</p>
+                <div className={`flex items-center text-xs mt-1 ${ordersChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {ordersChange >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                  {Math.abs(ordersChange).toFixed(1)}% vs previous
+                </div>
+              </div>
+              <div className="h-12 w-12 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                <Package className="h-6 w-6 text-blue-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Avg Order Value</p>
+                <p className="text-2xl font-bold">৳{stats.avgOrderValue.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground mt-1">Per delivered order</p>
+              </div>
+              <div className="h-12 w-12 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                <BarChart3 className="h-6 w-6 text-purple-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Conversion Rate</p>
+                <p className="text-2xl font-bold">{stats.conversionRate.toFixed(1)}%</p>
+                <p className="text-xs text-muted-foreground mt-1">Orders / Total attempts</p>
+              </div>
+              <div className="h-12 w-12 bg-green-500/10 rounded-lg flex items-center justify-center">
+                <TrendingUp className="h-6 w-6 text-green-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Tabs for different views */}
+      {/* Order Status Overview */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">Order Status Overview</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            {[
+              { label: "Pending", value: stats.pendingOrders, color: "yellow" },
+              { label: "Confirmed", value: stats.confirmedOrders, color: "blue" },
+              { label: "Processing", value: stats.processingOrders, color: "purple" },
+              { label: "Shipped", value: stats.shippedOrders, color: "cyan" },
+              { label: "Delivered", value: stats.deliveredOrders, color: "green" },
+              { label: "Cancelled", value: stats.cancelledOrders, color: "red" },
+              { label: "Returned", value: stats.returnedOrders, color: "orange" },
+            ].map((status) => (
+              <div
+                key={status.label}
+                className={`bg-${status.color}-500/10 border border-${status.color}-500/30 rounded-lg p-3 text-center`}
+              >
+                <p className={`text-2xl font-bold text-${status.color}-500`}>{status.value}</p>
+                <p className="text-xs text-muted-foreground">{status.label}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4">
+            <div className="flex justify-between text-sm mb-2">
+              <span>Order Success Rate</span>
+              <span className="font-medium text-green-500">
+                {stats.totalOrders > 0 ? Math.round((stats.deliveredOrders / stats.totalOrders) * 100) : 0}%
+              </span>
+            </div>
+            <Progress value={stats.totalOrders > 0 ? (stats.deliveredOrders / stats.totalOrders) * 100 : 0} className="h-2" />
+          </div>
+        </CardContent>
+      </Card>
+
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="products">Products</TabsTrigger>
           <TabsTrigger value="customers">Customers</TabsTrigger>
-          <TabsTrigger value="partners">Delivery Partners</TabsTrigger>
+          <TabsTrigger value="orders">Recent Orders</TabsTrigger>
+          <TabsTrigger value="partners">Partners</TabsTrigger>
           <TabsTrigger value="payments">Payments</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview">
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* Revenue Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Daily Revenue Trend</CardTitle>
+                <CardDescription>Revenue and orders over time</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {dailyRevenue.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">No data for selected period</p>
+                ) : (
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {dailyRevenue.slice(-14).map((day) => {
+                      const maxRevenue = Math.max(...dailyRevenue.map(d => d.revenue));
+                      const percentage = maxRevenue > 0 ? (day.revenue / maxRevenue) * 100 : 0;
+                      return (
+                        <div key={day.date} className="flex items-center gap-3">
+                          <span className="text-xs text-muted-foreground w-20">
+                            {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                          <div className="flex-1">
+                            <div className="h-6 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-gold to-gold-light rounded-full transition-all"
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
+                          </div>
+                          <span className="text-xs font-medium w-24 text-right">
+                            ৳{day.revenue.toLocaleString()}
+                          </span>
+                          <Badge variant="outline" className="text-xs">{day.orders}</Badge>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Quick Stats */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Quick Stats</CardTitle>
+                <CardDescription>Key metrics at a glance</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Users className="h-5 w-5 text-purple-500" />
+                    <span>Total Customers</span>
+                  </div>
+                  <span className="font-bold">{stats.totalCustomers}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <UserPlus className="h-5 w-5 text-green-500" />
+                    <span>New This Period</span>
+                  </div>
+                  <span className="font-bold text-green-500">+{stats.newCustomersThisPeriod}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <ShoppingCart className="h-5 w-5 text-orange-500" />
+                    <span>Abandoned Carts</span>
+                  </div>
+                  <span className="font-bold text-orange-500">{stats.abandonedCarts}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <DollarSign className="h-5 w-5 text-red-500" />
+                    <span>Lost Revenue</span>
+                  </div>
+                  <span className="font-bold text-red-500">৳{stats.abandonedValue.toLocaleString()}</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="products" className="space-y-4">
+          <div className="grid md:grid-cols-3 gap-4 mb-4">
+            <Card className="border-blue-500/30">
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="h-12 w-12 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                  <Package className="h-6 w-6 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.totalProducts}</p>
+                  <p className="text-sm text-muted-foreground">Active Products</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-yellow-500/30">
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="h-12 w-12 bg-yellow-500/10 rounded-lg flex items-center justify-center">
+                  <AlertTriangle className="h-6 w-6 text-yellow-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-yellow-500">{stats.lowStockProducts}</p>
+                  <p className="text-sm text-muted-foreground">Low Stock (≤5)</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-red-500/30">
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="h-12 w-12 bg-red-500/10 rounded-lg flex items-center justify-center">
+                  <XCircle className="h-6 w-6 text-red-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-red-500">{stats.outOfStockProducts}</p>
+                  <p className="text-sm text-muted-foreground">Out of Stock</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Orders Summary</CardTitle>
-                <CardDescription>
-                  {dateFrom} to {dateTo}
-                </CardDescription>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={exportOrdersReport}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Export CSV
-                </Button>
-              </div>
+            <CardHeader>
+              <CardTitle>Top Selling Products</CardTitle>
+              <CardDescription>Products ranked by revenue</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-muted/50 rounded-lg p-4 text-center">
-                  <p className="text-3xl font-bold text-green-500">
-                    {stats.deliveredOrders}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Successful</p>
+              {topProducts.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">No sales data available</p>
+              ) : (
+                <div className="space-y-3">
+                  {topProducts.map((product, index) => (
+                    <div key={product.id} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+                      <span className="text-lg font-bold text-gold w-6">#{index + 1}</span>
+                      <div className="h-12 w-12 rounded bg-muted overflow-hidden flex-shrink-0">
+                        {product.images[0] && (
+                          <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{product.name}</p>
+                        <p className="text-xs text-muted-foreground">{product.totalSold} sold</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-gold">৳{product.revenue.toLocaleString()}</p>
+                        <p className={`text-xs ${product.stockQuantity <= 5 ? 'text-red-500' : 'text-muted-foreground'}`}>
+                          Stock: {product.stockQuantity}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="bg-muted/50 rounded-lg p-4 text-center">
-                  <p className="text-3xl font-bold text-yellow-500">
-                    {stats.pendingOrders}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Pending</p>
-                </div>
-                <div className="bg-muted/50 rounded-lg p-4 text-center">
-                  <p className="text-3xl font-bold text-red-500">
-                    {stats.cancelledOrders}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Cancelled</p>
-                </div>
-                <div className="bg-muted/50 rounded-lg p-4 text-center">
-                  <p className="text-3xl font-bold text-orange-500">
-                    {stats.returnedOrders}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Returned</p>
-                </div>
-              </div>
-
-              {/* Success Rate */}
-              <div className="mt-6">
-                <div className="flex justify-between text-sm mb-2">
-                  <span>Success Rate</span>
-                  <span className="font-medium">
-                    {stats.totalOrders > 0
-                      ? Math.round(
-                          (stats.deliveredOrders / stats.totalOrders) * 100
-                        )
-                      : 0}
-                    %
-                  </span>
-                </div>
-                <div className="h-3 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-green-500 transition-all"
-                    style={{
-                      width: `${
-                        stats.totalOrders > 0
-                          ? (stats.deliveredOrders / stats.totalOrders) * 100
-                          : 0
-                      }%`,
-                    }}
-                  />
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -501,56 +801,87 @@ const AdminCRM = () => {
         <TabsContent value="customers">
           <Card>
             <CardHeader>
-              <CardTitle>Customer Insights</CardTitle>
-              <CardDescription>Customer growth and retention metrics</CardDescription>
+              <CardTitle>Top Customers</CardTitle>
+              <CardDescription>Customers ranked by total spending</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 text-center">
-                  <Users className="h-6 w-6 text-purple-500 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-purple-500">{stats.totalCustomers}</p>
-                  <p className="text-xs text-muted-foreground">Total Customers</p>
+              {topCustomers.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">No customer data available</p>
+              ) : (
+                <div className="space-y-3">
+                  {topCustomers.map((customer, index) => (
+                    <div key={customer.id} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+                      <span className="text-lg font-bold text-gold w-6">#{index + 1}</span>
+                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                        <Users className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium truncate">{customer.fullName}</p>
+                          {customer.isPremium && (
+                            <Badge className="bg-gold/20 text-gold border-gold/30">
+                              <Star className="h-3 w-3 mr-1" /> Premium
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{customer.email}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-gold">৳{customer.totalSpent.toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground">{customer.totalOrders} orders</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 text-center">
-                  <UserPlus className="h-6 w-6 text-green-500 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-green-500">{stats.newCustomersThisPeriod}</p>
-                  <p className="text-xs text-muted-foreground">New This Period</p>
-                </div>
-                <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4 text-center">
-                  <ShoppingCart className="h-6 w-6 text-orange-500 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-orange-500">{stats.abandonedCarts}</p>
-                  <p className="text-xs text-muted-foreground">Abandoned Carts</p>
-                </div>
-                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-center">
-                  <DollarSign className="h-6 w-6 text-red-500 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-red-500">৳{stats.abandonedValue.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">Lost Revenue</p>
-                </div>
-              </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-              {/* Customer Retention Rate */}
-              <div className="bg-muted/50 rounded-lg p-4">
-                <div className="flex justify-between text-sm mb-2">
-                  <span>Customer Acquisition Rate</span>
-                  <span className="font-medium">
-                    {stats.totalCustomers > 0
-                      ? Math.round((stats.newCustomersThisPeriod / stats.totalCustomers) * 100)
-                      : 0}%
-                  </span>
-                </div>
-                <div className="h-3 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-purple-500 transition-all"
-                    style={{
-                      width: `${
-                        stats.totalCustomers > 0
-                          ? (stats.newCustomersThisPeriod / stats.totalCustomers) * 100
-                          : 0
-                      }%`,
-                    }}
-                  />
-                </div>
+        <TabsContent value="orders">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Recent Orders</CardTitle>
+                <CardDescription>Latest orders in selected period</CardDescription>
               </div>
+              <Button variant="outline" size="sm" onClick={exportOrdersReport}>
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {recentOrders.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">No orders found</p>
+              ) : (
+                <div className="space-y-2">
+                  {recentOrders.map((order) => (
+                    <Link 
+                      key={order.id} 
+                      to={`/order/${order.id}`}
+                      className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{order.orderNumber}</p>
+                          <Badge className={`text-xs ${getStatusColor(order.status)}`}>
+                            {order.status}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{order.customerName}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold">৳{order.total.toLocaleString()}</p>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          {new Date(order.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    </Link>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -562,58 +893,60 @@ const AdminCRM = () => {
                 <CardTitle>Delivery Partner Performance</CardTitle>
                 <CardDescription>Orders by delivery company</CardDescription>
               </div>
-              <Button variant="outline" size="sm" onClick={exportPartnerReport}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => exportToCSV(partnerStats.map(p => ({
+                  partner: p.partnerName,
+                  total_orders: p.totalSent,
+                  delivered: p.delivered,
+                  returned: p.returned,
+                  success_rate: `${p.successRate.toFixed(1)}%`,
+                  pending_payment: p.pendingPayment,
+                  received_payment: p.receivedPayment,
+                })), "partner_report")}
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Export CSV
               </Button>
             </CardHeader>
             <CardContent>
               {partnerStats.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">
-                  No delivery partners configured
-                </p>
+                <p className="text-center text-muted-foreground py-8">No delivery partners configured</p>
               ) : (
                 <div className="space-y-4">
                   {partnerStats.map((partner) => (
-                    <div
-                      key={partner.partnerId}
-                      className="bg-muted/50 rounded-lg p-4"
-                    >
+                    <div key={partner.partnerId} className="bg-muted/50 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
                           <Building2 className="h-5 w-5 text-gold" />
                           <span className="font-medium">{partner.partnerName}</span>
                         </div>
-                        <span className="text-sm text-muted-foreground">
-                          {partner.totalSent} orders
-                        </span>
+                        <Badge variant="outline">{partner.totalSent} orders</Badge>
                       </div>
-                      <div className="grid grid-cols-4 gap-4 text-center text-sm">
+                      <div className="grid grid-cols-5 gap-4 text-center text-sm mb-3">
                         <div>
-                          <p className="font-semibold text-green-500">
-                            {partner.delivered}
-                          </p>
+                          <p className="font-semibold text-green-500">{partner.delivered}</p>
                           <p className="text-xs text-muted-foreground">Delivered</p>
                         </div>
                         <div>
-                          <p className="font-semibold text-orange-500">
-                            {partner.returned}
-                          </p>
+                          <p className="font-semibold text-orange-500">{partner.returned}</p>
                           <p className="text-xs text-muted-foreground">Returned</p>
                         </div>
                         <div>
-                          <p className="font-semibold text-yellow-500">
-                            ৳{partner.pendingPayment.toLocaleString()}
-                          </p>
+                          <p className="font-semibold text-blue-500">{partner.successRate.toFixed(1)}%</p>
+                          <p className="text-xs text-muted-foreground">Success</p>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-yellow-500">৳{partner.pendingPayment.toLocaleString()}</p>
                           <p className="text-xs text-muted-foreground">Pending</p>
                         </div>
                         <div>
-                          <p className="font-semibold text-green-500">
-                            ৳{partner.receivedPayment.toLocaleString()}
-                          </p>
+                          <p className="font-semibold text-green-500">৳{partner.receivedPayment.toLocaleString()}</p>
                           <p className="text-xs text-muted-foreground">Received</p>
                         </div>
                       </div>
+                      <Progress value={partner.successRate} className="h-2" />
                     </div>
                   ))}
                 </div>
@@ -623,47 +956,61 @@ const AdminCRM = () => {
         </TabsContent>
 
         <TabsContent value="payments">
-          <Card>
+          <div className="grid md:grid-cols-2 gap-6">
+            <Card className="border-yellow-500/30">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="h-14 w-14 bg-yellow-500/10 rounded-xl flex items-center justify-center">
+                    <DollarSign className="h-7 w-7 text-yellow-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Pending Payments</p>
+                    <p className="text-3xl font-bold text-yellow-500">৳{stats.pendingPayments.toLocaleString()}</p>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">Payments expected from delivery partners for delivered orders</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-green-500/30">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="h-14 w-14 bg-green-500/10 rounded-xl flex items-center justify-center">
+                    <CheckCircle className="h-7 w-7 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Received Payments</p>
+                    <p className="text-3xl font-bold text-green-500">৳{stats.receivedPayments.toLocaleString()}</p>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">Total payments received from delivery partners</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="mt-4">
             <CardHeader>
-              <CardTitle>Payment Overview</CardTitle>
-              <CardDescription>
-                Track payments from delivery partners
-              </CardDescription>
+              <CardTitle>Payment Collection Rate</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <DollarSign className="h-8 w-8 text-yellow-500" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Pending Payments
-                      </p>
-                      <p className="text-2xl font-bold text-yellow-500">
-                        ৳{stats.pendingPayments.toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Payments expected from delivery partners
-                  </p>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span>Collection Progress</span>
+                  <span className="font-bold text-green-500">
+                    {(stats.pendingPayments + stats.receivedPayments) > 0 
+                      ? ((stats.receivedPayments / (stats.pendingPayments + stats.receivedPayments)) * 100).toFixed(1)
+                      : 0}%
+                  </span>
                 </div>
-
-                <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <CheckCircle className="h-8 w-8 text-green-500" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Received Payments
-                      </p>
-                      <p className="text-2xl font-bold text-green-500">
-                        ৳{stats.receivedPayments.toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Payments received from partners
-                  </p>
+                <Progress 
+                  value={(stats.pendingPayments + stats.receivedPayments) > 0 
+                    ? (stats.receivedPayments / (stats.pendingPayments + stats.receivedPayments)) * 100 
+                    : 0} 
+                  className="h-3" 
+                />
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Received: ৳{stats.receivedPayments.toLocaleString()}</span>
+                  <span>Pending: ৳{stats.pendingPayments.toLocaleString()}</span>
                 </div>
               </div>
             </CardContent>
