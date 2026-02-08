@@ -3664,6 +3664,10 @@ export type Database = {
       }
     }
     Functions: {
+      can_submit_lead: {
+        Args: { p_email: string; p_phone: string }
+        Returns: boolean
+      }
       decrypt_credential: {
         Args: { encrypted_text: string; encryption_key: string }
         Returns: string
