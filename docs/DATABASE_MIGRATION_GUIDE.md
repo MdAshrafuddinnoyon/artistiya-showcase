@@ -238,47 +238,147 @@ certbot certonly --standalone -d your-domain.com
 
 ---
 
-## রিয়েল-টাইম সিঙ্ক ফিচার
+## ডাটাবেস টেবিল রেফারেন্স
 
-এই অ্যাপ্লিকেশনে Supabase Realtime ব্যবহার করা হয়েছে। মাইগ্রেশনের পর:
+### সম্পূর্ণ টেবিল লিস্ট (৭৫+ টেবিল):
 
-### Supabase-এ থাকলে (প্রস্তাবিত)
-- Realtime স্বয়ংক্রিয়ভাবে কাজ করবে
-- শুধু নতুন প্রজেক্টের credentials আপডেট করুন
+#### 🛒 প্রোডাক্ট ম্যানেজমেন্ট
+| টেবিল | বর্ণনা | প্রধান ফিল্ড |
+|-------|--------|-------------|
+| `products` | পণ্য তালিকা | name, price, images, stock_quantity |
+| `categories` | ক্যাটাগরি | name, slug, image_url, parent_id |
+| `collections` | কালেকশন | name, slug, image_url |
+| `product_variants` | ভ্যারিয়েন্ট | product_id, sku, price, stock |
+| `product_colors` | রঙ | product_id, color_name, color_code |
+| `product_sizes` | সাইজ | product_id, size_name |
+| `product_bundles` | বান্ডল | name, discount_type, discount_value |
+| `bundle_products` | বান্ডল আইটেম | bundle_id, product_id |
 
-### অন্য PostgreSQL-এ মাইগ্রেট করলে
-- Realtime ফিচার কাজ করবে না
-- বিকল্প: Polling, WebSockets, বা Pusher ব্যবহার করুন
+#### 📦 অর্ডার ম্যানেজমেন্ট
+| টেবিল | বর্ণনা | প্রধান ফিল্ড |
+|-------|--------|-------------|
+| `orders` | অর্ডার | order_number, status, total |
+| `order_items` | অর্ডার আইটেম | order_id, product_id, quantity |
+| `addresses` | ঠিকানা | full_name, phone, division, district |
+| `delivery_zones` | ডেলিভারি জোন | division, district, shipping_cost |
+| `delivery_partners` | কুরিয়ার পার্টনার | name, api_key, is_active |
+| `delivery_providers` | ডেলিভারি প্রোভাইডার | provider_type, config |
+| `abandoned_carts` | পরিত্যক্ত কার্ট | user_id, cart_data, cart_total |
 
-```typescript
-// Polling উদাহরণ (প্রতি ৫ সেকেন্ডে আপডেট)
-useEffect(() => {
-  const interval = setInterval(fetchData, 5000);
-  return () => clearInterval(interval);
-}, []);
+#### 💳 পেমেন্ট
+| টেবিল | বর্ণনা | প্রধান ফিল্ড |
+|-------|--------|-------------|
+| `payment_providers` | পেমেন্ট গেটওয়ে | name, provider_type, is_active |
+| `promo_codes` | প্রোমো কোড | code, discount_type, discount_value |
+| `customer_discount_credits` | কাস্টমার ক্রেডিট | user_id, discount_value |
+
+#### 👥 ইউজার ও CRM
+| টেবিল | বর্ণনা | প্রধান ফিল্ড |
+|-------|--------|-------------|
+| `profiles` | ইউজার প্রোফাইল | user_id, full_name, avatar_url |
+| `user_roles` | অ্যাডমিন রোল | user_id, role |
+| `customers` | কাস্টমার CRM | email, total_orders, total_spent |
+| `blocked_customers` | ব্লক কাস্টমার | phone, email, block_reason |
+| `cart_items` | কার্ট | user_id, product_id, quantity |
+| `wishlist_items` | উইশলিস্ট | user_id, product_id |
+| `custom_order_requests` | কাস্টম অর্ডার | description, reference_image_url |
+| `product_reviews` | রিভিউ | product_id, rating, comment |
+
+#### 🎨 CMS
+| টেবিল | বর্ণনা | প্রধান ফিল্ড |
+|-------|--------|-------------|
+| `hero_slides` | হিরো ব্যানার | title, image_url, button_link |
+| `homepage_sections` | হোমপেজ সেকশন | section_type, config, display_order |
+| `homepage_content` | হোমপেজ কন্টেন্ট | section_key, content |
+| `featured_sections` | ফিচার্ড সেকশন | title, image_url, features |
+| `blog_posts` | ব্লগ পোস্ট | title, content, slug |
+| `blog_categories` | ব্লগ ক্যাটাগরি | name, slug |
+| `blog_settings` | ব্লগ সেটিংস | posts_per_page, show_banner |
+| `faq_items` | FAQ | question, answer, category |
+| `testimonials` | টেস্টিমোনিয়াল | name, rating, comment |
+| `gallery_albums` | গ্যালারি অ্যালবাম | title, cover_image_url |
+| `gallery_items` | গ্যালারি আইটেম | album_id, media_url |
+| `instagram_posts` | ইনস্টাগ্রাম | image_url, caption, link_url |
+| `youtube_videos` | ইউটিউব | video_id, title |
+| `certifications` | সার্টিফিকেট | title, file_url |
+| `content_pages` | স্ট্যাটিক পেজ | page_key, title, content |
+| `announcement_bar` | অ্যানাউন্সমেন্ট | message, background_color |
+| `team_members` | টিম মেম্বার | name, role, image_url |
+
+#### ⚙️ সেটিংস
+| টেবিল | বর্ণনা | প্রধান ফিল্ড |
+|-------|--------|-------------|
+| `site_branding` | ব্র্যান্ডিং | logo_url, footer_description |
+| `theme_settings` | থিম | primary_color, font_family |
+| `shop_settings` | শপ সেটিংস | products_per_page, default_sort |
+| `checkout_settings` | চেকআউট | cod_enabled, free_shipping_threshold |
+| `checkout_fraud_settings` | ফ্রড সেটিংস | max_orders_per_phone |
+| `email_settings` | ইমেইল | provider, from_email |
+| `email_templates` | ইমেইল টেমপ্লেট | template_key, html_content |
+| `invoice_settings` | ইনভয়েস | company_name, logo_url |
+| `newsletter_settings` | নিউজলেটার | title, subtitle |
+| `newsletter_subscribers` | সাবস্ক্রাইবার | email, source |
+| `filter_settings` | ফিল্টার | filter_key, options |
+| `currency_rates` | কারেন্সি | currency_code, rate_to_bdt |
+| `category_display_settings` | ক্যাটাগরি ডিসপ্লে | columns_desktop, enable_slider |
+| `footer_link_groups` | ফুটার গ্রুপ | title, display_order |
+| `footer_links` | ফুটার লিংক | group_id, name, href |
+| `social_links` | সোশ্যাল লিংক | platform, url |
+| `marketing_settings` | মার্কেটিং | google_analytics_id |
+| `google_integrations` | গুগল | place_id, reviews_enabled |
+| `upsell_offers` | আপসেল | trigger_type, offer_text |
+| `crm_reports` | CRM রিপোর্ট | report_type, data |
+
+### গুরুত্বপূর্ণ সম্পর্ক:
+```sql
+orders.address_id → addresses.id
+order_items.order_id → orders.id
+order_items.product_id → products.id
+products.category_id → categories.id
+categories.parent_id → categories.id
+user_roles.user_id → auth.users.id
+customers.user_id → auth.users.id
 ```
 
 ---
 
-## ডাটাবেস টেবিল রেফারেন্স
+## ডাটাবেস সুইচ করার পদ্ধতি
 
-### মূল টেবিলগুলো (৭৫+ টেবিল):
+### Supabase থেকে অন্য Supabase-এ
 
-| ক্যাটাগরি | টেবিল | বর্ণনা |
-|----------|-------|--------|
-| **প্রোডাক্ট** | products, categories, product_variants, product_colors, product_sizes | পণ্য ও বৈচিত্র্য |
-| **অর্ডার** | orders, order_items, addresses, delivery_zones | অর্ডার ম্যানেজমেন্ট |
-| **পেমেন্ট** | payment_providers, payment_transactions, promo_codes | পেমেন্ট সিস্টেম |
-| **ইউজার** | profiles, user_roles, customers, wishlist_items, cart_items | ব্যবহারকারী ডাটা |
-| **CMS** | hero_slides, homepage_sections, blog_posts, faq_items | কন্টেন্ট ম্যানেজমেন্ট |
-| **সেটিংস** | site_branding, theme_settings, shop_settings, checkout_settings | সাইট কনফিগারেশন |
-| **মার্কেটিং** | testimonials, newsletter_subscribers, instagram_posts | মার্কেটিং |
+```bash
+# ১. পুরাতন প্রজেক্ট থেকে এক্সপোর্ট
+pg_dump "postgresql://postgres:[OLD_PASSWORD]@db.[OLD_REF].supabase.co:5432/postgres" \
+  --no-owner --no-privileges -f full_backup.sql
 
-### গুরুত্বপূর্ণ সম্পর্ক:
-- `orders` → `addresses` (order delivery)
-- `order_items` → `products` (product in order)
-- `products` → `categories` (product category)
-- `user_roles` → `auth.users` (admin access)
+# ২. নতুন প্রজেক্টে ইম্পোর্ট
+psql "postgresql://postgres:[NEW_PASSWORD]@db.[NEW_REF].supabase.co:5432/postgres" \
+  -f full_backup.sql
+
+# ৩. .env আপডেট
+VITE_SUPABASE_URL=https://new-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=new-anon-key
+VITE_SUPABASE_PROJECT_ID=new-project-id
+```
+
+### Lovable Cloud থেকে Self-Hosted
+
+```bash
+# ১. Lovable Cloud থেকে credentials নিন
+# Cloud View → Settings → Connection Info
+
+# ২. pg_dump দিয়ে এক্সপোর্ট
+pg_dump "postgresql://..." -f lovable_backup.sql
+
+# ৩. নতুন সার্ভারে PostgreSQL সেটআপ
+createdb artisan_shop
+psql -d artisan_shop -f lovable_backup.sql
+
+# ৪. Storage ফাইল মাইগ্রেট (S3/Cloudflare R2)
+# node scripts/migrate-storage.js
+
+# ৫. কোড আপডেট (Supabase SDK → pg/Node)
+```
 
 ---
 
@@ -294,8 +394,9 @@ useEffect(() => {
 | হোমপেজ সেকশন | ✅ সফল | 7 সক্রিয় সেকশন |
 | রিয়েলটাইম সিঙ্ক | ✅ সফল | সব টেবিলে কাজ করছে |
 | অ্যাডমিন RLS | ✅ সফল | is_admin() ফাংশন |
-| মোবাইল/ডেস্কটপ সিঙ্ক | ✅ সফল | একই প্রোডাক্ট দেখায় |
+| মোবাইল/ডেস্কটপ সিঙ্ক | ✅ সফল | ফুটার ফলব্যাক ফিক্সড |
 | ইমেজ স্টোরেজ | ✅ সফল | 4 বাকেট সক্রিয় |
+| CRM ড্যাশবোর্ড | ✅ সফল | ফিল্টার ও এক্সপোর্ট |
 
 ### Storage Buckets:
 - `product-images` (public) - প্রোডাক্ট ছবি
@@ -310,6 +411,8 @@ useEffect(() => {
 - [x] স্কিমা এক্সপোর্ট সম্পন্ন
 - [x] ডাটা এক্সপোর্ট সম্পন্ন
 - [x] Storage ফাইল ব্যাকআপ
+- [x] রিয়েলটাইম সিঙ্ক ডকুমেন্টেশন
+- [x] ফুটার ফলব্যাক লজিক ফিক্স
 - [ ] নতুন ডাটাবেস তৈরি
 - [ ] Extensions ইনস্টল
 - [ ] স্কিমা ইম্পোর্ট
@@ -321,6 +424,14 @@ useEffect(() => {
 - [ ] Storage সলিউশন সেটআপ
 - [ ] টেস্টিং সম্পন্ন
 - [ ] DNS আপডেট
+
+---
+
+## সম্পর্কিত ডকুমেন্টেশন
+
+- [DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md) - সম্পূর্ণ ফিচার লিস্ট ও আর্কিটেকচার
+- [SECURITY_GUIDE.md](./SECURITY_GUIDE.md) - সিকিউরিটি কনফিগারেশন
+- [MOBILE_LAYOUT_GUIDE.md](./MOBILE_LAYOUT_GUIDE.md) - মোবাইল রেসপন্সিভ গাইড
 
 ---
 
