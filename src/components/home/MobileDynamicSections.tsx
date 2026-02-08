@@ -184,11 +184,49 @@ const MobileDynamicSections = () => {
     await toggleWishlist(productId);
   };
 
-  // Mobile Product Slider Component
+  // Mobile Product Slider Component with Touch Support
   const MobileProductSlider = ({ items, title, showViewAll = true }: { items: Product[], title: string, showViewAll?: boolean }) => {
     const sliderRef = useRef<HTMLDivElement>(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const [startX, setStartX] = useState(0);
+    const [scrollLeft, setScrollLeft] = useState(0);
     
     if (items.length === 0) return null;
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+      setIsDragging(true);
+      setStartX(e.pageX - (sliderRef.current?.offsetLeft || 0));
+      setScrollLeft(sliderRef.current?.scrollLeft || 0);
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+      if (!isDragging) return;
+      e.preventDefault();
+      const x = e.pageX - (sliderRef.current?.offsetLeft || 0);
+      const walk = (x - startX) * 1.5;
+      if (sliderRef.current) {
+        sliderRef.current.scrollLeft = scrollLeft - walk;
+      }
+    };
+
+    const handleMouseUp = () => setIsDragging(false);
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+      setIsDragging(true);
+      setStartX(e.touches[0].pageX - (sliderRef.current?.offsetLeft || 0));
+      setScrollLeft(sliderRef.current?.scrollLeft || 0);
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+      if (!isDragging) return;
+      const x = e.touches[0].pageX - (sliderRef.current?.offsetLeft || 0);
+      const walk = (x - startX) * 1.5;
+      if (sliderRef.current) {
+        sliderRef.current.scrollLeft = scrollLeft - walk;
+      }
+    };
+
+    const handleTouchEnd = () => setIsDragging(false);
 
     return (
       <section className="px-4 py-4">
@@ -203,10 +241,25 @@ const MobileDynamicSections = () => {
           )}
         </div>
 
-        <div ref={sliderRef} className="flex gap-3 overflow-x-auto scrollbar-none pb-2" style={{ scrollSnapType: "x mandatory" }}>
+        <div 
+          ref={sliderRef} 
+          className="flex gap-3 overflow-x-auto scrollbar-none pb-2 cursor-grab active:cursor-grabbing" 
+          style={{ scrollSnapType: "x mandatory" }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           {items.map((product) => (
             <div key={product.id} className="flex-shrink-0 w-32" style={{ scrollSnapAlign: "start" }}>
-              <Link to={`/product/${product.slug}`} className="block">
+              <Link 
+                to={`/product/${product.slug}`} 
+                className="block"
+                onClick={(e) => isDragging && e.preventDefault()}
+              >
                 <div className="relative aspect-square bg-card rounded-lg overflow-hidden mb-1.5 border border-border/50">
                   <img
                     src={product.images?.[0] || "/placeholder.svg"}
@@ -319,9 +372,31 @@ const MobileDynamicSections = () => {
     );
   };
 
-  // Mobile YouTube Section
+  // Mobile YouTube Section with Touch Support
   const MobileYouTube = ({ videos, title, subtitle }: { videos: YouTubeVideo[], title: string, subtitle?: string }) => {
+    const ytSliderRef = useRef<HTMLDivElement>(null);
+    const [ytDragging, setYtDragging] = useState(false);
+    const [ytStartX, setYtStartX] = useState(0);
+    const [ytScrollLeft, setYtScrollLeft] = useState(0);
+
     if (videos.length === 0) return null;
+
+    const handleYtTouchStart = (e: React.TouchEvent) => {
+      setYtDragging(true);
+      setYtStartX(e.touches[0].pageX);
+      setYtScrollLeft(ytSliderRef.current?.scrollLeft || 0);
+    };
+
+    const handleYtTouchMove = (e: React.TouchEvent) => {
+      if (!ytDragging) return;
+      const x = e.touches[0].pageX;
+      const walk = (x - ytStartX) * 1.5;
+      if (ytSliderRef.current) {
+        ytSliderRef.current.scrollLeft = ytScrollLeft - walk;
+      }
+    };
+
+    const handleYtTouchEnd = () => setYtDragging(false);
 
     return (
       <section className="px-4 py-5 bg-muted/30">
@@ -330,7 +405,14 @@ const MobileDynamicSections = () => {
           {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
         </div>
 
-        <div className="flex gap-3 overflow-x-auto scrollbar-none pb-2">
+        <div 
+          ref={ytSliderRef}
+          className="flex gap-3 overflow-x-auto scrollbar-none pb-2 cursor-grab active:cursor-grabbing"
+          style={{ scrollSnapType: "x mandatory" }}
+          onTouchStart={handleYtTouchStart}
+          onTouchMove={handleYtTouchMove}
+          onTouchEnd={handleYtTouchEnd}
+        >
           {videos.map((video) => (
             <a
               key={video.id}
@@ -338,12 +420,15 @@ const MobileDynamicSections = () => {
               target="_blank"
               rel="noopener noreferrer"
               className="flex-shrink-0 w-48 group"
+              style={{ scrollSnapAlign: "start" }}
+              onClick={(e) => ytDragging && e.preventDefault()}
             >
               <div className="relative aspect-video rounded-lg overflow-hidden bg-muted mb-2">
                 <img
                   src={video.thumbnail_url || `https://img.youtube.com/vi/${video.video_id}/mqdefault.jpg`}
                   alt={video.title}
                   className="w-full h-full object-cover"
+                  draggable={false}
                 />
                 <div className="absolute inset-0 bg-background/30 flex items-center justify-center group-active:bg-background/10">
                   <div className="w-10 h-10 rounded-full bg-destructive flex items-center justify-center">
@@ -361,9 +446,31 @@ const MobileDynamicSections = () => {
     );
   };
 
-  // Mobile Blog Section
+  // Mobile Blog Section with Touch Support
   const MobileBlog = ({ posts, title, subtitle }: { posts: BlogPost[], title: string, subtitle?: string }) => {
+    const blogSliderRef = useRef<HTMLDivElement>(null);
+    const [blogDragging, setBlogDragging] = useState(false);
+    const [blogStartX, setBlogStartX] = useState(0);
+    const [blogScrollLeft, setBlogScrollLeft] = useState(0);
+
     if (posts.length === 0) return null;
+
+    const handleBlogTouchStart = (e: React.TouchEvent) => {
+      setBlogDragging(true);
+      setBlogStartX(e.touches[0].pageX);
+      setBlogScrollLeft(blogSliderRef.current?.scrollLeft || 0);
+    };
+
+    const handleBlogTouchMove = (e: React.TouchEvent) => {
+      if (!blogDragging) return;
+      const x = e.touches[0].pageX;
+      const walk = (x - blogStartX) * 1.5;
+      if (blogSliderRef.current) {
+        blogSliderRef.current.scrollLeft = blogScrollLeft - walk;
+      }
+    };
+
+    const handleBlogTouchEnd = () => setBlogDragging(false);
 
     return (
       <section className="px-4 py-5">
@@ -377,12 +484,25 @@ const MobileDynamicSections = () => {
           </Link>
         </div>
 
-        <div className="flex gap-3 overflow-x-auto scrollbar-none pb-2">
+        <div 
+          ref={blogSliderRef}
+          className="flex gap-3 overflow-x-auto scrollbar-none pb-2 cursor-grab active:cursor-grabbing"
+          style={{ scrollSnapType: "x mandatory" }}
+          onTouchStart={handleBlogTouchStart}
+          onTouchMove={handleBlogTouchMove}
+          onTouchEnd={handleBlogTouchEnd}
+        >
           {posts.map((post) => (
-            <Link key={post.id} to={`/blog/${post.slug}`} className="flex-shrink-0 w-40 group">
+            <Link 
+              key={post.id} 
+              to={`/blog/${post.slug}`} 
+              className="flex-shrink-0 w-40 group"
+              style={{ scrollSnapAlign: "start" }}
+              onClick={(e) => blogDragging && e.preventDefault()}
+            >
               <div className="aspect-[4/3] rounded-lg overflow-hidden bg-muted mb-2">
                 {post.featured_image ? (
-                  <img src={post.featured_image} alt={post.title} className="w-full h-full object-cover" />
+                  <img src={post.featured_image} alt={post.title} className="w-full h-full object-cover" draggable={false} />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-muted"><span className="text-2xl">📝</span></div>
                 )}
@@ -439,9 +559,58 @@ const MobileDynamicSections = () => {
     );
   };
 
-  // Mobile Category Slider
+  // Mobile Category Slider with Touch Support
   const MobileCategories = () => {
+    const catSliderRef = useRef<HTMLDivElement>(null);
+    const [catDragging, setCatDragging] = useState(false);
+    const [catStartX, setCatStartX] = useState(0);
+    const [catScrollLeft, setCatScrollLeft] = useState(0);
+    const [activeCategory, setActiveCategory] = useState<string | null>(null);
+
     if (categories.length === 0) return null;
+
+    const handleCatMouseDown = (e: React.MouseEvent) => {
+      setCatDragging(true);
+      setCatStartX(e.pageX - (catSliderRef.current?.offsetLeft || 0));
+      setCatScrollLeft(catSliderRef.current?.scrollLeft || 0);
+    };
+
+    const handleCatMouseMove = (e: React.MouseEvent) => {
+      if (!catDragging) return;
+      e.preventDefault();
+      const x = e.pageX - (catSliderRef.current?.offsetLeft || 0);
+      const walk = (x - catStartX) * 1.5;
+      if (catSliderRef.current) {
+        catSliderRef.current.scrollLeft = catScrollLeft - walk;
+      }
+    };
+
+    const handleCatMouseUp = () => setCatDragging(false);
+
+    const handleCatTouchStart = (e: React.TouchEvent) => {
+      setCatDragging(true);
+      setCatStartX(e.touches[0].pageX - (catSliderRef.current?.offsetLeft || 0));
+      setCatScrollLeft(catSliderRef.current?.scrollLeft || 0);
+    };
+
+    const handleCatTouchMove = (e: React.TouchEvent) => {
+      if (!catDragging) return;
+      const x = e.touches[0].pageX - (catSliderRef.current?.offsetLeft || 0);
+      const walk = (x - catStartX) * 1.5;
+      if (catSliderRef.current) {
+        catSliderRef.current.scrollLeft = catScrollLeft - walk;
+      }
+    };
+
+    const handleCatTouchEnd = () => setCatDragging(false);
+
+    // Default category icons
+    const getCategoryIcon = (slug: string) => {
+      const icons: Record<string, string> = {
+        jewelry: "💍", bags: "👜", woven: "🧶", art: "🎨", home: "🏠", fashion: "👗", accessories: "✨"
+      };
+      return icons[slug] || "🛍️";
+    };
 
     return (
       <section className="px-4 py-4">
@@ -452,19 +621,68 @@ const MobileDynamicSections = () => {
           <Link to="/shop" className="text-gold text-xs">{language === "bn" ? "সব →" : "All →"}</Link>
         </div>
 
-        <div className="flex gap-3 overflow-x-auto scrollbar-none pb-2">
+        <div 
+          ref={catSliderRef}
+          className="flex gap-3 overflow-x-auto scrollbar-none pb-2 cursor-grab active:cursor-grabbing"
+          style={{ scrollSnapType: "x mandatory" }}
+          onMouseDown={handleCatMouseDown}
+          onMouseMove={handleCatMouseMove}
+          onMouseUp={handleCatMouseUp}
+          onMouseLeave={handleCatMouseUp}
+          onTouchStart={handleCatTouchStart}
+          onTouchMove={handleCatTouchMove}
+          onTouchEnd={handleCatTouchEnd}
+        >
+          {/* All Products Button */}
+          <Link 
+            to="/shop" 
+            className="flex-shrink-0 text-center group"
+            style={{ scrollSnapAlign: "start" }}
+            onClick={(e) => {
+              if (catDragging) e.preventDefault();
+              else setActiveCategory("all");
+            }}
+          >
+            <div className={`w-14 h-14 rounded-full bg-card border-2 overflow-hidden mb-1.5 mx-auto flex items-center justify-center text-xl transition-all ${
+              activeCategory === "all" || !activeCategory ? "border-gold bg-gold/10" : "border-border group-active:border-gold"
+            }`}>
+              🛒
+            </div>
+            <span className={`text-[10px] font-medium ${activeCategory === "all" || !activeCategory ? "text-gold" : "text-foreground"}`}>
+              {language === "bn" ? "সব" : "All"}
+            </span>
+          </Link>
+
           {categories.map((category) => (
-            <Link key={category.id} to={`/shop/${category.slug}`} className="flex-shrink-0 text-center group">
-              <div className="w-16 h-16 rounded-full bg-card border border-border overflow-hidden mb-1.5 mx-auto group-active:border-gold">
+            <Link 
+              key={category.id} 
+              to={`/shop/${category.slug}`} 
+              className="flex-shrink-0 text-center group"
+              style={{ scrollSnapAlign: "start" }}
+              onClick={(e) => {
+                if (catDragging) e.preventDefault();
+                else setActiveCategory(category.id);
+              }}
+            >
+              <div className={`w-14 h-14 rounded-full bg-card border-2 overflow-hidden mb-1.5 mx-auto transition-all ${
+                activeCategory === category.id ? "border-gold ring-2 ring-gold/30" : "border-border group-active:border-gold"
+              }`}>
                 {category.mobile_image_url || category.image_url ? (
-                  <img src={category.mobile_image_url || category.image_url || ""} alt={category.name} className="w-full h-full object-cover" />
+                  <img 
+                    src={category.mobile_image_url || category.image_url || ""} 
+                    alt={category.name} 
+                    className="w-full h-full object-cover" 
+                    draggable={false}
+                  />
                 ) : category.icon_emoji ? (
-                  <div className="w-full h-full flex items-center justify-center text-2xl">{category.icon_emoji}</div>
+                  <div className="w-full h-full flex items-center justify-center text-xl bg-muted">{category.icon_emoji}</div>
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-muted text-lg">{category.name.charAt(0)}</div>
+                  <div className="w-full h-full flex items-center justify-center bg-muted text-xl">{getCategoryIcon(category.slug)}</div>
                 )}
               </div>
-              <span className="text-[10px] text-foreground font-medium line-clamp-1 max-w-16">
+              <span className={`text-[10px] font-medium line-clamp-1 max-w-14 ${
+                activeCategory === category.id ? "text-gold" : "text-foreground"
+              }`}>
                 {language === "bn" && category.name_bn ? category.name_bn : category.name}
               </span>
             </Link>
