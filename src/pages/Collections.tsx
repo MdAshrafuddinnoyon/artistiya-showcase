@@ -247,11 +247,24 @@ const Collections = () => {
                     >
                       <Link to={`/product/${product.slug}`} className="block">
                         <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-muted mb-4">
+                          {/* Primary Image */}
                           <img
                             src={product.images?.[0] || "/placeholder.svg"}
                             alt={getProductName(product)}
-                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            className={`w-full h-full object-cover transition-all duration-500 absolute inset-0 ${
+                              product.images && product.images.length > 1 
+                                ? "group-hover:opacity-0 group-active:opacity-0" 
+                                : "group-hover:scale-105"
+                            }`}
                           />
+                          {/* Secondary/Gallery Image on Hover */}
+                          {product.images && product.images.length > 1 && (
+                            <img
+                              src={product.images[1]}
+                              alt={`${getProductName(product)} - Gallery`}
+                              className="w-full h-full object-cover absolute inset-0 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-500"
+                            />
+                          )}
                           
                           {/* Badges */}
                           <div className="absolute top-3 left-3 flex flex-col gap-1">

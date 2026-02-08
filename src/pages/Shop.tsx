@@ -1010,11 +1010,24 @@ const Shop = () => {
                           <div className={`relative overflow-hidden rounded-lg bg-muted ${
                             viewMode === "list" ? "w-48 aspect-square flex-shrink-0" : "aspect-[3/4] mb-4"
                           }`}>
+                            {/* Primary Image */}
                             <img
                               src={product.images?.[0] || "/placeholder.svg"}
                               alt={getProductName(product)}
-                              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                              className={`w-full h-full object-cover transition-all duration-500 absolute inset-0 ${
+                                product.images && product.images.length > 1 
+                                  ? "group-hover:opacity-0 group-active:opacity-0" 
+                                  : "group-hover:scale-105"
+                              }`}
                             />
+                            {/* Secondary/Gallery Image on Hover */}
+                            {product.images && product.images.length > 1 && (
+                              <img
+                                src={product.images[1]}
+                                alt={`${getProductName(product)} - Gallery`}
+                                className="w-full h-full object-cover absolute inset-0 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-500"
+                              />
+                            )}
                             
                             {/* Wishlist Button */}
                             <button
