@@ -809,27 +809,6 @@ const Shop = () => {
     return language === "bn" && pageSettings.hero_subtitle_bn ? pageSettings.hero_subtitle_bn : pageSettings.hero_subtitle;
   };
 
-
-  // Promo Image Banner Component
-  const PromoBanner = () => {
-    if (!shopSettings.show_promo_banner || !shopSettings.promo_banner_image) return null;
-    
-    const bannerContent = (
-      <div className="rounded-xl overflow-hidden relative group">
-        <img 
-          src={shopSettings.promo_banner_image} 
-          alt="Promo" 
-          className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105"
-        />
-      </div>
-    );
-
-    if (shopSettings.promo_banner_link) {
-      return <a href={shopSettings.promo_banner_link} className="block mb-4">{bannerContent}</a>;
-    }
-    return <div className="mb-4">{bannerContent}</div>;
-  };
-
   // Check if filter should be on left or right
   const isFilterOnRight = shopSettings.filter_position === 'right';
 
