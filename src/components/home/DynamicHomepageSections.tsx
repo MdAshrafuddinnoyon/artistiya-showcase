@@ -6,7 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useLanguage } from "@/hooks/useLanguage";
-import { Play, Calendar, ArrowRight } from "lucide-react";
+import { Play, Calendar, ArrowRight, Star, Quote, User, Instagram, ShoppingBag, Heart, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import CategorySection from "./CategorySection";
+import NewArrivalsSection from "./NewArrivalsSection";
+import FeaturedSection from "./FeaturedSection";
+import MakingSection from "./MakingSection";
+import TestimonialsSection from "./TestimonialsSection";
+import InstagramSection from "./InstagramSection";
 
 interface Product {
   id: string;
@@ -762,6 +769,24 @@ const DynamicHomepageSections = () => {
           </section>
         );
       }
+
+      case "categories":
+        return <CategorySection key={section.id} />;
+
+      case "new_arrivals":
+        return <NewArrivalsSection key={section.id} />;
+
+      case "featured_static":
+        return <FeaturedSection key={section.id} />;
+
+      case "making":
+        return <MakingSection key={section.id} />;
+
+      case "testimonials":
+        return <TestimonialsSection key={section.id} />;
+
+      case "instagram":
+        return <InstagramSection key={section.id} />;
 
       default:
         return null;
