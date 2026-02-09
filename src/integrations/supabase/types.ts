@@ -1019,6 +1019,12 @@ export type Database = {
           created_at: string
           custom_order_enabled: boolean | null
           default_advance_percent: number | null
+          form_description_label: string | null
+          form_description_placeholder: string | null
+          form_subtitle: string | null
+          form_subtitle_bn: string | null
+          form_title: string | null
+          form_title_bn: string | null
           header_button_enabled: boolean | null
           header_button_icon: string | null
           header_button_link: string | null
@@ -1027,12 +1033,22 @@ export type Database = {
           id: string
           max_advance_percent: number | null
           min_advance_percent: number | null
+          require_image: boolean | null
+          show_budget_fields: boolean | null
+          success_message: string | null
+          success_message_bn: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           custom_order_enabled?: boolean | null
           default_advance_percent?: number | null
+          form_description_label?: string | null
+          form_description_placeholder?: string | null
+          form_subtitle?: string | null
+          form_subtitle_bn?: string | null
+          form_title?: string | null
+          form_title_bn?: string | null
           header_button_enabled?: boolean | null
           header_button_icon?: string | null
           header_button_link?: string | null
@@ -1041,12 +1057,22 @@ export type Database = {
           id?: string
           max_advance_percent?: number | null
           min_advance_percent?: number | null
+          require_image?: boolean | null
+          show_budget_fields?: boolean | null
+          success_message?: string | null
+          success_message_bn?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           custom_order_enabled?: boolean | null
           default_advance_percent?: number | null
+          form_description_label?: string | null
+          form_description_placeholder?: string | null
+          form_subtitle?: string | null
+          form_subtitle_bn?: string | null
+          form_title?: string | null
+          form_title_bn?: string | null
           header_button_enabled?: boolean | null
           header_button_icon?: string | null
           header_button_link?: string | null
@@ -1055,6 +1081,10 @@ export type Database = {
           id?: string
           max_advance_percent?: number | null
           min_advance_percent?: number | null
+          require_image?: boolean | null
+          show_budget_fields?: boolean | null
+          success_message?: string | null
+          success_message_bn?: string | null
           updated_at?: string
         }
         Relationships: []
