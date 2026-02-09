@@ -1020,6 +1020,10 @@ export type Database = {
           custom_order_enabled: boolean | null
           default_advance_percent: number | null
           header_button_enabled: boolean | null
+          header_button_icon: string | null
+          header_button_link: string | null
+          header_button_text: string | null
+          header_button_text_bn: string | null
           id: string
           max_advance_percent: number | null
           min_advance_percent: number | null
@@ -1030,6 +1034,10 @@ export type Database = {
           custom_order_enabled?: boolean | null
           default_advance_percent?: number | null
           header_button_enabled?: boolean | null
+          header_button_icon?: string | null
+          header_button_link?: string | null
+          header_button_text?: string | null
+          header_button_text_bn?: string | null
           id?: string
           max_advance_percent?: number | null
           min_advance_percent?: number | null
@@ -1040,6 +1048,10 @@ export type Database = {
           custom_order_enabled?: boolean | null
           default_advance_percent?: number | null
           header_button_enabled?: boolean | null
+          header_button_icon?: string | null
+          header_button_link?: string | null
+          header_button_text?: string | null
+          header_button_text_bn?: string | null
           id?: string
           max_advance_percent?: number | null
           min_advance_percent?: number | null

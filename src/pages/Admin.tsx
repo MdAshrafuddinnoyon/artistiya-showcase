@@ -103,6 +103,7 @@ import AdminNewsletterSubscribers from "@/components/admin/AdminNewsletterSubscr
 import AdminFilterSettings from "@/components/admin/AdminFilterSettings";
 import AdminPromoCodes from "@/components/admin/AdminPromoCodes";
 import AdminNotifications from "@/components/admin/AdminNotifications";
+import AdminCustomizationSettings from "@/components/admin/AdminCustomizationSettings";
 
 // Menu sections for organized navigation
 const menuSections = [
@@ -177,6 +178,7 @@ const menuSections = [
   {
     title: "Settings",
     items: [
+      { id: "customization", name: "Custom Order Settings", icon: PaletteIcon },
       { id: "shop-settings", name: "Shop Page", icon: ShoppingBag },
       { id: "filter-settings", name: "Filter Management", icon: Sliders },
       { id: "checkout", name: "Checkout", icon: ShoppingBag },
@@ -383,6 +385,8 @@ const Admin = () => {
         return <AdminPromoCodes />;
       case "notifications":
         return <AdminNotifications />;
+      case "customization":
+        return <AdminCustomizationSettings />;
       case "settings":
         return <AdminSettings />;
       default:
