@@ -1,6 +1,5 @@
-import { useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, Upload, Image as ImageIcon, Loader2 } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { X, Upload, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/hooks/useLanguage";
+import { useCustomizationSettings } from "@/hooks/useCustomizationSettings";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -18,6 +19,8 @@ interface CustomOrderModalProps {
 
 const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
   const { user } = useAuth();
+  const { language } = useLanguage();
+  const { settings } = useCustomizationSettings();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -57,46 +60,52 @@ const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
     e.preventDefault();
 
     if (!user) {
-      toast.error("Please login first");
+      toast.error(language === "bn" ? "প্রথমে লগইন করুন" : "Please login first");
       onOpenChange(false);
       navigate("/auth");
       return;
     }
 
-    if (!selectedFile) {
-      toast.error("Please upload an image");
+    // Check if image is required
+    if (settings?.require_image && !selectedFile) {
+      toast.error(language === "bn" ? "একটি ছবি আপলোড করুন" : "Please upload an image");
       return;
     }
 
     if (!formData.description.trim()) {
-      toast.error("Please add a description");
+      toast.error(language === "bn" ? "বিস্তারিত লিখুন" : "Please add a description");
       return;
     }
 
     setLoading(true);
 
     try {
-      // Upload image to storage
-      const fileExt = selectedFile.name.split('.').pop();
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      let publicUrl = "";
       
-      const { error: uploadError, data: uploadData } = await supabase.storage
-        .from("custom-designs")
-        .upload(fileName, selectedFile);
+      // Upload image if provided
+      if (selectedFile) {
+        const fileExt = selectedFile.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from("custom-designs")
+          .upload(fileName, selectedFile);
 
-      if (uploadError) throw uploadError;
+        if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from("custom-designs")
-        .getPublicUrl(fileName);
+        const { data: urlData } = supabase.storage
+          .from("custom-designs")
+          .getPublicUrl(fileName);
+
+        publicUrl = urlData.publicUrl;
+      }
 
       // Create custom order request
       const { error: insertError } = await supabase
         .from("custom_order_requests")
         .insert({
           user_id: user.id,
-          reference_image_url: publicUrl,
+          reference_image_url: publicUrl || "https://via.placeholder.com/400x300?text=No+Image",
           description: formData.description,
           budget_min: formData.budgetMin ? parseFloat(formData.budgetMin) : null,
           budget_max: formData.budgetMax ? parseFloat(formData.budgetMax) : null,
@@ -104,7 +113,11 @@ const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
 
       if (insertError) throw insertError;
 
-      toast.success("Your custom order request has been submitted!");
+      const successMsg = language === "bn" 
+        ? (settings?.success_message_bn || "আপনার কাস্টম অর্ডার রিকোয়েস্ট জমা দেওয়া হয়েছে!")
+        : (settings?.success_message || "Your custom order request has been submitted!");
+      
+      toast.success(successMsg);
       onOpenChange(false);
       
       // Reset form
@@ -113,7 +126,7 @@ const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
       setImagePreview(null);
     } catch (error) {
       console.error("Error submitting custom order:", error);
-      toast.error("Something went wrong, please try again");
+      toast.error(language === "bn" ? "কিছু ভুল হয়েছে, আবার চেষ্টা করুন" : "Something went wrong, please try again");
     } finally {
       setLoading(false);
     }
@@ -125,6 +138,18 @@ const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
     setImagePreview(null);
   };
 
+  // Get localized texts
+  const formTitle = language === "bn" 
+    ? (settings?.form_title_bn || "আপনার ডিজাইন জমা দিন")
+    : (settings?.form_title || "Submit Your Design");
+  
+  const formSubtitle = language === "bn"
+    ? (settings?.form_subtitle_bn || "আপনার ডিজাইন আইডিয়া আপলোড করুন")
+    : (settings?.form_subtitle || "Upload your design idea and we will make it for you");
+
+  const descriptionLabel = settings?.form_description_label || "Detailed Description";
+  const descriptionPlaceholder = settings?.form_description_placeholder || "Describe your preferred colors, size, materials...";
+
   return (
     <Dialog open={open} onOpenChange={(newOpen) => {
       if (!newOpen) resetForm();
@@ -133,10 +158,10 @@ const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
       <DialogContent className="sm:max-w-lg bg-card border-border">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl text-gold">
-            Submit Your Design
+            {formTitle}
           </DialogTitle>
           <p className="text-muted-foreground text-sm mt-1">
-            Upload your design idea and we'll make it for you
+            {formSubtitle}
           </p>
         </DialogHeader>
 
@@ -144,7 +169,8 @@ const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
           {/* Image Upload */}
           <div>
             <Label className="text-foreground mb-2 block">
-              Reference Image <span className="text-destructive">*</span>
+              {language === "bn" ? "রেফারেন্স ছবি" : "Reference Image"} 
+              {settings?.require_image && <span className="text-destructive"> *</span>}
             </Label>
             
             <input
@@ -183,8 +209,12 @@ const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
                   <Upload className="h-6 w-6 text-gold" />
                 </div>
                 <div className="text-center">
-                  <p className="text-foreground font-medium">Upload Image</p>
-                  <p className="text-muted-foreground text-sm">JPG, PNG or WEBP (max 5MB)</p>
+                  <p className="text-foreground font-medium">
+                    {language === "bn" ? "ছবি আপলোড করুন" : "Upload Image"}
+                  </p>
+                  <p className="text-muted-foreground text-sm">
+                    JPG, PNG or WEBP (max 5MB)
+                  </p>
                 </div>
               </button>
             )}
@@ -193,39 +223,43 @@ const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
           {/* Description */}
           <div>
             <Label htmlFor="description" className="text-foreground">
-              Detailed Description <span className="text-destructive">*</span>
+              {descriptionLabel} <span className="text-destructive">*</span>
             </Label>
             <Textarea
               id="description"
-              placeholder="Describe your preferred colors, size, materials, and other details..."
+              placeholder={descriptionPlaceholder}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="mt-1.5 min-h-[100px]"
             />
           </div>
 
-          {/* Budget Range */}
-          <div>
-            <Label className="text-foreground">Budget Range (Optional)</Label>
-            <div className="grid grid-cols-2 gap-4 mt-1.5">
-              <div>
-                <Input
-                  type="number"
-                  placeholder="Min ৳"
-                  value={formData.budgetMin}
-                  onChange={(e) => setFormData({ ...formData, budgetMin: e.target.value })}
-                />
-              </div>
-              <div>
-                <Input
-                  type="number"
-                  placeholder="Max ৳"
-                  value={formData.budgetMax}
-                  onChange={(e) => setFormData({ ...formData, budgetMax: e.target.value })}
-                />
+          {/* Budget Range - Conditionally shown */}
+          {settings?.show_budget_fields !== false && (
+            <div>
+              <Label className="text-foreground">
+                {language === "bn" ? "বাজেট রেঞ্জ (ঐচ্ছিক)" : "Budget Range (Optional)"}
+              </Label>
+              <div className="grid grid-cols-2 gap-4 mt-1.5">
+                <div>
+                  <Input
+                    type="number"
+                    placeholder={language === "bn" ? "সর্বনিম্ন ৳" : "Min ৳"}
+                    value={formData.budgetMin}
+                    onChange={(e) => setFormData({ ...formData, budgetMin: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Input
+                    type="number"
+                    placeholder={language === "bn" ? "সর্বোচ্চ ৳" : "Max ৳"}
+                    value={formData.budgetMax}
+                    onChange={(e) => setFormData({ ...formData, budgetMax: e.target.value })}
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Submit Button */}
           <div className="flex gap-3 pt-2">
@@ -235,7 +269,7 @@ const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
               onClick={() => onOpenChange(false)}
               className="flex-1"
             >
-              Cancel
+              {language === "bn" ? "বাতিল" : "Cancel"}
             </Button>
             <Button
               type="submit"
@@ -246,10 +280,10 @@ const CustomOrderModal = ({ open, onOpenChange }: CustomOrderModalProps) => {
               {loading ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Submitting...
+                  {language === "bn" ? "জমা দেওয়া হচ্ছে..." : "Submitting..."}
                 </span>
               ) : (
-                "Submit Request"
+                language === "bn" ? "রিকোয়েস্ট জমা দিন" : "Submit Request"
               )}
             </Button>
           </div>
