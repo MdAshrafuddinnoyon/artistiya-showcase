@@ -68,6 +68,8 @@ const Header = () => {
   const [cartOpen, setCartOpen] = useState(false);
   const [customOrderOpen, setCustomOrderOpen] = useState(false);
   const [headerButtonEnabled, setHeaderButtonEnabled] = useState(true);
+  const [headerButtonText, setHeaderButtonText] = useState("Custom Design");
+  const [headerButtonLink, setHeaderButtonLink] = useState<string | null>(null);
   
   const [branding, setBranding] = useState<SiteBranding>({
     logo_url: null,
@@ -94,11 +96,13 @@ const Header = () => {
     try {
       const { data } = await supabase
         .from("customization_settings")
-        .select("header_button_enabled")
+        .select("header_button_enabled, header_button_text, header_button_link")
         .single();
       
       if (data) {
         setHeaderButtonEnabled(data.header_button_enabled ?? true);
+        setHeaderButtonText(data.header_button_text || "Custom Design");
+        setHeaderButtonLink(data.header_button_link);
       }
     } catch (error) {
       console.error("Error fetching customization settings:", error);
@@ -278,10 +282,16 @@ const Header = () => {
                   variant="gold-outline" 
                   size="sm" 
                   className="hidden md:flex items-center gap-2"
-                  onClick={() => setCustomOrderOpen(true)}
+                  onClick={() => {
+                    if (headerButtonLink) {
+                      navigate(headerButtonLink);
+                    } else {
+                      setCustomOrderOpen(true);
+                    }
+                  }}
                 >
                   <Palette className="h-4 w-4" />
-                  Custom Design
+                  {headerButtonText}
                 </Button>
               )}
 
