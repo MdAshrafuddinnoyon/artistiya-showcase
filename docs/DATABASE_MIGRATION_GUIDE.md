@@ -335,7 +335,7 @@ certbot certonly --standalone -d your-domain.com
 | `filter_settings` | ফিল্টার | filter_key, options |
 | `currency_rates` | কারেন্সি | currency_code, rate_to_bdt |
 | `category_display_settings` | ক্যাটাগরি ডিসপ্লে | columns_desktop, enable_slider |
-| `customization_settings` | কাস্টমাইজেশন সেটিংস | custom_order_enabled, header_button_enabled, default_advance_percent |
+| `customization_settings` | কাস্টমাইজেশন সেটিংস | custom_order_enabled, header_button_enabled, header_button_text, header_button_text_bn, header_button_link, default_advance_percent, form_title, form_subtitle, require_image, show_budget_fields, success_message |
 | `footer_link_groups` | ফুটার গ্রুপ | title, display_order |
 | `footer_links` | ফুটার লিংক | group_id, name, href |
 | `social_links` | সোশ্যাল লিংক | platform, url |
@@ -399,7 +399,7 @@ psql -d artisan_shop -f lovable_backup.sql
 
 ---
 
-## টেস্ট রেজাল্ট (সর্বশেষ আপডেট: ২০২৬-০২-০৮)
+## টেস্ট রেজাল্ট (সর্বশেষ আপডেট: ২০২৬-০২-০৯)
 
 ### ✅ সফল পরীক্ষাগুলো:
 
@@ -414,7 +414,8 @@ psql -d artisan_shop -f lovable_backup.sql
 | মোবাইল/ডেস্কটপ সিঙ্ক | ✅ সফল | রেসপন্সিভ ডিজাইন |
 | ইমেজ স্টোরেজ | ✅ সফল | 4 বাকেট সক্রিয় |
 | CRM ড্যাশবোর্ড | ✅ সফল | ফিল্টার ও এক্সপোর্ট |
-| কাস্টমাইজেশন সিস্টেম | ✅ সফল | কাস্টম অর্ডার + অ্যাডভান্স পেমেন্ট |
+| কাস্টমাইজেশন সিস্টেম | ✅ সফল | কাস্টম অর্ডার + ফর্ম কাস্টমাইজেশন |
+| হেডার বাটন কাস্টমাইজ | ✅ সফল | টেক্সট, লিঙ্ক, অ্যাক্টিভেশন |
 | ডিসকাউন্ট ব্যাজ | ✅ সফল | ডাইনামিক % ক্যালকুলেশন |
 
 ### Storage Buckets:
@@ -464,4 +465,4 @@ psql -d artisan_shop -f lovable_backup.sql
 
 ---
 
-*শেষ আপডেট: ২০২৬-০২-০৮*
+*শেষ আপডেট: ২০২৬-০২-০৯*
