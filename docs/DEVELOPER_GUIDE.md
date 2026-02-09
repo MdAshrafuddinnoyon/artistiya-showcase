@@ -516,26 +516,99 @@ if (product.customization_only) {
 }
 ```
 
-### অ্যাডমিন সেটিংস
+---
 
-| সেটিং | বর্ণনা | ডিফল্ট |
-|-------|--------|--------|
-| `custom_order_enabled` | কাস্টম অর্ডার সিস্টেম চালু | true |
-| `header_button_enabled` | হেডারে "Custom Design" বাটন | true |
-| `default_advance_percent` | ডিফল্ট অ্যাডভান্স % | 50 |
-| `min_advance_percent` | মিনিমাম অ্যাডভান্স % | 20 |
-| `max_advance_percent` | ম্যাক্সিমাম অ্যাডভান্স % | 100 |
+## হেডার বাটন ও ফর্ম কাস্টমাইজেশন
+
+### `customization_settings` টেবিল (সম্পূর্ণ ফিল্ড লিস্ট)
+
+| ফিল্ড | টাইপ | বর্ণনা | ডিফল্ট |
+|-------|------|--------|--------|
+| `custom_order_enabled` | BOOLEAN | কাস্টম অর্ডার সিস্টেম চালু | true |
+| `header_button_enabled` | BOOLEAN | হেডারে বাটন দেখানো | true |
+| `header_button_text` | VARCHAR(100) | বাটন টেক্সট (ইংরেজি) | "Custom Design" |
+| `header_button_text_bn` | VARCHAR(100) | বাটন টেক্সট (বাংলা) | "কাস্টম ডিজাইন" |
+| `header_button_link` | VARCHAR(500) | কাস্টম লিঙ্ক (null = modal) | null |
+| `header_button_icon` | VARCHAR(50) | Lucide আইকন নাম | "Palette" |
+| `default_advance_percent` | INTEGER | ডিফল্ট অ্যাডভান্স % | 50 |
+| `min_advance_percent` | INTEGER | মিনিমাম অ্যাডভান্স % | 20 |
+| `max_advance_percent` | INTEGER | ম্যাক্সিমাম অ্যাডভান্স % | 100 |
+| `form_title` | VARCHAR(200) | ফর্ম টাইটেল (ইংরেজি) | "Submit Your Design" |
+| `form_title_bn` | VARCHAR(200) | ফর্ম টাইটেল (বাংলা) | "আপনার ডিজাইন জমা দিন" |
+| `form_subtitle` | VARCHAR(500) | ফর্ম সাবটাইটেল (ইংরেজি) | "Upload your design idea..." |
+| `form_subtitle_bn` | VARCHAR(500) | ফর্ম সাবটাইটেল (বাংলা) | "আপনার ডিজাইন আইডিয়া আপলোড করুন..." |
+| `form_description_label` | VARCHAR(200) | ডেসক্রিপশন লেবেল | "Detailed Description" |
+| `form_description_placeholder` | VARCHAR(500) | ডেসক্রিপশন প্লেসহোল্ডার | "Describe your preferred colors..." |
+| `require_image` | BOOLEAN | ছবি বাধ্যতামূলক | false |
+| `show_budget_fields` | BOOLEAN | বাজেট ফিল্ড দেখানো | true |
+| `success_message` | VARCHAR(500) | সফল মেসেজ (ইংরেজি) | "Your custom order request..." |
+| `success_message_bn` | VARCHAR(500) | সফল মেসেজ (বাংলা) | "আপনার কাস্টম অর্ডার রিকোয়েস্ট..." |
+
+### কাস্টমাইজেশন হুক
+
+```typescript
+import { useCustomizationSettings } from "@/hooks/useCustomizationSettings";
+
+const { settings, loading, updateSettings, refetch } = useCustomizationSettings();
+
+// সেটিংস অ্যাক্সেস
+if (settings?.header_button_enabled) {
+  // বাটন দেখাও
+}
+```
+
+### অ্যাডমিন প্যানেল অ্যাক্সেস
+
+```
+Admin Dashboard → Settings → Custom Order Settings
+```
+
+তিনটি ট্যাব:
+1. **General**: ফিচার টগল, হেডার বাটন কাস্টমাইজ
+2. **Form Customization**: ফর্ম টাইটেল, লেবেল, প্লেসহোল্ডার, ভ্যালিডেশন
+3. **Payment**: অ্যাডভান্স পেমেন্ট শতাংশ সেটিংস
+
+### দুইটি মোডাল
+
+| মোডাল | ব্যবহার | কম্পোনেন্ট |
+|-------|---------|-----------|
+| `CustomOrderModal` | হেডার বাটন থেকে ওপেন হয় | সাধারণ ডিজাইন রিকোয়েস্ট |
+| `ProductCustomOrderModal` | প্রোডাক্ট ডিটেইল থেকে ওপেন হয় | প্রোডাক্ট-স্পেসিফিক কাস্টম অর্ডার |
 
 ### কাস্টম অর্ডার ফ্লো
 
 ```
-১. কাস্টমার প্রোডাক্ট দেখে → "Request Custom Order" ক্লিক
-২. মোডালে রিকোয়ারমেন্ট ফর্ম → রেফারেন্স ইমেজ আপলোড
-৩. ডেলিভারি ইনফো → বিভাগ/জেলা/থানা সিলেক্ট
-৪. অ্যাডভান্স পেমেন্ট → bKash/Nagad দিয়ে পেমেন্ট
-৫. অ্যাডমিন নোটিফিকেশন → প্রাইস কনফার্ম করে কাজ শুরু
+┌─────────────────────────────────────────────────────────────┐
+│                    HEADER BUTTON FLOW                        │
+├─────────────────────────────────────────────────────────────┤
+│ হেডার বাটন ক্লিক → CustomOrderModal →                       │
+│ রেফারেন্স ইমেজ + ডেসক্রিপশন + বাজেট → সাবমিট              │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                  PRODUCT-SPECIFIC FLOW                       │
+├─────────────────────────────────────────────────────────────┤
+│ প্রোডাক্ট "Request Custom Order" ক্লিক →                    │
+│ ProductCustomOrderModal → ৩ স্টেপ ফ্লো:                     │
+│   Step 1: রিকোয়ারমেন্ট (ইমেজ, ডেসক্রিপশন)                  │
+│   Step 2: ডেলিভারি (নাম, ফোন, ঠিকানা)                       │
+│   Step 3: পেমেন্ট (bKash/Nagad/COD)                         │
+│ → অ্যাডভান্স পেমেন্ট কমপ্লিট → অ্যাডমিন রিভিউ              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-*শেষ আপডেট: ২০২৬-০২-০৮*
+## সম্পর্কিত ফাইল
+
+| ফাইল | বর্ণনা |
+|------|--------|
+| `src/hooks/useCustomizationSettings.tsx` | সেটিংস ফেচ ও আপডেট |
+| `src/components/modals/CustomOrderModal.tsx` | হেডার বাটন মোডাল |
+| `src/components/modals/ProductCustomOrderModal.tsx` | প্রোডাক্ট কাস্টম অর্ডার |
+| `src/components/admin/AdminCustomizationSettings.tsx` | অ্যাডমিন সেটিংস পেজ |
+| `src/components/layout/Header.tsx` | হেডার বাটন রেন্ডার |
+
+---
+
+*শেষ আপডেট: ২০২৬-০২-০৯*
