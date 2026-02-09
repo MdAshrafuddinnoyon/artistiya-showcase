@@ -12,6 +12,7 @@ import WhatsAppOrderButton from "@/components/product/WhatsAppOrderButton";
 import RelatedProducts from "@/components/product/RelatedProducts";
 import ProductCustomOrderModal from "@/components/modals/ProductCustomOrderModal";
 import ProductDiscountBadge from "@/components/product/ProductDiscountBadge";
+import QuickCheckoutDrawer from "@/components/checkout/QuickCheckoutDrawer";
 import { toast } from "sonner";
 
 interface Product {
@@ -58,6 +59,7 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
   const [customOrderOpen, setCustomOrderOpen] = useState(false);
+  const [quickCheckoutOpen, setQuickCheckoutOpen] = useState(false);
   
   // Swipe handling for image gallery
   const [isDragging, setIsDragging] = useState(false);
@@ -81,17 +83,8 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
     setAddingToCart(false);
   };
 
-  const handleBuyNow = async () => {
-    setAddingToCart(true);
-    try {
-      for (let i = 0; i < quantity; i++) {
-        await addToCart(product.id);
-      }
-      navigate("/checkout");
-    } catch (error) {
-      console.error("Buy now error:", error);
-    }
-    setAddingToCart(false);
+  const handleBuyNow = () => {
+    setQuickCheckoutOpen(true);
   };
 
   const handleWishlist = async () => {
@@ -472,6 +465,23 @@ const MobileProductDetail = ({ product, reviewCount = 0, avgRating = 0 }: Mobile
           advance_payment_percent: product.advance_payment_percent || undefined,
           customization_instructions: product.customization_instructions || undefined,
         }}
+      />
+
+      {/* Quick Checkout Drawer */}
+      <QuickCheckoutDrawer
+        open={quickCheckoutOpen}
+        onOpenChange={setQuickCheckoutOpen}
+        product={{
+          id: product.id,
+          name: product.name,
+          name_bn: product.name_bn,
+          price: product.price,
+          compare_at_price: product.compare_at_price,
+          images: product.images,
+          stock_quantity: product.stock_quantity,
+          is_preorderable: product.is_preorderable,
+        }}
+        quantity={quantity}
       />
     </div>
   );

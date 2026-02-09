@@ -18,6 +18,7 @@ import MobileAppHeader from "@/components/mobile/MobileAppHeader";
 import MobileAppBottomNav from "@/components/mobile/MobileAppBottomNav";
 import ProductCustomOrderModal from "@/components/modals/ProductCustomOrderModal";
 import ProductDiscountBadge from "@/components/product/ProductDiscountBadge";
+import QuickCheckoutDrawer from "@/components/checkout/QuickCheckoutDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
@@ -66,6 +67,7 @@ const ProductDetail = () => {
   const [addingToCart, setAddingToCart] = useState(false);
   const [wishlisted, setWishlisted] = useState(false);
   const [customOrderOpen, setCustomOrderOpen] = useState(false);
+  const [quickCheckoutOpen, setQuickCheckoutOpen] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -131,17 +133,9 @@ const ProductDetail = () => {
     setAddingToCart(false);
   };
 
-  const handleBuyNow = async () => {
+  const handleBuyNow = () => {
     if (!product) return;
-    
-    setAddingToCart(true);
-    try {
-      await addToCart(product.id, quantity);
-      navigate("/checkout");
-    } catch (error) {
-      console.error("Buy now error:", error);
-    }
-    setAddingToCart(false);
+    setQuickCheckoutOpen(true);
   };
 
   const handleWishlist = async () => {
@@ -584,6 +578,25 @@ const ProductDetail = () => {
             advance_payment_percent: product.advance_payment_percent || undefined,
             customization_instructions: product.customization_instructions || undefined,
           }}
+        />
+      )}
+
+      {/* Quick Checkout Drawer */}
+      {product && (
+        <QuickCheckoutDrawer
+          open={quickCheckoutOpen}
+          onOpenChange={setQuickCheckoutOpen}
+          product={{
+            id: product.id,
+            name: product.name,
+            name_bn: product.name_bn,
+            price: product.price,
+            compare_at_price: product.compare_at_price,
+            images: product.images,
+            stock_quantity: product.stock_quantity,
+            is_preorderable: product.is_preorderable,
+          }}
+          quantity={quantity}
         />
       )}
     </div>
