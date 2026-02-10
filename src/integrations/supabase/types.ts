@@ -3171,6 +3171,7 @@ export type Database = {
           google_place_id: string | null
           header_announcement_active: boolean | null
           header_announcement_text: string | null
+          header_logo_size: string | null
           hide_manual_reviews_when_api_active: boolean | null
           id: string
           logo_text: string | null
@@ -3214,6 +3215,7 @@ export type Database = {
           google_place_id?: string | null
           header_announcement_active?: boolean | null
           header_announcement_text?: string | null
+          header_logo_size?: string | null
           hide_manual_reviews_when_api_active?: boolean | null
           id?: string
           logo_text?: string | null
@@ -3257,6 +3259,7 @@ export type Database = {
           google_place_id?: string | null
           header_announcement_active?: boolean | null
           header_announcement_text?: string | null
+          header_logo_size?: string | null
           hide_manual_reviews_when_api_active?: boolean | null
           id?: string
           logo_text?: string | null
