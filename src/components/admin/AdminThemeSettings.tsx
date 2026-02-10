@@ -44,22 +44,35 @@ const fontOptions = [
   { value: "Libre Baskerville", label: "Libre Baskerville (Serif)" },
   { value: "Montserrat", label: "Montserrat (Modern)" },
   { value: "Poppins", label: "Poppins (Clean)" },
+  { value: "Merriweather", label: "Merriweather (Traditional)" },
+  { value: "Lora", label: "Lora (Elegant Serif)" },
+  { value: "Oswald", label: "Oswald (Bold Impact)" },
+  { value: "Raleway", label: "Raleway (Thin & Modern)" },
+  { value: "Crimson Text", label: "Crimson Text (Book Style)" },
 ];
 
 const bodyFontOptions = [
   { value: "Lato", label: "Lato (Readable)" },
   { value: "Open Sans", label: "Open Sans (Professional)" },
   { value: "Roboto", label: "Roboto (Modern)" },
-  { value: "Source Sans Pro", label: "Source Sans Pro (Clean)" },
+  { value: "Source Sans 3", label: "Source Sans 3 (Clean)" },
   { value: "Nunito", label: "Nunito (Friendly)" },
   { value: "Inter", label: "Inter (UI Focused)" },
+  { value: "Work Sans", label: "Work Sans (Geometric)" },
+  { value: "Mulish", label: "Mulish (Minimal)" },
+  { value: "DM Sans", label: "DM Sans (Geometric)" },
+  { value: "Outfit", label: "Outfit (Modern Geometric)" },
 ];
 
 const bengaliFontOptions = [
-  { value: "Hind Siliguri", label: "Hind Siliguri" },
-  { value: "Noto Sans Bengali", label: "Noto Sans Bengali" },
-  { value: "Noto Serif Bengali", label: "Noto Serif Bengali" },
-  { value: "Baloo Da 2", label: "Baloo Da 2" },
+  { value: "Hind Siliguri", label: "Hind Siliguri (Modern)" },
+  { value: "Noto Sans Bengali", label: "Noto Sans Bengali (Clean)" },
+  { value: "Noto Serif Bengali", label: "Noto Serif Bengali (Traditional)" },
+  { value: "Baloo Da 2", label: "Baloo Da 2 (Friendly)" },
+  { value: "Anek Bangla", label: "Anek Bangla (Versatile)" },
+  { value: "Galada", label: "Galada (Handwritten)" },
+  { value: "Atma", label: "Atma (Playful)" },
+  { value: "Mina", label: "Mina (Elegant)" },
 ];
 
 const AdminThemeSettings = () => {
@@ -143,7 +156,7 @@ const AdminThemeSettings = () => {
         .update({ setting_value: layout } as any)
         .eq("setting_key", "layout");
 
-      toast.success("Theme settings saved! Refresh to see changes.");
+      toast.success("Theme settings saved! Changes will apply automatically.");
     } catch (error) {
       console.error("Error saving theme settings:", error);
       toast.error("Failed to save settings");

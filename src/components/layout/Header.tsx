@@ -34,6 +34,7 @@ interface SiteBranding {
   logo_text: string;
   logo_text_secondary: string;
   show_logo_text: boolean;
+  header_logo_size: string;
   header_announcement_text: string;
   header_announcement_active: boolean;
 }
@@ -76,6 +77,7 @@ const Header = () => {
     logo_text: "artistiya",
     logo_text_secondary: ".store",
     show_logo_text: true,
+    header_logo_size: "medium",
     header_announcement_text: "✨ Free shipping on orders over ৳5,000 ✨",
     header_announcement_active: true,
   });
@@ -90,6 +92,24 @@ const Header = () => {
   useEffect(() => {
     fetchData();
     fetchCustomizationSettings();
+
+    // Subscribe to realtime branding changes
+    const channel = supabase
+      .channel('header_branding')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'site_branding' }, () => {
+        fetchData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, () => {
+        fetchData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_sub_items' }, () => {
+        fetchData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchCustomizationSettings = async () => {
@@ -117,7 +137,11 @@ const Header = () => {
         supabase.from("menu_sub_items").select("*").eq("is_active", true).order("display_order"),
       ]);
 
-      if (brandingRes.data) setBranding(brandingRes.data);
+      if (brandingRes.data) setBranding({
+        ...brandingRes.data,
+        show_logo_text: brandingRes.data.show_logo_text ?? true,
+        header_logo_size: brandingRes.data.header_logo_size || "medium",
+      });
       if (menuRes.data) setMenuItems(menuRes.data);
       if (subRes.data) setSubItems(subRes.data);
     } catch (error) {
@@ -160,11 +184,14 @@ const Header = () => {
                 <img 
                   src={branding.logo_url} 
                   alt="Logo" 
-                  className="h-8 md:h-10 w-auto"
+                  className={`w-auto ${
+                    branding.header_logo_size === "small" ? "h-6" :
+                    branding.header_logo_size === "large" ? "h-12" :
+                    branding.header_logo_size === "xlarge" ? "h-16" : "h-8 md:h-10"
+                  }`}
                 />
               )}
-              {/* Only show text if show_logo_text is true AND either no logo or explicitly enabled */}
-              {branding.show_logo_text && !branding.logo_url && (
+              {branding.show_logo_text && (
                 <motion.h1 
                   className="font-display text-2xl md:text-3xl tracking-wide"
                   initial={{ opacity: 0 }}

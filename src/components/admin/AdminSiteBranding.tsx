@@ -21,6 +21,7 @@ interface SiteBranding {
   logo_text: string;
   logo_text_secondary: string;
   show_logo_text: boolean;
+  header_logo_size: string;
   favicon_url: string | null;
   header_announcement_text: string;
   header_announcement_active: boolean;
@@ -87,6 +88,7 @@ const AdminSiteBranding = () => {
         setBranding({
           ...data,
           show_logo_text: data.show_logo_text ?? true,
+          header_logo_size: data.header_logo_size || "medium",
           footer_logo_size: data.footer_logo_size || "medium",
           footer_banner_height: data.footer_banner_height || 80,
           footer_left_logo_url: data.footer_left_logo_url || null,
@@ -108,6 +110,7 @@ const AdminSiteBranding = () => {
         setBranding({
           ...newData,
           show_logo_text: true,
+          header_logo_size: "medium",
           footer_logo_size: "medium",
           footer_banner_height: 80,
           footer_left_logo_url: null,
@@ -341,12 +344,37 @@ const AdminSiteBranding = () => {
                   </div>
                 )}
 
+                {/* Header Logo Size */}
+                {branding.logo_url && (
+                  <div>
+                    <Label>Header Logo Size</Label>
+                    <Select
+                      value={branding.header_logo_size}
+                      onValueChange={(v) => updateField("header_logo_size", v)}
+                    >
+                      <SelectTrigger className="mt-1.5">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="small">Small (24px)</SelectItem>
+                        <SelectItem value="medium">Medium (32-40px)</SelectItem>
+                        <SelectItem value="large">Large (48px)</SelectItem>
+                        <SelectItem value="xlarge">Extra Large (64px)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 {/* Logo Preview */}
                 <div className="p-4 bg-background rounded-lg">
                   <p className="text-sm text-muted-foreground mb-2">Preview:</p>
                   <div className="flex items-center gap-3">
                     {branding.logo_url && (
-                      <img src={branding.logo_url} alt="Logo" className="h-8 w-auto" />
+                      <img src={branding.logo_url} alt="Logo" className={`w-auto ${
+                        branding.header_logo_size === "small" ? "h-6" :
+                        branding.header_logo_size === "large" ? "h-12" :
+                        branding.header_logo_size === "xlarge" ? "h-16" : "h-8"
+                      }`} />
                     )}
                     {branding.show_logo_text && (
                       <h2 className="font-display text-2xl">
