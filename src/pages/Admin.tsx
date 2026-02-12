@@ -80,7 +80,7 @@ import AdminHomepageSections from "@/components/admin/AdminHomepageSections";
 import AdminDeliveryZones from "@/components/admin/AdminDeliveryZones";
 import AdminTeamMembers from "@/components/admin/AdminTeamMembers";
 import AdminFAQs from "@/components/admin/AdminFAQs";
-import AdminFooterLinks from "@/components/admin/AdminFooterLinks";
+
 import AdminCustomers from "@/components/admin/AdminCustomers";
 import AdminAnnouncementBar from "@/components/admin/AdminAnnouncementBar";
 import AdminGoogleIntegrations from "@/components/admin/AdminGoogleIntegrations";
@@ -171,8 +171,7 @@ const menuSections = [
       { id: "theme", name: "Theme Settings", icon: Palette },
       { id: "branding", name: "Site Branding", icon: Palette },
       { id: "announcement", name: "Announcement Bar", icon: Megaphone },
-      { id: "menu-manager", name: "Mega Menu", icon: Menu },
-      { id: "footer-links", name: "Footer Links", icon: Sliders },
+      { id: "menu-manager", name: "Menu Management", icon: Menu },
     ],
   },
   {
@@ -352,7 +351,7 @@ const Admin = () => {
       case "gallery":
         return <AdminGallery />;
       case "footer-links":
-        return <AdminFooterLinks />;
+        return <AdminMenuManager />;
       case "upsells":
         return <AdminUpsellOffers />;
       case "bundles":
