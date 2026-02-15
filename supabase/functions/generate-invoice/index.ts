@@ -6,34 +6,25 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface InvoiceRequest {
-  orderId: string;
-}
-
 // Generate QR Code as SVG
 function generateQRCode(data: string, size: number = 100): string {
   const cells = 21;
   const cellSize = size / cells;
-  
   let hash = 0;
   for (let i = 0; i < data.length; i++) {
     hash = ((hash << 5) - hash) + data.charCodeAt(i);
     hash = hash & hash;
   }
-  
   let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`;
   svg += `<rect width="${size}" height="${size}" fill="white"/>`;
-  
   const drawFinder = (x: number, y: number) => {
     svg += `<rect x="${x * cellSize}" y="${y * cellSize}" width="${7 * cellSize}" height="${7 * cellSize}" fill="black"/>`;
     svg += `<rect x="${(x + 1) * cellSize}" y="${(y + 1) * cellSize}" width="${5 * cellSize}" height="${5 * cellSize}" fill="white"/>`;
     svg += `<rect x="${(x + 2) * cellSize}" y="${(y + 2) * cellSize}" width="${3 * cellSize}" height="${3 * cellSize}" fill="black"/>`;
   };
-  
   drawFinder(0, 0);
   drawFinder(cells - 7, 0);
   drawFinder(0, cells - 7);
-  
   for (let y = 0; y < cells; y++) {
     for (let x = 0; x < cells; x++) {
       if ((x < 8 && y < 8) || (x >= cells - 8 && y < 8) || (x < 8 && y >= cells - 8)) continue;
@@ -43,34 +34,47 @@ function generateQRCode(data: string, size: number = 100): string {
       }
     }
   }
-  
   svg += '</svg>';
   return svg;
 }
 
-// Generate Barcode as SVG
 function generateBarcode(data: string, width: number = 200, height: number = 50): string {
-  const pattern = data.split('').map((char, i) => {
+  const pattern = data.split('').map((char) => {
     const code = char.charCodeAt(0);
     return [(code % 3) + 1, ((code >> 2) % 2) + 1];
   }).flat();
-  
   let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`;
   svg += `<rect width="${width}" height="${height}" fill="white"/>`;
-  
   const totalUnits = pattern.reduce((a, b) => a + b, 0);
   const unitWidth = (width - 20) / totalUnits;
   let x = 10;
-  
   pattern.forEach((units, i) => {
     if (i % 2 === 0) {
       svg += `<rect x="${x}" y="5" width="${units * unitWidth}" height="${height - 10}" fill="black"/>`;
     }
     x += units * unitWidth;
   });
-  
   svg += '</svg>';
   return svg;
+}
+
+async function fetchLogoAsBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const arrayBuffer = await response.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    let binary = '';
+    for (let i = 0; i < uint8Array.length; i++) {
+      binary += String.fromCharCode(uint8Array[i]);
+    }
+    const base64 = btoa(binary);
+    const contentType = response.headers.get('content-type') || 'image/png';
+    return `data:${contentType};base64,${base64}`;
+  } catch (e) {
+    console.error("Failed to fetch logo:", e);
+    return null;
+  }
 }
 
 serve(async (req) => {
@@ -82,137 +86,91 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    
-    // Create service client for database operations
     const supabaseService = createClient(supabaseUrl, supabaseServiceKey);
-    
-    // Authentication check
+
     const authHeader = req.headers.get("Authorization") || "";
     if (!authHeader?.startsWith("Bearer ")) {
-      console.error("Missing or invalid authorization header");
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const token = authHeader.replace("Bearer ", "");
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
-
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader } } });
     const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
-
     if (claimsError || !claimsData?.claims) {
-      console.error("Auth error:", claimsError);
-      return new Response(
-        JSON.stringify({ error: "Invalid token" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Invalid token" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const userId = claimsData.claims.sub;
-    console.log(`Authenticated user: ${userId}`);
-
-    const { orderId }: InvoiceRequest = await req.json();
+    const { orderId } = await req.json();
     console.log(`Generating invoice for order: ${orderId}`);
 
     const { data: order, error: orderError } = await supabaseService
-      .from("orders")
-      .select(`
-        *,
-        address:addresses (*),
-        order_items (*)
-      `)
-      .eq("id", orderId)
-      .single();
+      .from("orders").select(`*, address:addresses (*), order_items (*)`).eq("id", orderId).single();
 
     if (orderError || !order) {
-      console.error("Order fetch error:", orderError);
-      return new Response(
-        JSON.stringify({ error: "Order not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Order not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Verify order ownership OR admin access
     const { data: isAdmin } = await supabaseService.rpc("is_admin", { check_user_id: userId });
-    
     if (order.user_id !== userId && !isAdmin) {
-      console.error("Order ownership mismatch:", { orderUserId: order.user_id, requestUserId: userId });
-      return new Response(
-        JSON.stringify({ error: "Unauthorized access to order" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Unauthorized access" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    
-    console.log(`Access verified - Admin: ${isAdmin}, Owner: ${order.user_id === userId}`);
 
-    // Get invoice settings
-    const { data: settings } = await supabaseService
-      .from("invoice_settings")
-      .select("*")
-      .limit(1)
-      .single();
+    // Fetch all settings in parallel
+    const [settingsRes, brandingRes, qrRes] = await Promise.all([
+      supabaseService.from("invoice_settings").select("*").limit(1).single(),
+      supabaseService.from("site_branding").select("logo_url, logo_text, logo_text_secondary, contact_phone, contact_address, social_facebook, social_instagram, social_whatsapp").limit(1).single(),
+      supabaseService.from("qr_discount_settings").select("*").limit(1).single(),
+    ]);
 
-    // Get site branding for logo
-    const { data: siteBranding } = await supabaseService
-      .from("site_branding")
-      .select("logo_url, business_name")
-      .limit(1)
-      .single();
+    const settings = settingsRes.data;
+    const siteBranding = brandingRes.data;
+    const qrSettings = qrRes.data;
 
-    const invoiceSettings = settings || {
-      company_name: siteBranding?.business_name || "artistiya.store",
-      company_address: "Dhaka, Bangladesh",
-      company_email: "hello@artistiya.store",
-      company_phone: "+880 1XXX-XXXXXX",
-      logo_url: siteBranding?.logo_url || null,
-      footer_note: "Thank you for your purchase!",
-      terms_and_conditions: "All items are handcrafted and may have slight variations."
+    const invoiceSettings = {
+      company_name: settings?.company_name || siteBranding?.logo_text || "artistiya.store",
+      company_address: settings?.company_address || siteBranding?.contact_address || "Dhaka, Bangladesh",
+      company_email: settings?.company_email || "hello@artistiya.store",
+      company_phone: settings?.company_phone || siteBranding?.contact_phone || "+880 1XXX-XXXXXX",
+      logo_url: settings?.logo_url || siteBranding?.logo_url || null,
+      footer_note: settings?.footer_note || "Thank you for your purchase!",
+      terms_and_conditions: settings?.terms_and_conditions || "",
     };
 
-    // Use site branding logo if invoice settings logo is not set
-    const logoUrl = invoiceSettings.logo_url || siteBranding?.logo_url || null;
-
-    // Get QR discount settings
-    const { data: qrSettings } = await supabaseService
-      .from("qr_discount_settings")
-      .select("*")
-      .limit(1)
-      .single();
+    // Fetch logo as base64 for PDF embedding
+    let logoBase64: string | null = null;
+    if (invoiceSettings.logo_url) {
+      logoBase64 = await fetchLogoAsBase64(invoiceSettings.logo_url);
+    }
 
     const qrActive = qrSettings?.is_active ?? false;
     const qrDiscount = qrSettings?.discount_value ?? 5;
     const qrType = qrSettings?.discount_type ?? 'percentage';
 
-    // Generate QR code URL for discount claim
     const baseUrl = supabaseUrl.replace('.supabase.co', '.lovable.app').replace('https://', 'https://id-preview--');
     const claimUrl = `${baseUrl}/claim-discount?orderId=${order.id}&qr=${order.qr_code_id}`;
+    const qrCodeSvg = generateQRCode(claimUrl, 130);
+    const barcodeSvg = generateBarcode(order.order_number, 200, 45);
+
+    const invoiceDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    const orderDate = new Date(order.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+
+    const subtotal = order.order_items.reduce((sum: number, item: any) => sum + (item.product_price * item.quantity), 0);
+    const discountAmount = subtotal - (order.subtotal || subtotal);
     
-    const qrCodeSvg = generateQRCode(claimUrl, 120);
-    const barcodeSvg = generateBarcode(order.order_number, 180, 40);
-
-    const invoiceDate = new Date().toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric"
-    });
-
-    const orderDate = new Date(order.created_at).toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric"
-    });
-
-    const itemsHtml = order.order_items.map((item: any) => `
-      <tr>
-        <td style="padding: 12px; border-bottom: 1px solid #e0e0e0;">${item.product_name}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #e0e0e0; text-align: center;">${item.quantity}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #e0e0e0; text-align: right;">৳${item.product_price.toLocaleString()}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #e0e0e0; text-align: right;">৳${(item.product_price * item.quantity).toLocaleString()}</td>
+    const itemsHtml = order.order_items.map((item: any, idx: number) => `
+      <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#fafaf8'};">
+        <td style="padding: 14px 16px; border-bottom: 1px solid #f0ede8; font-size: 14px; color: #2d2926;">${item.product_name}</td>
+        <td style="padding: 14px 16px; border-bottom: 1px solid #f0ede8; text-align: center; font-weight: 600; color: #2d2926;">${item.quantity}</td>
+        <td style="padding: 14px 16px; border-bottom: 1px solid #f0ede8; text-align: right; color: #5a5550;">৳${item.product_price.toLocaleString()}</td>
+        <td style="padding: 14px 16px; border-bottom: 1px solid #f0ede8; text-align: right; font-weight: 600; color: #2d2926;">৳${(item.product_price * item.quantity).toLocaleString()}</td>
       </tr>
     `).join("");
+
+    const socialLinks = [];
+    if (siteBranding?.social_facebook) socialLinks.push(`<a href="${siteBranding.social_facebook}" style="color: #b8a88a; text-decoration: none; margin: 0 8px;">Facebook</a>`);
+    if (siteBranding?.social_instagram) socialLinks.push(`<a href="${siteBranding.social_instagram}" style="color: #b8a88a; text-decoration: none; margin: 0 8px;">Instagram</a>`);
+    if (siteBranding?.social_whatsapp) socialLinks.push(`<a href="https://wa.me/${siteBranding.social_whatsapp}" style="color: #b8a88a; text-decoration: none; margin: 0 8px;">WhatsApp</a>`);
 
     const invoiceHtml = `
 <!DOCTYPE html>
@@ -223,211 +181,262 @@ serve(async (req) => {
   <style>
     @media print {
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      @page { margin: 15mm; }
     }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
       line-height: 1.6;
-      color: #333;
+      color: #2d2926;
       max-width: 800px;
       margin: 0 auto;
       padding: 40px;
+      background: #fff;
     }
+    
     .header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 40px;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #D4AF37;
+      padding-bottom: 30px;
+      margin-bottom: 30px;
+      border-bottom: 3px solid #b8a88a;
+      position: relative;
     }
-    .logo-section {
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      width: 120px;
+      height: 3px;
+      background: #2d2926;
+    }
+    
+    .logo-section { display: flex; align-items: center; gap: 16px; }
+    .logo-section img { max-height: 70px; max-width: 140px; object-fit: contain; }
+    .company-name { font-size: 26px; font-weight: 700; color: #2d2926; letter-spacing: -0.5px; }
+    .company-tagline { font-size: 11px; color: #b8a88a; letter-spacing: 3px; text-transform: uppercase; margin-top: 2px; }
+    .company-info { font-size: 12px; color: #8a8580; margin-top: 8px; line-height: 1.8; }
+    
+    .invoice-badge {
+      text-align: right;
+    }
+    .invoice-title {
+      font-size: 32px;
+      font-weight: 800;
+      color: #b8a88a;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+    }
+    .invoice-meta { margin-top: 12px; font-size: 13px; color: #5a5550; line-height: 2; }
+    .invoice-meta strong { color: #2d2926; font-weight: 600; }
+    
+    .billing-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 35px;
+    }
+    .billing-card {
+      padding: 20px;
+      border-radius: 10px;
+      border: 1px solid #f0ede8;
+      background: #fafaf8;
+    }
+    .billing-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #b8a88a;
+      font-weight: 700;
+      margin-bottom: 12px;
       display: flex;
       align-items: center;
-      gap: 15px;
+      gap: 6px;
     }
-    .logo-section img {
-      max-height: 60px;
-      max-width: 120px;
-      object-fit: contain;
-    }
-    .logo-section h1 {
-      font-size: 28px;
-      color: #D4AF37;
-      margin: 0;
-    }
-    .company-info {
-      font-size: 13px;
-      color: #666;
-      margin-top: 5px;
-    }
-    .invoice-info {
-      text-align: right;
-    }
-    .invoice-info h2 {
-      font-size: 24px;
-      color: #333;
-      margin: 0 0 10px 0;
-    }
-    .billing-section {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 40px;
-    }
-    .billing-box {
-      width: 48%;
-    }
-    .billing-box h3 {
-      color: #D4AF37;
-      font-size: 14px;
+    .billing-name { font-size: 17px; font-weight: 700; color: #2d2926; margin-bottom: 6px; }
+    .billing-detail { font-size: 13px; color: #5a5550; line-height: 1.8; }
+    
+    .status-pill {
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 10px;
+      letter-spacing: 0.5px;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 30px;
-    }
-    th {
-      background: #1a1a1a;
-      color: #D4AF37;
-      padding: 12px;
+    .status-paid { background: #e8f5e9; color: #2e7d32; }
+    .status-cod { background: #fff3e0; color: #e65100; }
+    .status-pending { background: #fff8e1; color: #f57f17; }
+    
+    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; border-radius: 10px; overflow: hidden; }
+    thead th {
+      background: linear-gradient(135deg, #2d2926 0%, #3d3935 100%);
+      color: #b8a88a;
+      padding: 14px 16px;
       text-align: left;
       font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
-    th:nth-child(2), th:nth-child(3), th:nth-child(4) {
-      text-align: right;
+    thead th:nth-child(2) { text-align: center; }
+    thead th:nth-child(3), thead th:nth-child(4) { text-align: right; }
+    
+    .totals-section {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 35px;
     }
-    th:nth-child(2) { text-align: center; }
-    .totals {
-      width: 300px;
-      margin-left: auto;
+    .totals-box {
+      width: 320px;
+      background: #fafaf8;
+      border-radius: 10px;
+      padding: 20px;
+      border: 1px solid #f0ede8;
     }
-    .totals-row {
+    .total-row {
       display: flex;
       justify-content: space-between;
       padding: 8px 0;
-      border-bottom: 1px solid #e0e0e0;
+      font-size: 14px;
+      color: #5a5550;
     }
-    .totals-row.grand-total {
-      border-bottom: none;
-      border-top: 2px solid #D4AF37;
-      padding-top: 12px;
-      font-size: 18px;
-      font-weight: bold;
-      color: #D4AF37;
+    .total-row.discount { color: #2e7d32; }
+    .total-row.grand {
+      border-top: 2px solid #b8a88a;
+      margin-top: 8px;
+      padding-top: 14px;
+      font-size: 20px;
+      font-weight: 800;
+      color: #2d2926;
     }
-    .qr-section {
+    .total-row.grand span:last-child { color: #b8a88a; }
+    
+    .qr-footer {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: 40px;
-      padding: 20px;
-      background: #f8f8f8;
-      border-radius: 8px;
+      padding: 24px;
+      background: linear-gradient(135deg, #fafaf8 0%, #f5f2ed 100%);
+      border-radius: 12px;
+      border: 1px solid #f0ede8;
+      margin-bottom: 25px;
+      gap: 20px;
     }
-    .qr-code {
+    .qr-block { text-align: center; }
+    .qr-block p { font-size: 11px; color: #8a8580; margin-top: 6px; }
+    .barcode-block { text-align: center; }
+    .barcode-block p { font-size: 12px; font-family: 'Courier New', monospace; color: #5a5550; letter-spacing: 2px; margin-top: 4px; }
+    
+    .discount-promo-card {
+      background: linear-gradient(135deg, #2d2926 0%, #3d3935 100%);
+      color: #fff;
+      padding: 18px 24px;
+      border-radius: 12px;
       text-align: center;
+      min-width: 160px;
     }
-    .qr-code p {
+    .discount-promo-card .gift-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #b8a88a; margin-bottom: 6px; }
+    .discount-promo-card .gift-value { font-size: 28px; font-weight: 800; color: #b8a88a; }
+    .discount-promo-card .gift-note { font-size: 10px; color: #aaa; margin-top: 4px; }
+    
+    .terms-box {
+      background: #fafaf8;
+      border: 1px solid #f0ede8;
+      border-radius: 10px;
+      padding: 18px;
       font-size: 12px;
-      color: #666;
-      margin-top: 8px;
+      color: #8a8580;
+      margin-bottom: 25px;
+      line-height: 1.8;
     }
-    .barcode {
-      text-align: center;
-    }
-    .barcode p {
-      font-size: 12px;
-      font-family: monospace;
-      margin-top: 4px;
-    }
-    .discount-promo {
-      background: linear-gradient(135deg, #D4AF37 0%, #F5D77A 100%);
-      color: #1a1a1a;
-      padding: 15px 20px;
-      border-radius: 8px;
-      text-align: center;
-      max-width: 200px;
-    }
-    .discount-promo h4 {
-      margin: 0 0 5px 0;
-      font-size: 14px;
-    }
-    .discount-promo .value {
-      font-size: 24px;
-      font-weight: bold;
-    }
-    .discount-promo p {
-      font-size: 11px;
-      margin: 5px 0 0 0;
-    }
+    .terms-box strong { color: #5a5550; }
+    
     .footer {
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 1px solid #e0e0e0;
-      font-size: 12px;
-      color: #666;
+      text-align: center;
+      padding-top: 25px;
+      border-top: 1px solid #f0ede8;
     }
-    .terms {
-      background: #f8f8f8;
-      padding: 15px;
-      border-radius: 8px;
-      margin-top: 20px;
+    .footer .thank-you {
+      font-size: 16px;
+      color: #b8a88a;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .footer .auto-gen {
+      font-size: 11px;
+      color: #aaa;
+      margin-top: 6px;
+    }
+    .footer .social-links {
+      margin-top: 12px;
       font-size: 12px;
     }
   </style>
 </head>
 <body>
+  <!-- Header with Logo -->
   <div class="header">
     <div class="logo-section">
-      ${logoUrl ? `<img src="${logoUrl}" alt="Logo" />` : ''}
+      ${logoBase64 ? `<img src="${logoBase64}" alt="Logo" />` : ''}
       <div>
-        <h1>${invoiceSettings.company_name}</h1>
+        <div class="company-name">${invoiceSettings.company_name}</div>
+        <div class="company-tagline">Handcrafted with love</div>
         <div class="company-info">
           ${invoiceSettings.company_address}<br>
-          ${invoiceSettings.company_email}<br>
-          ${invoiceSettings.company_phone}
+          ${invoiceSettings.company_email} &bull; ${invoiceSettings.company_phone}
         </div>
       </div>
     </div>
-    <div class="invoice-info">
-      <h2>INVOICE</h2>
-      <p><strong>Invoice #:</strong> INV-${order.order_number}</p>
-      <p><strong>Order #:</strong> ${order.order_number}</p>
-      <p><strong>Date:</strong> ${invoiceDate}</p>
-      <p><strong>Order Date:</strong> ${orderDate}</p>
+    <div class="invoice-badge">
+      <div class="invoice-title">Invoice</div>
+      <div class="invoice-meta">
+        <strong>Invoice #:</strong> INV-${order.order_number}<br>
+        <strong>Order #:</strong> ${order.order_number}<br>
+        <strong>Invoice Date:</strong> ${invoiceDate}<br>
+        <strong>Order Date:</strong> ${orderDate}
+      </div>
     </div>
   </div>
 
-  <div class="billing-section">
-    <div class="billing-box">
-      <h3>Bill To</h3>
-      <p>
-        <strong>${order.address?.full_name || 'Customer'}</strong><br>
+  <!-- Billing Grid -->
+  <div class="billing-grid">
+    <div class="billing-card">
+      <div class="billing-label">📍 Bill To</div>
+      <div class="billing-name">${order.address?.full_name || 'Customer'}</div>
+      <div class="billing-detail">
         ${order.address?.address_line || ''}<br>
         ${order.address?.thana || ''}, ${order.address?.district || ''}<br>
         ${order.address?.division || ''}<br>
-        Phone: ${order.address?.phone || 'N/A'}
-      </p>
+        📞 ${order.address?.phone || 'N/A'}
+      </div>
     </div>
-    <div class="billing-box">
-      <h3>Payment Info</h3>
-      <p>
-        <strong>Method:</strong> ${order.payment_method.toUpperCase()}<br>
-        <strong>Status:</strong> ${order.status?.toUpperCase() || 'PENDING'}<br>
-        ${order.payment_transaction_id ? `<strong>Transaction ID:</strong> ${order.payment_transaction_id}` : ''}
-      </p>
+    <div class="billing-card">
+      <div class="billing-label">💳 Payment Details</div>
+      <div style="margin-bottom: 10px;">
+        ${order.payment_method === 'cod' 
+          ? '<span class="status-pill status-cod">Cash on Delivery</span>'
+          : '<span class="status-pill status-paid">✓ Paid</span>'}
+      </div>
+      <div class="billing-detail">
+        <strong>Method:</strong> ${order.payment_method?.toUpperCase()}<br>
+        <strong>Order Status:</strong> ${order.status?.toUpperCase() || 'PENDING'}<br>
+        ${order.payment_transaction_id ? `<strong>TXN ID:</strong> ${order.payment_transaction_id}` : ''}
+      </div>
     </div>
   </div>
 
+  <!-- Items Table -->
   <table>
     <thead>
       <tr>
         <th>Item Description</th>
-        <th style="text-align: center;">Qty</th>
-        <th style="text-align: right;">Unit Price</th>
-        <th style="text-align: right;">Amount</th>
+        <th>Qty</th>
+        <th>Unit Price</th>
+        <th>Amount</th>
       </tr>
     </thead>
     <tbody>
@@ -435,66 +444,68 @@ serve(async (req) => {
     </tbody>
   </table>
 
-  <div class="totals">
-    <div class="totals-row">
-      <span>Subtotal:</span>
-      <span>৳${order.subtotal.toLocaleString()}</span>
-    </div>
-    <div class="totals-row">
-      <span>Shipping:</span>
-      <span>৳${order.shipping_cost.toLocaleString()}</span>
-    </div>
-    <div class="totals-row grand-total">
-      <span>Total:</span>
-      <span>৳${order.total.toLocaleString()}</span>
+  <!-- Totals -->
+  <div class="totals-section">
+    <div class="totals-box">
+      <div class="total-row">
+        <span>Subtotal (${order.order_items.length} items)</span>
+        <span>৳${subtotal.toLocaleString()}</span>
+      </div>
+      ${discountAmount > 0 ? `
+      <div class="total-row discount">
+        <span>Discount</span>
+        <span>-৳${discountAmount.toLocaleString()}</span>
+      </div>` : ''}
+      <div class="total-row">
+        <span>Shipping</span>
+        <span>৳${order.shipping_cost?.toLocaleString() || '0'}</span>
+      </div>
+      <div class="total-row grand">
+        <span>Total</span>
+        <span>৳${order.total.toLocaleString()}</span>
+      </div>
     </div>
   </div>
 
-  <div class="qr-section">
-    <div class="qr-code">
+  <!-- QR & Barcode Footer -->
+  <div class="qr-footer">
+    <div class="qr-block">
       ${qrCodeSvg}
       <p>Scan for authenticity</p>
     </div>
     
     ${qrActive ? `
-    <div class="discount-promo">
-      <h4>🎁 Scan & Get</h4>
-      <div class="value">${qrType === 'percentage' ? qrDiscount + '%' : '৳' + qrDiscount}</div>
-      <p>OFF your next order!</p>
-    </div>
-    ` : ''}
+    <div class="discount-promo-card">
+      <div class="gift-label">🎁 Next Order</div>
+      <div class="gift-value">${qrType === 'percentage' ? qrDiscount + '%' : '৳' + qrDiscount}</div>
+      <div class="gift-note">Scan QR to claim discount</div>
+    </div>` : ''}
     
-    <div class="barcode">
+    <div class="barcode-block">
       ${barcodeSvg}
       <p>${order.order_number}</p>
     </div>
   </div>
 
   ${invoiceSettings.terms_and_conditions ? `
-  <div class="terms">
+  <div class="terms-box">
     <strong>Terms & Conditions:</strong><br>
     ${invoiceSettings.terms_and_conditions}
-  </div>
-  ` : ''}
+  </div>` : ''}
 
+  <!-- Footer -->
   <div class="footer">
-    <p style="text-align: center; font-size: 14px; color: #D4AF37;">
-      ${invoiceSettings.footer_note}
-    </p>
-    <p style="text-align: center;">
-      This is a computer-generated invoice. No signature required.
-    </p>
+    <div class="thank-you">${invoiceSettings.footer_note}</div>
+    ${socialLinks.length > 0 ? `<div class="social-links">${socialLinks.join(' &bull; ')}</div>` : ''}
+    <div class="auto-gen">This is a computer-generated invoice. No signature required.</div>
   </div>
 </body>
-</html>
-    `;
+</html>`;
 
-    console.log("Invoice HTML generated successfully with QR code and logo");
+    console.log("Invoice generated with embedded logo and modern design");
 
     return new Response(JSON.stringify({ 
-      success: true, 
-      html: invoiceHtml,
-      order_number: order.order_number 
+      success: true, html: invoiceHtml, order_number: order.order_number 
     }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -503,10 +514,7 @@ serve(async (req) => {
     console.error("Error generating invoice:", error);
     return new Response(
       JSON.stringify({ error: "Failed to generate invoice" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
