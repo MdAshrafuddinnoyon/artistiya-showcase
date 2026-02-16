@@ -17,3 +17,15 @@ verify_jwt = false
 
 [functions.encrypt-credentials]
 verify_jwt = false
+
+[functions.sslcommerz-payment]
+verify_jwt = false
+
+[functions.aamarpay-payment]
+verify_jwt = false
+
+[functions.surjopay-payment]
+verify_jwt = false
+
+[functions.delivery-api]
+verify_jwt = false

@@ -45,15 +45,17 @@ interface PaymentProvider {
 }
 
 const providerTypes = [
-  { value: "cod", label: "Cash on Delivery", logo: "💵", requiresApi: false, supportsModes: false },
-  { value: "bkash", label: "bKash", logo: "🔴", requiresApi: true, supportsModes: true },
-  { value: "nagad", label: "Nagad", logo: "🟠", requiresApi: true, supportsModes: true },
-  { value: "rocket", label: "Rocket", logo: "🟣", requiresApi: true, supportsModes: true },
-  { value: "upay", label: "Upay", logo: "🔵", requiresApi: true, supportsModes: true },
-  { value: "sslcommerz", label: "SSLCommerz", logo: "🔒", requiresApi: true, supportsModes: false },
-  { value: "stripe", label: "Stripe", logo: "💳", requiresApi: true, supportsModes: false },
-  { value: "paypal", label: "PayPal", logo: "🅿️", requiresApi: true, supportsModes: false },
-  { value: "bank_transfer", label: "Bank Transfer", logo: "🏦", requiresApi: false, supportsModes: false },
+  { value: "cod", label: "Cash on Delivery", logo: "💵", requiresApi: false, supportsModes: false, sandboxInfo: "" },
+  { value: "bkash", label: "bKash", logo: "🔴", requiresApi: true, supportsModes: true, sandboxInfo: "" },
+  { value: "nagad", label: "Nagad", logo: "🟠", requiresApi: true, supportsModes: true, sandboxInfo: "" },
+  { value: "rocket", label: "Rocket", logo: "🟣", requiresApi: true, supportsModes: true, sandboxInfo: "" },
+  { value: "upay", label: "Upay", logo: "🔵", requiresApi: true, supportsModes: true, sandboxInfo: "" },
+  { value: "sslcommerz", label: "SSLCommerz", logo: "🔒", requiresApi: true, supportsModes: false, sandboxInfo: "Sandbox: developer.sslcommerz.com/registration — Test Card: 4111 1111 1111 1111" },
+  { value: "aamarpay", label: "AamarPay", logo: "💰", requiresApi: true, supportsModes: false, sandboxInfo: "Sandbox Store ID: aamarpaytest, Signature Key: dbb74894e82415a2f7ff0ec3a97e4183" },
+  { value: "surjopay", label: "SurjoPay", logo: "☀️", requiresApi: true, supportsModes: false, sandboxInfo: "Sandbox Username: sp_sandbox, Password: pyaborern" },
+  { value: "stripe", label: "Stripe", logo: "💳", requiresApi: true, supportsModes: false, sandboxInfo: "" },
+  { value: "paypal", label: "PayPal", logo: "🅿️", requiresApi: true, supportsModes: false, sandboxInfo: "" },
+  { value: "bank_transfer", label: "Bank Transfer", logo: "🏦", requiresApi: false, supportsModes: false, sandboxInfo: "" },
 ];
 
 const AdminPaymentProviders = () => {
@@ -601,36 +603,107 @@ const AdminPaymentProviders = () => {
                       </>
                     )}
 
+                    {/* SSLCommerz fields */}
+                    {formData.provider_type === "sslcommerz" && (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Store ID</Label>
+                            <Input value={formData.store_id}
+                              onChange={(e) => setFormData({ ...formData, store_id: e.target.value })}
+                              placeholder={formData.is_sandbox ? "testbox" : "your_store_id"} />
+                          </div>
+                          <div>
+                            <Label>Store Password</Label>
+                            <Input type="password" value={formData.store_password}
+                              onChange={(e) => setFormData({ ...formData, store_password: e.target.value })}
+                              placeholder={formData.is_sandbox ? "qwerty" : "your_store_password"} />
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Sandbox: <a href="https://developer.sslcommerz.com/registration/" target="_blank" rel="noopener" className="text-gold hover:underline">developer.sslcommerz.com</a> — Test Card: 4111 1111 1111 1111
+                        </p>
+                      </>
+                    )}
+
+                    {/* AamarPay fields */}
+                    {formData.provider_type === "aamarpay" && (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Store ID</Label>
+                            <Input value={formData.store_id}
+                              onChange={(e) => setFormData({ ...formData, store_id: e.target.value })}
+                              placeholder={formData.is_sandbox ? "aamarpaytest" : "your_store_id"} />
+                          </div>
+                          <div>
+                            <Label>Signature Key</Label>
+                            <Input type="password" value={formData.store_password}
+                              onChange={(e) => setFormData({ ...formData, store_password: e.target.value })}
+                              placeholder={formData.is_sandbox ? "dbb74894e82415a2f7ff0ec3a97e4183" : "your_signature_key"} />
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Sandbox: Store ID = <code className="bg-muted px-1 rounded">aamarpaytest</code> — Only bKash available in sandbox
+                        </p>
+                      </>
+                    )}
+
+                    {/* SurjoPay fields */}
+                    {formData.provider_type === "surjopay" && (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Username</Label>
+                            <Input value={formData.store_id}
+                              onChange={(e) => setFormData({ ...formData, store_id: e.target.value })}
+                              placeholder={formData.is_sandbox ? "sp_sandbox" : "your_username"} />
+                          </div>
+                          <div>
+                            <Label>Password</Label>
+                            <Input type="password" value={formData.store_password}
+                              onChange={(e) => setFormData({ ...formData, store_password: e.target.value })}
+                              placeholder={formData.is_sandbox ? "pyaborern" : "your_password"} />
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Sandbox: Username = <code className="bg-muted px-1 rounded">sp_sandbox</code>, Password = <code className="bg-muted px-1 rounded">pyaborern</code>
+                        </p>
+                      </>
+                    )}
+
                     {/* Generic API fields for other providers */}
-                    {!["bkash", "nagad"].includes(formData.provider_type) && (
+                    {!["bkash", "nagad", "sslcommerz", "aamarpay", "surjopay"].includes(formData.provider_type) && (
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label>Store ID / API Key</Label>
-                          <Input
-                            value={formData.store_id}
+                          <Input value={formData.store_id}
                             onChange={(e) => setFormData({ ...formData, store_id: e.target.value })}
-                            placeholder="Enter store ID or API key"
-                          />
+                            placeholder="Enter store ID or API key" />
                         </div>
                         <div>
                           <Label>Store Password / Secret Key</Label>
-                          <Input
-                            type="password"
-                            value={formData.store_password}
+                          <Input type="password" value={formData.store_password}
                             onChange={(e) => setFormData({ ...formData, store_password: e.target.value })}
-                            placeholder="Enter store password or secret"
-                          />
+                            placeholder="Enter store password or secret" />
                         </div>
                       </div>
                     )}
 
-                    <div className="flex items-center gap-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                    <div className="flex items-center gap-2 p-3 bg-accent/50 border border-accent rounded-lg">
                       <Switch
                         checked={formData.is_sandbox}
                         onCheckedChange={(checked) => setFormData({ ...formData, is_sandbox: checked })}
                       />
-                      <Label className="text-yellow-600">Sandbox / Test Mode</Label>
+                      <Label className="text-foreground font-medium">
+                        {formData.is_sandbox ? "🧪 Sandbox / Test Mode" : "🔴 Live / Production Mode"}
+                      </Label>
                     </div>
+                    {formData.is_sandbox && (
+                      <p className="text-xs text-muted-foreground bg-muted p-2 rounded">
+                        ⚠️ Sandbox মোডে টেস্ট ট্রানজেকশন হবে। লাইভ করতে সঠিক credentials দিয়ে Sandbox বন্ধ করুন।
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               )}
