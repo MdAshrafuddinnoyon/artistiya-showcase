@@ -430,7 +430,7 @@ const AdminPromoCodes = () => {
         </Card>
         <Card>
           <CardContent className="pt-4 pb-4">
-            <div className="text-2xl font-bold text-green-600">{activeCodes}</div>
+            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{activeCodes}</div>
             <div className="text-xs text-muted-foreground">Active</div>
           </CardContent>
         </Card>
@@ -529,7 +529,7 @@ const AdminPromoCodes = () => {
                       )}
                       {!code.is_active && <Badge variant="secondary">Inactive</Badge>}
                       {isExpired(code.expires_at) && <Badge variant="destructive">Expired</Badge>}
-                      {isNotStarted(code.starts_at) && <Badge variant="outline" className="text-blue-600 border-blue-300">Scheduled</Badge>}
+                      {isNotStarted(code.starts_at) && <Badge variant="outline" className="text-primary border-primary/30">Scheduled</Badge>}
                     </div>
                     
                     {code.description && (
