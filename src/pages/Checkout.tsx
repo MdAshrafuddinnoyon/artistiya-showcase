@@ -204,10 +204,17 @@ const Checkout = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
+    // Client-side validation
     if (!formData.fullName || !formData.phone || !selectedDivision || 
         !selectedDistrict || !selectedThana || !formData.addressLine) {
       toast.error(t("checkout.fillAll"));
+      return;
+    }
+
+    // Phone validation
+    const cleanPhone = formData.phone.replace(/[\s-]/g, "");
+    if (!/^01[3-9]\d{8}$/.test(cleanPhone)) {
+      toast.error(language === "bn" ? "সঠিক ফোন নম্বর দিন" : "Please enter a valid phone number");
       return;
     }
 
@@ -226,120 +233,74 @@ const Checkout = () => {
     setLoading(true);
 
     try {
-      // For guest checkout, we'll create order without user_id
-      const userId = user?.id || null;
-
-      // Create address
-      // For logged-in users, use their ID; for guests, use a constant guest placeholder
-      const guestPlaceholder = "00000000-0000-0000-0000-000000000001";
-      const addressData = {
-        user_id: userId || guestPlaceholder,
-        full_name: formData.fullName,
-        phone: formData.phone,
-        division: selectedDivision,
-        district: selectedDistrict,
-        thana: selectedThana,
-        address_line: formData.addressLine,
-        is_default: !!userId,
+      // Build secure order payload - prices are verified server-side
+      const orderPayload = {
+        items: items.map(item => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+        })),
+        address: {
+          full_name: formData.fullName,
+          phone: cleanPhone,
+          email: formData.email || null,
+          division: selectedDivision,
+          district: selectedDistrict,
+          thana: selectedThana,
+          address_line: formData.addressLine,
+        },
+        payment_method: formData.paymentMethod,
+        transaction_id: formData.transactionId || null,
+        promo_code: appliedPromo?.code || null,
+        notes: [formData.notes, formData.paymentNote ? `Payment Note: ${formData.paymentNote}` : null].filter(Boolean).join(" | ") || null,
+        shipping_method: "delivery",
       };
 
-      const { data: address, error: addressError } = await supabase
-        .from("addresses")
-        .insert(addressData)
-        .select()
-        .single();
+      const { data, error } = await supabase.functions.invoke("create-order", {
+        body: orderPayload,
+      });
 
-      if (addressError) throw addressError;
+      if (error) throw error;
 
-      // Generate order number
-      const orderNum = `ART-${Date.now()}`;
+      if (!data?.success) {
+        toast.error(data?.error || "Failed to place order");
+        setLoading(false);
+        return;
+      }
 
-      // Build notes combining user notes, guest email, and payment note
-      const orderNotes = [
-        formData.notes,
-        !userId && formData.email ? `Guest Email: ${formData.email}` : null,
-        formData.paymentNote ? `Payment Note: ${formData.paymentNote}` : null,
-      ].filter(Boolean).join(" | ") || null;
-
-      // Create order
-      const { data: orderData, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          user_id: userId,
-          address_id: address.id,
-          payment_method: formData.paymentMethod,
-          payment_transaction_id: formData.transactionId || null,
-          subtotal,
-          shipping_cost: shippingCost,
-          total,
-          is_preorder: hasPreorderItems,
-          notes: orderNotes,
-          order_number: orderNum,
-        } as any)
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      // Create order items
-      const orderItems = items.map(item => ({
-        order_id: orderData.id,
-        product_id: item.product_id,
-        product_name: item.product.name,
-        product_price: item.product.price,
-        quantity: item.quantity,
-        is_preorder: item.product.stock_quantity === 0 && item.product.is_preorderable,
-      }));
-
-      const { error: itemsError } = await supabase
-        .from("order_items")
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
-
-      // Handle automated payment
-      const isAutomatedPayment = 
-        (formData.paymentMethod === "bkash" && bkashAvailable && paymentMode === "auto") ||
-        (formData.paymentMethod === "nagad" && nagadAvailable && paymentMode === "auto");
-
+      // Handle automated payment redirect
       if (isAutomatedPayment) {
-        // Initiate automated payment
         if (formData.paymentMethod === "bkash") {
-          const result = await initiateBkashPayment(total, orderData.id);
+          const result = await initiateBkashPayment(data.total, data.order_id);
           if (result.success && result.bkashURL) {
-            // Redirect to bKash payment page
             redirectToPayment(result.bkashURL);
             return;
           } else {
             toast.error(result.error || "Failed to initiate bKash payment");
-            // Fall back to manual payment
             setPaymentMode("manual");
             return;
           }
         } else if (formData.paymentMethod === "nagad") {
-          const result = await initiateNagadPayment(total, orderData.id);
+          const result = await initiateNagadPayment(data.total, data.order_id);
           if (result.success && result.callBackUrl) {
-            // Redirect to Nagad payment page
             redirectToPayment(result.callBackUrl);
             return;
           } else {
             toast.error(result.error || "Failed to initiate Nagad payment");
-            // Fall back to manual payment
             setPaymentMode("manual");
             return;
           }
         }
       }
 
-      // Clear cart for COD or manual payment
+      // Clear local cart
       await clearCart();
 
       // Redirect to success page
-      navigate(`/order-success?orderId=${orderData.id}`);
+      navigate(`/order-success?orderId=${data.order_id}`);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Checkout error:", error);
-      toast.error(t("checkout.error"));
+      toast.error(error?.message || t("checkout.error"));
     } finally {
       setLoading(false);
     }

@@ -29,3 +29,9 @@ verify_jwt = false
 
 [functions.delivery-api]
 verify_jwt = false
+
+[functions.create-order]
+verify_jwt = false
+
+[functions.fetch-google-reviews]
+verify_jwt = false
