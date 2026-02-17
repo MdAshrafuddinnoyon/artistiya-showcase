@@ -95,6 +95,13 @@ const MobileCheckout = () => {
       return;
     }
 
+    // Phone validation
+    const cleanPhone = formData.phone.replace(/[\s-]/g, "");
+    if (!/^01[3-9]\d{8}$/.test(cleanPhone)) {
+      toast.error(language === "bn" ? "সঠিক ফোন নম্বর দিন" : "Please enter a valid phone number");
+      return;
+    }
+
     if (shippingMethod === "delivery" && (!selectedDivision || !selectedDistrict || !selectedThana || !formData.addressLine)) {
       toast.error("Please fill in your delivery address");
       return;
@@ -103,83 +110,49 @@ const MobileCheckout = () => {
     setLoading(true);
 
     try {
-      const userId = user?.id || null;
-      const guestPlaceholder = "00000000-0000-0000-0000-000000000001";
-
-      // Create address
-      const addressData = {
-        user_id: userId || guestPlaceholder,
-        full_name: formData.fullName,
-        phone: formData.phone,
-        division: selectedDivision || "N/A",
-        district: selectedDistrict || "N/A",
-        thana: selectedThana || "N/A",
-        address_line: shippingMethod === "pickup" ? "Store Pickup" : formData.addressLine,
-        is_default: !!userId,
+      // Build secure order payload - prices verified server-side
+      const orderPayload = {
+        items: items.map(item => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+        })),
+        address: {
+          full_name: formData.fullName,
+          phone: cleanPhone,
+          email: formData.email || null,
+          division: selectedDivision || "N/A",
+          district: selectedDistrict || "N/A",
+          thana: selectedThana || "N/A",
+          address_line: shippingMethod === "pickup" ? "Store Pickup" : formData.addressLine,
+        },
+        payment_method: formData.paymentMethod,
+        transaction_id: formData.transactionId || null,
+        promo_code: null,
+        notes: [formData.paymentNote ? `Payment Note: ${formData.paymentNote}` : null].filter(Boolean).join(" | ") || null,
+        shipping_method: shippingMethod,
       };
 
-      const { data: address, error: addressError } = await supabase
-        .from("addresses")
-        .insert(addressData)
-        .select()
-        .single();
+      const { data, error } = await supabase.functions.invoke("create-order", {
+        body: orderPayload,
+      });
 
-      if (addressError) throw addressError;
+      if (error) throw error;
 
-      // Generate order number
-      const orderNum = `ART-${Date.now()}`;
+      if (!data?.success) {
+        toast.error(data?.error || "Failed to place order");
+        setLoading(false);
+        return;
+      }
 
-      // Build notes
-      const orderNotes = [
-        formData.email ? `Guest Email: ${formData.email}` : null,
-        formData.transactionId ? `Txn ID: ${formData.transactionId}` : null,
-        formData.paymentNote ? `Payment Note: ${formData.paymentNote}` : null,
-      ].filter(Boolean).join(" | ") || null;
-
-      // Create order
-      const { data: orderData, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          user_id: userId,
-          address_id: address.id,
-          payment_method: formData.paymentMethod,
-          payment_transaction_id: formData.transactionId || null,
-          subtotal,
-          shipping_cost: shippingMethod === "delivery" ? shippingCost : 0,
-          total,
-          notes: orderNotes,
-          order_number: orderNum,
-        } as any)
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      // Create order items
-      const orderItems = items.map(item => ({
-        order_id: orderData.id,
-        product_id: item.product_id,
-        product_name: item.product.name,
-        product_price: item.product.price,
-        quantity: item.quantity,
-        is_preorder: item.product.stock_quantity === 0 && item.product.is_preorderable,
-      }));
-
-      const { error: itemsError } = await supabase
-        .from("order_items")
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
-
-      // Clear cart
+      // Clear local cart
       await clearCart();
 
       // Navigate to success
-      navigate(`/order-success?orderId=${orderData.id}`);
+      navigate(`/order-success?orderId=${data.order_id}`);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Checkout error:", error);
-      toast.error("Failed to place order. Please try again.");
+      toast.error(error?.message || "Failed to place order. Please try again.");
     } finally {
       setLoading(false);
     }
