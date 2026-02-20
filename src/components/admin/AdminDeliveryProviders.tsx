@@ -38,10 +38,9 @@ const providerTypes = [
   { value: "pathao", label: "Pathao Courier", logo: "🚚", fields: ["client_id", "client_secret", "username", "password"], sandboxInfo: "Sandbox: hermes-api.pathao.com — Get credentials from Pathao Merchant Dashboard > Developers API" },
   { value: "redx", label: "RedX", logo: "🔴", fields: ["access_token"], sandboxInfo: "Sandbox: sandbox.redx.com.bd — Contact RedX for sandbox access token" },
   { value: "paperfly", label: "Paperfly", logo: "✈️", fields: ["username", "password", "merchant_name", "pickup_address", "pickup_phone"], sandboxInfo: "API Key: Paperfly_~La?Rj73FcLm — Get merchant credentials from Paperfly WINGS" },
-  { value: "steadfast", label: "Steadfast Courier", logo: "📦", fields: ["api_key", "secret_key"], sandboxInfo: "Get API credentials from Steadfast Merchant Panel" },
-  { value: "ecourier", label: "eCourier", logo: "📬", fields: ["api_key", "api_secret", "user_id"], sandboxInfo: "Get credentials from eCourier merchant panel" },
-  { value: "dhl", label: "DHL Express", logo: "🌍", fields: ["api_key"], sandboxInfo: "" },
-  { value: "fedex", label: "FedEx", logo: "📮", fields: ["api_key"], sandboxInfo: "" },
+  { value: "steadfast", label: "Steadfast Courier", logo: "📦", fields: ["api_key", "secret_key"], sandboxInfo: "Sandbox: portal.packzy.com — Get API Key & Secret from Steadfast Merchant Panel > API Settings" },
+  { value: "ecourier", label: "eCourier", logo: "📬", fields: ["api_key", "api_secret", "user_id"], sandboxInfo: "Staging: staging.ecourier.com.bd — Get credentials from eCourier merchant panel" },
+  { value: "deliverytiger", label: "Delivery Tiger", logo: "🐯", fields: ["api_key"], sandboxInfo: "Multi-courier aggregator — Get API token from Delivery Tiger merchant dashboard" },
   { value: "manual", label: "Manual Delivery", logo: "🏍️", fields: [], sandboxInfo: "" },
 ];
 
@@ -134,6 +133,8 @@ const AdminDeliveryProviders = () => {
         config.pickup_phone = formData.pickup_phone;
         config.pickup_thana = formData.pickup_thana;
         config.pickup_district = formData.pickup_district;
+      } else if (formData.provider_type === "ecourier") {
+        config.user_id = formData.username;
       }
 
       const providerData = {
@@ -214,6 +215,9 @@ const AdminDeliveryProviders = () => {
       let action = "";
       if (provider.provider_type === "pathao") action = "cities";
       else if (provider.provider_type === "redx") action = "areas";
+      else if (provider.provider_type === "steadfast") action = "balance";
+      else if (provider.provider_type === "ecourier") action = "city_list";
+      else if (provider.provider_type === "deliverytiger") action = "districts";
       else {
         toast.info("Connection test not available for this provider yet");
         setTestingProvider(null);
@@ -229,6 +233,7 @@ const AdminDeliveryProviders = () => {
       });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       toast.success(`✅ ${provider.name} connection successful!`);
     } catch (error: any) {
       toast.error(`❌ Connection failed: ${error.message}`);
@@ -415,8 +420,82 @@ const AdminDeliveryProviders = () => {
                 </Card>
               )}
 
+              {/* Steadfast fields */}
+              {formData.provider_type === "steadfast" && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Steadfast API Credentials</CardTitle>
+                    <CardDescription>Get from Steadfast Merchant Panel → API Settings</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label>API Key</Label>
+                      <Input value={formData.api_key}
+                        onChange={(e) => setFormData({ ...formData, api_key: e.target.value })}
+                        placeholder="Steadfast API Key" />
+                    </div>
+                    <div>
+                      <Label>Secret Key</Label>
+                      <Input type="password" value={formData.api_secret}
+                        onChange={(e) => setFormData({ ...formData, api_secret: e.target.value })}
+                        placeholder="Steadfast Secret Key" />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* eCourier fields */}
+              {formData.provider_type === "ecourier" && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">eCourier API Credentials</CardTitle>
+                    <CardDescription>Get from eCourier Merchant Panel</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>API Key</Label>
+                        <Input value={formData.api_key}
+                          onChange={(e) => setFormData({ ...formData, api_key: e.target.value })}
+                          placeholder="eCourier API Key" />
+                      </div>
+                      <div>
+                        <Label>API Secret</Label>
+                        <Input type="password" value={formData.api_secret}
+                          onChange={(e) => setFormData({ ...formData, api_secret: e.target.value })}
+                          placeholder="eCourier API Secret" />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>User ID</Label>
+                      <Input value={formData.username}
+                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                        placeholder="eCourier User ID" />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Delivery Tiger fields */}
+              {formData.provider_type === "deliverytiger" && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Delivery Tiger API</CardTitle>
+                    <CardDescription>Multi-courier aggregator — Get token from merchant dashboard</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label>API Token</Label>
+                      <Input value={formData.api_key}
+                        onChange={(e) => setFormData({ ...formData, api_key: e.target.value })}
+                        placeholder="Bearer Token" />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Generic fields for other providers */}
-              {formData.provider_type && !["pathao", "redx", "paperfly", "manual"].includes(formData.provider_type) && (
+              {formData.provider_type && !["pathao", "redx", "paperfly", "steadfast", "ecourier", "deliverytiger", "manual"].includes(formData.provider_type) && (
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">API Credentials</CardTitle>
