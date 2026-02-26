@@ -1251,6 +1251,646 @@ try {
 
 ---
 
+## Delivery API (Bangladesh Courier Partners)
+
+### `src/DeliveryService.php` — Multi-Courier Integration
+
+```php
+<?php
+declare(strict_types=1);
+
+/**
+ * Unified Delivery Service for Bangladesh Courier Partners
+ * Supports: Pathao, Steadfast, RedX, eCourier, Paperfly, Delivery Tiger
+ * All API keys are stored encrypted in delivery_providers table
+ */
+class DeliveryService
+{
+    private string $provider;
+    private array $config;
+    private string $apiKey;
+    private string $apiSecret;
+    private string $baseUrl;
+
+    public function __construct(string $providerType)
+    {
+        $this->provider = $providerType;
+        $providerData = Database::fetchOne(
+            "SELECT * FROM delivery_providers WHERE provider_type = ? AND is_active = 1", [$providerType]
+        );
+        if (!$providerData) throw new \RuntimeException("Delivery provider '$providerType' not found or inactive");
+
+        $this->apiKey    = Encryption::decrypt($providerData['api_key'] ?? '');
+        $this->apiSecret = Encryption::decrypt($providerData['api_secret'] ?? '');
+        $this->config    = json_decode($providerData['config'] ?? '{}', true);
+    }
+
+    /**
+     * Create a parcel/consignment with the delivery provider
+     * @param array $order Order data from database
+     * @param array $address Delivery address
+     * @return array ['consignment_id', 'tracking_code', 'status']
+     */
+    public function createParcel(array $order, array $address): array
+    {
+        return match ($this->provider) {
+            'pathao'         => $this->createPathaoParcel($order, $address),
+            'steadfast'      => $this->createSteadfastParcel($order, $address),
+            'redx'           => $this->createRedXParcel($order, $address),
+            'ecourier'       => $this->createECourierParcel($order, $address),
+            'paperfly'       => $this->createPaperflyParcel($order, $address),
+            'delivery_tiger' => $this->createDeliveryTigerParcel($order, $address),
+            default          => throw new \RuntimeException("Unsupported provider: {$this->provider}"),
+        };
+    }
+
+    /**
+     * Track a parcel by consignment/tracking ID
+     */
+    public function trackParcel(string $trackingId): array
+    {
+        return match ($this->provider) {
+            'pathao'         => $this->trackPathao($trackingId),
+            'steadfast'      => $this->trackSteadfast($trackingId),
+            'redx'           => $this->trackRedX($trackingId),
+            'ecourier'       => $this->trackECourier($trackingId),
+            'paperfly'       => $this->trackPaperfly($trackingId),
+            'delivery_tiger' => $this->trackDeliveryTiger($trackingId),
+            default          => throw new \RuntimeException("Unsupported provider: {$this->provider}"),
+        };
+    }
+
+    /**
+     * Get area/zone list for pricing calculation
+     */
+    public function getAreas(string $city = ''): array
+    {
+        return match ($this->provider) {
+            'pathao'    => $this->getPathaoAreas($city),
+            'steadfast' => $this->getSteadfastAreas(),
+            'redx'      => $this->getRedXAreas(),
+            'ecourier'  => $this->getECourierAreas($city),
+            default     => [],
+        };
+    }
+
+    /**
+     * Calculate delivery charge
+     */
+    public function calculatePrice(string $fromCity, string $toCity, float $weight, float $codAmount = 0): array
+    {
+        return match ($this->provider) {
+            'pathao'    => $this->getPathaoPricing($fromCity, $toCity, $weight),
+            'steadfast' => ['delivery_charge' => $codAmount > 0 ? 130 : 120], // Steadfast fixed rate
+            'redx'      => $this->getRedXPricing($fromCity, $toCity),
+            'ecourier'  => $this->getECourierPricing($fromCity, $toCity, $weight),
+            default     => ['delivery_charge' => 120],
+        };
+    }
+
+    // ══════════════════════════════════════════════
+    // PATHAO COURIER — https://merchant.pathao.com/
+    // ══════════════════════════════════════════════
+
+    private function getPathaoToken(): string
+    {
+        $baseUrl = $this->config['is_sandbox'] ?? true
+            ? 'https://hermes-api.p-stageenv.xyz'
+            : 'https://api-hermes.pathao.com';
+
+        $res = $this->curlPost($baseUrl . '/aladdin/api/v1/issue-token', [
+            'client_id'     => $this->config['client_id'] ?? '',
+            'client_secret' => $this->config['client_secret'] ?? '',
+            'username'      => $this->config['username'] ?? '',
+            'password'      => Encryption::decrypt($this->config['password'] ?? ''),
+            'grant_type'    => 'password',
+        ]);
+        return $res['access_token'] ?? '';
+    }
+
+    private function createPathaoParcel(array $order, array $address): array
+    {
+        $token = $this->getPathaoToken();
+        $baseUrl = $this->config['is_sandbox'] ?? true
+            ? 'https://hermes-api.p-stageenv.xyz'
+            : 'https://api-hermes.pathao.com';
+
+        $res = $this->curlPost($baseUrl . '/aladdin/api/v1/orders', [
+            'store_id'            => $this->config['store_id'] ?? '',
+            'merchant_order_id'   => $order['order_number'],
+            'recipient_name'      => $address['full_name'],
+            'recipient_phone'     => $address['phone'],
+            'recipient_address'   => $address['address_line'],
+            'recipient_city'      => $this->getPathaoCityId($address['district']),
+            'recipient_zone'      => $this->getPathaoZoneId($address['thana']),
+            'delivery_type'       => 48, // 48=Normal, 12=On Demand
+            'item_type'           => 2,  // 1=Document, 2=Parcel
+            'special_instruction' => $order['notes'] ?? '',
+            'item_quantity'       => 1,
+            'item_weight'         => 0.5,
+            'amount_to_collect'   => $order['payment_method'] === 'cod' ? $order['total'] : 0,
+        ], ['Authorization: Bearer ' . $token]);
+
+        return [
+            'consignment_id' => $res['data']['consignment_id'] ?? '',
+            'tracking_code'  => $res['data']['consignment_id'] ?? '',
+            'status'         => $res['type'] ?? 'unknown',
+        ];
+    }
+
+    private function trackPathao(string $trackingId): array
+    {
+        $token = $this->getPathaoToken();
+        $baseUrl = ($this->config['is_sandbox'] ?? true)
+            ? 'https://hermes-api.p-stageenv.xyz'
+            : 'https://api-hermes.pathao.com';
+
+        return $this->curlGet($baseUrl . "/aladdin/api/v1/orders/{$trackingId}", [
+            'Authorization: Bearer ' . $token,
+        ]);
+    }
+
+    private function getPathaoAreas(string $city): array
+    {
+        $token = $this->getPathaoToken();
+        $baseUrl = ($this->config['is_sandbox'] ?? true)
+            ? 'https://hermes-api.p-stageenv.xyz'
+            : 'https://api-hermes.pathao.com';
+
+        if ($city) {
+            $cityId = $this->getPathaoCityId($city);
+            return $this->curlGet($baseUrl . "/aladdin/api/v1/cities/{$cityId}/zone-list", [
+                'Authorization: Bearer ' . $token,
+            ]);
+        }
+        return $this->curlGet($baseUrl . '/aladdin/api/v1/city-list', [
+            'Authorization: Bearer ' . $token,
+        ]);
+    }
+
+    private function getPathaoPricing(string $from, string $to, float $weight): array
+    {
+        $token = $this->getPathaoToken();
+        $baseUrl = ($this->config['is_sandbox'] ?? true)
+            ? 'https://hermes-api.p-stageenv.xyz'
+            : 'https://api-hermes.pathao.com';
+
+        return $this->curlPost($baseUrl . '/aladdin/api/v1/merchant/price-plan', [
+            'store_id'  => $this->config['store_id'] ?? '',
+            'item_type' => 2,
+            'delivery_type' => 48,
+            'item_weight' => $weight,
+            'recipient_city' => $this->getPathaoCityId($to),
+            'recipient_zone' => 1, // default zone
+        ], ['Authorization: Bearer ' . $token]);
+    }
+
+    private function getPathaoCityId(string $name): int { return $this->config['city_map'][$name] ?? 1; }
+    private function getPathaoZoneId(string $name): int { return $this->config['zone_map'][$name] ?? 1; }
+
+    // ══════════════════════════════════════════════════
+    // STEADFAST COURIER — https://steadfast.com.bd/
+    // ══════════════════════════════════════════════════
+
+    private function createSteadfastParcel(array $order, array $address): array
+    {
+        $res = $this->curlPost('https://portal.steadfast.com.bd/api/v1/create_order', [
+            'invoice'          => $order['order_number'],
+            'recipient_name'   => $address['full_name'],
+            'recipient_phone'  => $address['phone'],
+            'recipient_address'=> $address['address_line'] . ', ' . $address['thana'] . ', ' . $address['district'],
+            'cod_amount'       => $order['payment_method'] === 'cod' ? $order['total'] : 0,
+            'note'             => $order['notes'] ?? '',
+        ], [
+            'Api-Key: ' . $this->apiKey,
+            'Secret-Key: ' . $this->apiSecret,
+        ]);
+
+        return [
+            'consignment_id' => $res['consignment']['consignment_id'] ?? '',
+            'tracking_code'  => $res['consignment']['tracking_code'] ?? '',
+            'status'         => $res['status'] ?? 200,
+        ];
+    }
+
+    private function trackSteadfast(string $trackingId): array
+    {
+        return $this->curlGet(
+            "https://portal.steadfast.com.bd/api/v1/status_by_trackingcode/{$trackingId}",
+            ['Api-Key: ' . $this->apiKey, 'Secret-Key: ' . $this->apiSecret]
+        );
+    }
+
+    private function getSteadfastAreas(): array
+    {
+        return $this->curlGet(
+            'https://portal.steadfast.com.bd/api/v1/get_areas',
+            ['Api-Key: ' . $this->apiKey, 'Secret-Key: ' . $this->apiSecret]
+        );
+    }
+
+    /**
+     * Steadfast bulk order upload
+     */
+    public function bulkCreateSteadfast(array $orders): array
+    {
+        $payload = array_map(fn($o) => [
+            'invoice'          => $o['order_number'],
+            'recipient_name'   => $o['recipient_name'],
+            'recipient_phone'  => $o['recipient_phone'],
+            'recipient_address'=> $o['recipient_address'],
+            'cod_amount'       => $o['cod_amount'],
+        ], $orders);
+
+        return $this->curlPost('https://portal.steadfast.com.bd/api/v1/create_order/bulk-order', $payload, [
+            'Api-Key: ' . $this->apiKey,
+            'Secret-Key: ' . $this->apiSecret,
+        ]);
+    }
+
+    /**
+     * Steadfast account balance check
+     */
+    public function getSteadfastBalance(): array
+    {
+        return $this->curlGet(
+            'https://portal.steadfast.com.bd/api/v1/get_balance',
+            ['Api-Key: ' . $this->apiKey, 'Secret-Key: ' . $this->apiSecret]
+        );
+    }
+
+    // ═══════════════════════════════════════
+    // REDX COURIER — https://redx.com.bd/
+    // ═══════════════════════════════════════
+
+    private function createRedXParcel(array $order, array $address): array
+    {
+        $res = $this->curlPost('https://openapi.redx.com.bd/v1.0.0-beta/parcel', [
+            'customer_name'          => $address['full_name'],
+            'customer_phone'         => $address['phone'],
+            'delivery_area'          => $address['thana'] . ', ' . $address['district'],
+            'delivery_area_id'       => $this->config['area_map'][$address['thana']] ?? 1,
+            'merchant_invoice_id'    => $order['order_number'],
+            'cash_collection_amount' => $order['payment_method'] === 'cod' ? $order['total'] : 0,
+            'parcel_weight'          => 500, // grams
+            'instruction'            => $order['notes'] ?? '',
+            'value'                  => $order['total'],
+        ], ['API-ACCESS-TOKEN: Bearer ' . $this->apiKey]);
+
+        return [
+            'consignment_id' => $res['tracking_id'] ?? '',
+            'tracking_code'  => $res['tracking_id'] ?? '',
+            'status'         => 'created',
+        ];
+    }
+
+    private function trackRedX(string $trackingId): array
+    {
+        return $this->curlGet(
+            "https://openapi.redx.com.bd/v1.0.0-beta/parcel/track/{$trackingId}",
+            ['API-ACCESS-TOKEN: Bearer ' . $this->apiKey]
+        );
+    }
+
+    private function getRedXAreas(): array
+    {
+        return $this->curlGet(
+            'https://openapi.redx.com.bd/v1.0.0-beta/areas',
+            ['API-ACCESS-TOKEN: Bearer ' . $this->apiKey]
+        );
+    }
+
+    private function getRedXPricing(string $from, string $to): array
+    {
+        // RedX uses area-based pricing
+        $fromAreaId = $this->config['area_map'][$from] ?? 1;
+        $toAreaId   = $this->config['area_map'][$to] ?? 1;
+        $sameCity   = ($fromAreaId === $toAreaId);
+        return ['delivery_charge' => $sameCity ? 70 : 130];
+    }
+
+    // ════════════════════════════════════════════
+    // eCOURIER — https://ecourier.com.bd/
+    // ════════════════════════════════════════════
+
+    private function createECourierParcel(array $order, array $address): array
+    {
+        $res = $this->curlPost('https://backoffice.ecourier.com.bd/api/order-place', [
+            'recipient_name'    => $address['full_name'],
+            'recipient_mobile'  => $address['phone'],
+            'recipient_city'    => $address['district'],
+            'recipient_thana'   => $address['thana'],
+            'recipient_area'    => $address['address_line'],
+            'recipient_address' => $address['address_line'] . ', ' . $address['thana'] . ', ' . $address['district'],
+            'package_code'      => '#' . $order['order_number'],
+            'product_price'     => $order['total'],
+            'payment_method'    => $order['payment_method'] === 'cod' ? 'COD' : 'MPAY',
+            'product_id'        => $order['order_number'],
+            'parcel_type'       => 'BOX',
+            'requested_delivery_time' => 'any',
+            'delivery_hour'     => 'any',
+            'comments'          => $order['notes'] ?? '',
+            'number_of_item'    => 1,
+            'actual_product_price' => $order['total'],
+        ], [
+            'API-KEY: ' . $this->apiKey,
+            'API-SECRET: ' . $this->apiSecret,
+            'USER-ID: ' . ($this->config['user_id'] ?? ''),
+        ]);
+
+        return [
+            'consignment_id' => $res['ID'] ?? '',
+            'tracking_code'  => $res['tracking'] ?? $res['ecr_id'] ?? '',
+            'status'         => $res['success'] ?? false ? 'created' : 'failed',
+        ];
+    }
+
+    private function trackECourier(string $trackingId): array
+    {
+        return $this->curlPost('https://backoffice.ecourier.com.bd/api/track', [
+            'ecr' => $trackingId,
+        ], [
+            'API-KEY: ' . $this->apiKey,
+            'API-SECRET: ' . $this->apiSecret,
+            'USER-ID: ' . ($this->config['user_id'] ?? ''),
+        ]);
+    }
+
+    private function getECourierAreas(string $city): array
+    {
+        $endpoint = $city ? 'thana-list' : 'city-list';
+        $payload = $city ? ['city' => $city] : [];
+        return $this->curlPost("https://backoffice.ecourier.com.bd/api/{$endpoint}", $payload, [
+            'API-KEY: ' . $this->apiKey,
+            'API-SECRET: ' . $this->apiSecret,
+            'USER-ID: ' . ($this->config['user_id'] ?? ''),
+        ]);
+    }
+
+    private function getECourierPricing(string $from, string $to, float $weight): array
+    {
+        return $this->curlPost('https://backoffice.ecourier.com.bd/api/packages', [
+            'from' => $from, 'to' => $to, 'weight' => $weight,
+        ], [
+            'API-KEY: ' . $this->apiKey,
+            'API-SECRET: ' . $this->apiSecret,
+            'USER-ID: ' . ($this->config['user_id'] ?? ''),
+        ]);
+    }
+
+    // ═════════════════════════════════════════
+    // PAPERFLY — https://go.paperfly.com.bd/
+    // ═════════════════════════════════════════
+
+    private function createPaperflyParcel(array $order, array $address): array
+    {
+        $res = $this->curlPost('https://go-app.paperfly.com.bd/merchant/api/react-api/create-order', [
+            'merOrderRef'    => $order['order_number'],
+            'pickMerchantName' => $this->config['merchant_name'] ?? 'Artistiya',
+            'pickMerchantAddress' => $this->config['pickup_address'] ?? '',
+            'pickMerchantThana' => $this->config['pickup_thana'] ?? '',
+            'pickMerchantDistrict' => $this->config['pickup_district'] ?? '',
+            'custname'       => $address['full_name'],
+            'custphone'      => $address['phone'],
+            'custaddress'    => $address['address_line'],
+            'custthana'      => $address['thana'],
+            'custdistrict'   => $address['district'],
+            'packagePrice'   => $order['total'],
+            'productSizeWeight' => 'standard',
+            'numberOfItem'   => 1,
+            'max_weight'     => 0.5,
+        ], [
+            'paperflykey: ' . $this->apiKey,
+        ]);
+
+        return [
+            'consignment_id' => $res['orderid'] ?? '',
+            'tracking_code'  => $res['orderid'] ?? '',
+            'status'         => 'created',
+        ];
+    }
+
+    private function trackPaperfly(string $trackingId): array
+    {
+        return $this->curlPost('https://go-app.paperfly.com.bd/merchant/api/react-api/tracker', [
+            'trackingId' => $trackingId,
+        ], ['paperflykey: ' . $this->apiKey]);
+    }
+
+    // ══════════════════════════════════════════════
+    // DELIVERY TIGER — https://deliverytiger.com.bd/
+    // ══════════════════════════════════════════════
+
+    private function createDeliveryTigerParcel(array $order, array $address): array
+    {
+        $res = $this->curlPost('https://api.deliverytiger.com.bd/api/order/create', [
+            'MerchantOrderId' => $order['order_number'],
+            'CustomerName'    => $address['full_name'],
+            'CustomerPhone'   => $address['phone'],
+            'CustomerAddress' => $address['address_line'] . ', ' . $address['thana'],
+            'DistrictId'      => $this->config['district_map'][$address['district']] ?? 14,
+            'ThanaId'         => $this->config['thana_map'][$address['thana']] ?? 1,
+            'CollectionAmount'=> $order['payment_method'] === 'cod' ? $order['total'] : 0,
+            'ProductPrice'    => $order['total'],
+            'Weight'          => 0.5,
+            'DeliveryType'    => 0, // 0=Normal, 1=Express
+        ], ['Authorization: Bearer ' . $this->apiKey]);
+
+        return [
+            'consignment_id' => $res['OrderId'] ?? '',
+            'tracking_code'  => $res['TrackingNumber'] ?? '',
+            'status'         => 'created',
+        ];
+    }
+
+    private function trackDeliveryTiger(string $trackingId): array
+    {
+        return $this->curlGet(
+            "https://api.deliverytiger.com.bd/api/order/track/{$trackingId}",
+            ['Authorization: Bearer ' . $this->apiKey]
+        );
+    }
+
+    // ═══════════════════════════════════
+    // HTTP Helpers
+    // ═══════════════════════════════════
+
+    private function curlPost(string $url, array $data, array $extraHeaders = []): array
+    {
+        $ch = curl_init($url);
+        $headers = array_merge(['Content-Type: application/json', 'Accept: application/json'], $extraHeaders);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode($data),
+            CURLOPT_HTTPHEADER     => $headers,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_TIMEOUT        => 30,
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode >= 400) {
+            error_log("Delivery API error [{$this->provider}] HTTP {$httpCode}: {$response}");
+        }
+        return json_decode($response ?: '{}', true) ?: [];
+    }
+
+    private function curlGet(string $url, array $extraHeaders = []): array
+    {
+        $ch = curl_init($url);
+        $headers = array_merge(['Accept: application/json'], $extraHeaders);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER     => $headers,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_TIMEOUT        => 30,
+        ]);
+        $response = curl_exec($ch);
+        curl_close($ch);
+        return json_decode($response ?: '{}', true) ?: [];
+    }
+}
+```
+
+### Delivery API Endpoint — `api/delivery.php`
+
+```php
+<?php
+// api/delivery.php — Frontend-facing delivery API
+declare(strict_types=1);
+require_once __DIR__ . '/../vendor/autoload.php';
+
+header('Content-Type: application/json');
+$user = Auth::requireAuth();
+if (!Auth::isAdmin($user['id'])) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Admin access required']);
+    exit;
+}
+
+$input = json_decode(file_get_contents('php://input'), true);
+$action = $input['action'] ?? $_GET['action'] ?? '';
+$provider = $input['provider'] ?? $_GET['provider'] ?? 'steadfast';
+
+try {
+    $delivery = new DeliveryService($provider);
+
+    switch ($action) {
+        case 'create_parcel':
+            $order = Database::fetchOne("SELECT * FROM orders WHERE id = ?", [$input['order_id']]);
+            $address = Database::fetchOne("SELECT * FROM addresses WHERE id = ?", [$order['address_id']]);
+            $result = $delivery->createParcel($order, $address);
+
+            // Save tracking info to order
+            Database::query(
+                "UPDATE orders SET delivery_tracking_id = ?, delivery_partner_id = (SELECT id FROM delivery_partners WHERE LOWER(name) = ? LIMIT 1), status = 'shipped' WHERE id = ?",
+                [$result['tracking_code'], strtolower($provider), $input['order_id']]
+            );
+            echo json_encode(['success' => true, 'data' => $result]);
+            break;
+
+        case 'track':
+            $result = $delivery->trackParcel($input['tracking_id']);
+            echo json_encode(['success' => true, 'data' => $result]);
+            break;
+
+        case 'areas':
+            $result = $delivery->getAreas($input['city'] ?? '');
+            echo json_encode(['success' => true, 'data' => $result]);
+            break;
+
+        case 'price':
+            $result = $delivery->calculatePrice(
+                $input['from_city'] ?? 'Dhaka',
+                $input['to_city'] ?? '',
+                floatval($input['weight'] ?? 0.5),
+                floatval($input['cod_amount'] ?? 0)
+            );
+            echo json_encode(['success' => true, 'data' => $result]);
+            break;
+
+        case 'balance':
+            if ($provider === 'steadfast') {
+                $result = $delivery->getSteadfastBalance();
+                echo json_encode(['success' => true, 'data' => $result]);
+            } else {
+                echo json_encode(['error' => 'Balance check not supported for this provider']);
+            }
+            break;
+
+        case 'bulk_create':
+            if ($provider === 'steadfast') {
+                $result = $delivery->bulkCreateSteadfast($input['orders']);
+                echo json_encode(['success' => true, 'data' => $result]);
+            } else {
+                echo json_encode(['error' => 'Bulk create not supported for this provider']);
+            }
+            break;
+
+        default:
+            echo json_encode(['error' => 'Invalid action. Use: create_parcel, track, areas, price, balance, bulk_create']);
+    }
+} catch (\Throwable $e) {
+    error_log("Delivery API error: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['error' => 'Delivery service error']);
+}
+```
+
+### React Frontend Integration Example
+
+```typescript
+// hooks/useDelivery.ts — Call PHP delivery API from React
+const createParcel = async (orderId: string, provider: string) => {
+  const res = await fetch('/api/delivery.php', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ action: 'create_parcel', provider, order_id: orderId }),
+  });
+  return res.json();
+};
+
+const trackParcel = async (trackingId: string, provider: string) => {
+  const res = await fetch('/api/delivery.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ action: 'track', provider, tracking_id: trackingId }),
+  });
+  return res.json();
+};
+
+const getAreas = async (provider: string, city?: string) => {
+  const res = await fetch('/api/delivery.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ action: 'areas', provider, city }),
+  });
+  return res.json();
+};
+```
+
+### Composer Dependencies for Delivery
+
+```json
+{
+    "require": {
+        "php": ">=8.1",
+        "ext-curl": "*"
+    }
+}
+```
+
+> **Note:** No external Composer packages needed — all courier APIs use direct cURL calls.
+> For Pathao, Steadfast, RedX: API keys are obtained from their respective merchant dashboards.
+> Store API credentials encrypted in `delivery_providers` table via admin panel.
+
+---
+
 ## Email System (Hostinger SMTP)
 
 ### `src/EmailService.php`

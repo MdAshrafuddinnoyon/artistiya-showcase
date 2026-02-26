@@ -186,6 +186,7 @@ const menuSections = [
       { id: "delivery-zones", name: "Delivery Zones", icon: Truck },
       { id: "currency", name: "Currency", icon: DollarSign },
       { id: "email-settings", name: "Email Settings", icon: Mail },
+      { id: "sms-settings", name: "SMS Settings", icon: MessageSquare },
       { id: "newsletter", name: "Newsletter", icon: Mail },
       { id: "email-templates", name: "Email Templates", icon: Mail },
       { id: "invoice", name: "Invoice", icon: Receipt },
@@ -361,6 +362,8 @@ const Admin = () => {
       case "checkout":
         return <AdminCheckoutSettings />;
       case "email-settings":
+        return <AdminEmailSettings />;
+      case "sms-settings":
         return <AdminEmailSettings />;
       case "email-templates":
         return <AdminEmailTemplates />;
