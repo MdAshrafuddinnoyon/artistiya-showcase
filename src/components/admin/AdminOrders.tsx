@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Eye, Truck, CheckCircle, XCircle, Clock, Search, AlertTriangle, Shield, FileText, Printer, Download, Loader2, Calendar, Filter, MapPin, RefreshCw } from "lucide-react";
+import { Eye, Truck, CheckCircle, XCircle, Clock, Search, AlertTriangle, Shield, FileText, Printer, Download, Loader2, Calendar, Filter, MapPin, RefreshCw, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/popover";
 import BulkSelectionToolbar from "./BulkSelectionToolbar";
 import OrderExportTools from "./OrderExportTools";
+import DeliveryDispatchModal from "./DeliveryDispatchModal";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -88,6 +89,8 @@ const AdminOrders = () => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deliveryPartners, setDeliveryPartners] = useState<{id: string; name: string}[]>([]);
   const [bulkDownloading, setBulkDownloading] = useState(false);
+  const [dispatchModalOpen, setDispatchModalOpen] = useState(false);
+  const [dispatchOrders, setDispatchOrders] = useState<Order[]>([]);
 
   const fetchDeliveryPartners = async () => {
     const { data } = await supabase
@@ -588,6 +591,19 @@ const AdminOrders = () => {
                 {bulkDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4 mr-1" />}
                 Slips
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const selected = filteredOrders.filter(o => selectedIds.includes(o.id));
+                  setDispatchOrders(selected);
+                  setDispatchModalOpen(true);
+                }}
+                className="gap-1.5"
+              >
+                <Send className="h-4 w-4" />
+                Dispatch
+              </Button>
             </div>
           )
         }
@@ -737,13 +753,27 @@ const AdminOrders = () => {
                       </div>
                     </td>
                     <td className="p-4">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewDetails(order)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewDetails(order)}
+                          title="View Details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setDispatchOrders([order]);
+                            setDispatchModalOpen(true);
+                          }}
+                          title="Dispatch to Delivery Partner"
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -850,6 +880,17 @@ const AdminOrders = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delivery Dispatch Modal */}
+      <DeliveryDispatchModal
+        open={dispatchModalOpen}
+        onOpenChange={setDispatchModalOpen}
+        orders={dispatchOrders}
+        onDispatchComplete={() => {
+          fetchOrders();
+          setSelectedIds([]);
+        }}
+      />
     </div>
   );
 };

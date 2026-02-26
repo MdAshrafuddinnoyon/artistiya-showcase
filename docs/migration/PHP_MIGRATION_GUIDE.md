@@ -1839,6 +1839,104 @@ try {
 }
 ```
 
+### Bulk Dispatch from Admin Panel — `api/delivery-dispatch.php`
+
+```php
+<?php
+// api/delivery-dispatch.php — Bulk/Single order dispatch to courier API
+declare(strict_types=1);
+require_once __DIR__ . '/../vendor/autoload.php';
+
+header('Content-Type: application/json');
+$user = Auth::requireAuth();
+if (!Auth::isAdmin($user['id'])) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Admin access required']);
+    exit;
+}
+
+$input = json_decode(file_get_contents('php://input'), true);
+$provider = $input['provider'] ?? '';
+$orderIds = $input['order_ids'] ?? [];
+
+if (empty($provider) || empty($orderIds)) {
+    http_response_code(400);
+    echo json_encode(['error' => 'provider and order_ids required']);
+    exit;
+}
+
+$delivery = new DeliveryService($provider);
+$results = [];
+
+// Steadfast bulk support
+if ($provider === 'steadfast' && count($orderIds) > 1) {
+    $orders = [];
+    foreach ($orderIds as $orderId) {
+        $order = Database::fetchOne("SELECT o.*, a.full_name, a.phone, a.address_line, a.thana, a.district, a.division FROM orders o LEFT JOIN addresses a ON o.address_id = a.id WHERE o.id = ?", [$orderId]);
+        if ($order) {
+            $codAmount = $order['payment_method'] === 'cod' ? $order['total'] : 0;
+            $orders[] = [
+                'invoice' => $order['order_number'],
+                'recipient_name' => $order['full_name'],
+                'recipient_phone' => $order['phone'],
+                'recipient_address' => "{$order['address_line']}, {$order['thana']}, {$order['district']}, {$order['division']}",
+                'cod_amount' => $codAmount,
+            ];
+        }
+    }
+    $bulkResult = $delivery->bulkCreateSteadfast($orders);
+    
+    // Update all orders
+    foreach ($orderIds as $orderId) {
+        Database::query(
+            "UPDATE orders SET status = 'shipped', shipped_at = NOW() WHERE id = ?",
+            [$orderId]
+        );
+    }
+    echo json_encode(['success' => true, 'data' => $bulkResult]);
+    exit;
+}
+
+// Single dispatch per order
+foreach ($orderIds as $orderId) {
+    try {
+        $order = Database::fetchOne("SELECT o.*, a.full_name, a.phone, a.address_line, a.thana, a.district, a.division FROM orders o LEFT JOIN addresses a ON o.address_id = a.id WHERE o.id = ?", [$orderId]);
+        
+        if (!$order) {
+            $results[] = ['order_id' => $orderId, 'success' => false, 'error' => 'Order not found'];
+            continue;
+        }
+
+        $result = $delivery->createParcel($order, [
+            'full_name' => $order['full_name'],
+            'phone' => $order['phone'],
+            'address_line' => $order['address_line'],
+            'thana' => $order['thana'],
+            'district' => $order['district'],
+            'division' => $order['division'],
+        ]);
+
+        $trackingId = $result['tracking_code'] ?? $result['consignment_id'] ?? null;
+        
+        Database::query(
+            "UPDATE orders SET status = 'shipped', shipped_at = NOW(), tracking_number = ? WHERE id = ?",
+            [$trackingId, $orderId]
+        );
+
+        $results[] = [
+            'order_id' => $orderId,
+            'order_number' => $order['order_number'],
+            'success' => true,
+            'tracking_id' => $trackingId,
+        ];
+    } catch (\Throwable $e) {
+        $results[] = ['order_id' => $orderId, 'success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+echo json_encode(['success' => true, 'results' => $results]);
+```
+
 ### React Frontend Integration Example
 
 ```typescript
@@ -1851,6 +1949,19 @@ const createParcel = async (orderId: string, provider: string) => {
       'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify({ action: 'create_parcel', provider, order_id: orderId }),
+  });
+  return res.json();
+};
+
+// Bulk dispatch
+const bulkDispatch = async (orderIds: string[], provider: string) => {
+  const res = await fetch('/api/delivery-dispatch.php', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ provider, order_ids: orderIds }),
   });
   return res.json();
 };
