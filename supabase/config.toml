@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.fetch-google-reviews]
 verify_jwt = false
+
+[functions.send-sms]
+verify_jwt = false
