@@ -1754,7 +1754,60 @@ CREATE TABLE IF NOT EXISTS `email_log` (
   INDEX `idx_el_sent_at` (`sent_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ─────────────────────────────────────────────
+-- 22. SMS & OTP TABLES
+-- ─────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS `sms_settings` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `is_enabled` TINYINT(1) DEFAULT 0,
+  `provider` VARCHAR(50) DEFAULT 'twilio',
+  `api_key` TEXT NULL COMMENT 'Encrypted via AES-256',
+  `api_secret` TEXT NULL COMMENT 'Encrypted via AES-256',
+  `sender_id` VARCHAR(50) NULL,
+  `config` JSON DEFAULT (JSON_OBJECT()),
+  `send_order_confirmation` TINYINT(1) DEFAULT 1,
+  `send_shipping_update` TINYINT(1) DEFAULT 1,
+  `send_delivery_notification` TINYINT(1) DEFAULT 1,
+  `send_otp` TINYINT(1) DEFAULT 1,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `sms_log` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `recipient` VARCHAR(20) NOT NULL,
+  `message` TEXT NOT NULL,
+  `provider` VARCHAR(50) DEFAULT 'twilio',
+  `status` VARCHAR(20) DEFAULT 'sent',
+  `message_type` VARCHAR(50) DEFAULT 'notification',
+  `error` TEXT NULL,
+  `sent_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  INDEX `idx_sms_recipient` (`recipient`),
+  INDEX `idx_sms_sent_at` (`sent_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `otp_codes` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `phone` VARCHAR(20) NOT NULL,
+  `otp_hash` VARCHAR(255) NOT NULL,
+  `purpose` VARCHAR(50) DEFAULT 'login',
+  `expires_at` DATETIME NOT NULL,
+  `attempts` TINYINT DEFAULT 0,
+  `is_used` TINYINT(1) DEFAULT 0,
+  `verified_at` DATETIME NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  INDEX `idx_otp_phone` (`phone`, `purpose`, `is_used`),
+  INDEX `idx_otp_expires` (`expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
 -- ============================================================
 -- END OF COMPLETE SCHEMA
--- Total: 57 tables + 1 view + 4 functions + 6 triggers + 2 procedures
+-- Total: 60 tables + 1 view + 4 functions + 6 triggers + 2 procedures
 -- ============================================================
