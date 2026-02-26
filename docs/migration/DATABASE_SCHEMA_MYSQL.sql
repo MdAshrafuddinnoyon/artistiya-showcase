@@ -241,7 +241,7 @@ CREATE TABLE IF NOT EXISTS `orders` (
   `user_id` CHAR(36) NULL,
   `address_id` CHAR(36) NULL,
   `status` ENUM('pending','confirmed','processing','shipped','delivered','cancelled') DEFAULT 'pending',
-  `payment_method` ENUM('cod','bkash','nagad','bank_transfer') NOT NULL,
+  `payment_method` ENUM('cod','bkash','nagad','bank_transfer','sslcommerz','aamarpay','surjopay') NOT NULL,
   `payment_transaction_id` VARCHAR(255) NULL,
   `subtotal` DECIMAL(12,2) NOT NULL,
   `shipping_cost` DECIMAL(12,2) NOT NULL DEFAULT 0,
