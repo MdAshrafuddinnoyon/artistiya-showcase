@@ -31,7 +31,7 @@ const Checkout = () => {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { initiateBkashPayment, initiateNagadPayment, redirectToPayment, loading: paymentLoading } = usePayment();
+  const { initiateBkashPayment, initiateNagadPayment, initiateSSLCommerzPayment, initiateAamarPayPayment, initiateSurjoPayPayment, redirectToPayment, loading: paymentLoading } = usePayment();
   
   const [loading, setLoading] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
@@ -39,6 +39,9 @@ const Checkout = () => {
   const [paymentMode, setPaymentMode] = useState<"auto" | "manual">("auto");
   const [bkashAvailable, setBkashAvailable] = useState(false);
   const [nagadAvailable, setNagadAvailable] = useState(false);
+  const [sslcommerzAvailable, setSslcommerzAvailable] = useState(false);
+  const [aamarpayAvailable, setAamarpayAvailable] = useState(false);
+  const [surjopayAvailable, setSurjopayAvailable] = useState(false);
   
   // Promo code state
   const [promoCode, setPromoCode] = useState("");
@@ -61,7 +64,7 @@ const Checkout = () => {
     phone: "",
     email: "",
     addressLine: "",
-    paymentMethod: "cod" as "cod" | "bkash" | "nagad" | "bank_transfer",
+    paymentMethod: "cod" as "cod" | "bkash" | "nagad" | "sslcommerz" | "aamarpay" | "surjopay" | "bank_transfer",
     transactionId: "",
     notes: "",
     paymentNote: "",
@@ -78,6 +81,9 @@ const Checkout = () => {
       if (providers) {
         setBkashAvailable(providers.some(p => p.provider_type === "bkash"));
         setNagadAvailable(providers.some(p => p.provider_type === "nagad"));
+        setSslcommerzAvailable(providers.some(p => p.provider_type === "sslcommerz"));
+        setAamarpayAvailable(providers.some(p => p.provider_type === "aamarpay"));
+        setSurjopayAvailable(providers.some(p => p.provider_type === "surjopay"));
       }
     };
     checkPaymentProviders();
@@ -221,7 +227,10 @@ const Checkout = () => {
     // For manual payment mode, require transaction ID
     const isAutomatedPayment = 
       (formData.paymentMethod === "bkash" && bkashAvailable && paymentMode === "auto") ||
-      (formData.paymentMethod === "nagad" && nagadAvailable && paymentMode === "auto");
+      (formData.paymentMethod === "nagad" && nagadAvailable && paymentMode === "auto") ||
+      (formData.paymentMethod === "sslcommerz" && sslcommerzAvailable) ||
+      (formData.paymentMethod === "aamarpay" && aamarpayAvailable) ||
+      (formData.paymentMethod === "surjopay" && surjopayAvailable);
 
     if (!isAutomatedPayment && 
         (formData.paymentMethod === "bkash" || formData.paymentMethod === "nagad") && 
@@ -287,6 +296,36 @@ const Checkout = () => {
           } else {
             toast.error(result.error || "Failed to initiate Nagad payment");
             setPaymentMode("manual");
+            return;
+          }
+        } else if (formData.paymentMethod === "sslcommerz") {
+          const result = await initiateSSLCommerzPayment(data.order_id);
+          if (result.success && result.gatewayUrl) {
+            redirectToPayment(result.gatewayUrl);
+            return;
+          } else {
+            toast.error(result.error || "Failed to initiate SSLCommerz payment");
+            setLoading(false);
+            return;
+          }
+        } else if (formData.paymentMethod === "aamarpay") {
+          const result = await initiateAamarPayPayment(data.order_id);
+          if (result.success && result.gatewayUrl) {
+            redirectToPayment(result.gatewayUrl);
+            return;
+          } else {
+            toast.error(result.error || "Failed to initiate AamarPay payment");
+            setLoading(false);
+            return;
+          }
+        } else if (formData.paymentMethod === "surjopay") {
+          const result = await initiateSurjoPayPayment(data.order_id);
+          if (result.success && result.gatewayUrl) {
+            redirectToPayment(result.gatewayUrl);
+            return;
+          } else {
+            toast.error(result.error || "Failed to initiate SurjoPay payment");
+            setLoading(false);
             return;
           }
         }

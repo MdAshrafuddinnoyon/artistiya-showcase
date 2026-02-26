@@ -880,6 +880,338 @@ class BkashPayment
 }
 ```
 
+### AamarPay Payment (PHP)
+
+```php
+<?php
+/**
+ * AamarPay Payment Gateway Integration
+ * Docs: https://docs.aamarpay.com/guides
+ * Flow: POST jsonpost.php → payment_url redirect → callback → verify
+ */
+class AamarPayPayment
+{
+    private string $storeId;
+    private string $signatureKey;
+    private string $baseUrl;
+
+    public function __construct()
+    {
+        $provider = Database::fetchOne(
+            "SELECT * FROM payment_providers WHERE provider_type = 'aamarpay' AND is_active = 1"
+        );
+        $this->storeId = Encryption::decrypt($provider['store_id']);
+        $this->signatureKey = Encryption::decrypt($provider['store_password']);
+        $this->baseUrl = ($provider['is_sandbox'] ?? true)
+            ? 'https://sandbox.aamarpay.com'
+            : 'https://secure.aamarpay.com';
+    }
+
+    /**
+     * Initiate payment session
+     * @param string $orderId Internal order UUID
+     * @param float $amount Server-verified total (never from client)
+     * @param array $customer ['name','email','phone','address','district']
+     * @return array ['payment_url' => string]
+     */
+    public function initiatePayment(string $orderId, float $amount, array $customer): array
+    {
+        $order = Database::fetchOne("SELECT order_number FROM orders WHERE id = ?", [$orderId]);
+        $postData = [
+            'store_id'      => $this->storeId,
+            'signature_key' => $this->signatureKey,
+            'tran_id'       => $order['order_number'],
+            'amount'        => number_format($amount, 2, '.', ''),
+            'currency'      => 'BDT',
+            'desc'          => 'Order ' . $order['order_number'],
+            'cus_name'      => Sanitizer::cleanString($customer['name'], 100),
+            'cus_email'     => $customer['email'] ?? 'customer@artistiya.store',
+            'cus_phone'     => $customer['phone'],
+            'cus_add1'      => $customer['address'] ?? 'Bangladesh',
+            'cus_city'      => $customer['district'] ?? 'Dhaka',
+            'cus_country'   => 'Bangladesh',
+            'success_url'   => getenv('APP_URL') . '/api/payment-callback.php?gateway=aamarpay',
+            'fail_url'      => getenv('APP_URL') . '/api/payment-callback.php?gateway=aamarpay',
+            'cancel_url'    => getenv('APP_URL') . '/checkout?error=cancel',
+            'type'          => 'json',
+            'opt_a'         => $orderId,
+            'opt_b'         => (string) $amount,
+        ];
+
+        $ch = curl_init($this->baseUrl . '/jsonpost.php');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode($postData),
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        $response = json_decode(curl_exec($ch), true);
+        curl_close($ch);
+
+        if (empty($response['payment_url'])) {
+            throw new \RuntimeException('AamarPay initiation failed: ' . ($response['error'] ?? 'Unknown'));
+        }
+        return ['payment_url' => $response['payment_url']];
+    }
+
+    /**
+     * Verify transaction via Search API
+     * @param string $tranId Transaction/order number
+     * @return array Verification result
+     */
+    public function verifyPayment(string $tranId): array
+    {
+        $url = $this->baseUrl . '/api/v1/trxcheck/request.php?' . http_build_query([
+            'request_id'    => $tranId,
+            'store_id'      => $this->storeId,
+            'signature_key' => $this->signatureKey,
+            'type'          => 'json',
+        ]);
+        $response = json_decode(file_get_contents($url), true);
+        return $response;
+    }
+}
+```
+
+### SurjoPay / ShurjoPay Payment (PHP)
+
+```php
+<?php
+/**
+ * SurjoPay (ShurjoPay) Payment Gateway Integration
+ * Docs: https://shurjopay.com.bd/developers/shurjopay-restapi
+ * Flow: get_token → execute_url (create payment) → checkout_url redirect → return callback → verification
+ */
+class SurjoPayPayment
+{
+    private string $username;
+    private string $password;
+    private string $baseUrl;
+
+    public function __construct()
+    {
+        $provider = Database::fetchOne(
+            "SELECT * FROM payment_providers WHERE provider_type = 'surjopay' AND is_active = 1"
+        );
+        $this->username = Encryption::decrypt($provider['store_id'] ?? '') ?: 'sp_sandbox';
+        $this->password = Encryption::decrypt($provider['store_password'] ?? '') ?: 'pyaborern';
+        $this->baseUrl = ($provider['is_sandbox'] ?? true)
+            ? 'https://sandbox.shurjopayment.com/api'
+            : 'https://engine.shurjopayment.com/api';
+    }
+
+    /**
+     * Step 1: Get authentication token
+     * @return array ['token', 'token_type', 'store_id', 'execute_url']
+     */
+    private function getToken(): array
+    {
+        $ch = curl_init($this->baseUrl . '/get_token');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode([
+                'username' => $this->username,
+                'password' => $this->password,
+            ]),
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        $result = json_decode(curl_exec($ch), true);
+        curl_close($ch);
+
+        if (empty($result['token'])) {
+            throw new \RuntimeException('SurjoPay authentication failed');
+        }
+        return $result;
+    }
+
+    /**
+     * Step 2: Create payment and get checkout URL
+     * @param string $orderId Internal order UUID
+     * @param float $amount Server-verified total
+     * @param array $customer Customer details
+     * @return array ['checkout_url', 'sp_order_id']
+     */
+    public function initiatePayment(string $orderId, float $amount, array $customer): array
+    {
+        $tokenResult = $this->getToken();
+        $order = Database::fetchOne("SELECT order_number FROM orders WHERE id = ?", [$orderId]);
+
+        $paymentData = [
+            'prefix'            => 'ART',
+            'token'             => $tokenResult['token'],
+            'store_id'          => $tokenResult['store_id'],
+            'return_url'        => getenv('APP_URL') . '/api/payment-callback.php?gateway=surjopay',
+            'cancel_url'        => getenv('APP_URL') . '/checkout?error=cancel',
+            'amount'            => $amount,
+            'order_id'          => $order['order_number'],
+            'currency'          => 'BDT',
+            'customer_name'     => Sanitizer::cleanString($customer['name'] ?? 'Customer', 100),
+            'customer_phone'    => Sanitizer::cleanString($customer['phone'] ?? 'N/A', 20),
+            'customer_email'    => Sanitizer::cleanString($customer['email'] ?? 'customer@store.com', 100),
+            'customer_address'  => Sanitizer::cleanString($customer['address'] ?? 'N/A', 200),
+            'customer_city'     => Sanitizer::cleanString($customer['district'] ?? 'Dhaka', 50),
+            'customer_post_code'=> '1000',
+            'client_ip'         => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1',
+            'value1'            => $orderId,
+            'value2'            => (string) $amount,
+        ];
+
+        $ch = curl_init($tokenResult['execute_url']);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode($paymentData),
+            CURLOPT_HTTPHEADER     => [
+                'Content-Type: application/json',
+                'Authorization: ' . $tokenResult['token_type'] . ' ' . $tokenResult['token'],
+            ],
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        $result = json_decode(curl_exec($ch), true);
+        curl_close($ch);
+
+        if (empty($result['checkout_url'])) {
+            throw new \RuntimeException('SurjoPay payment creation failed');
+        }
+        return ['checkout_url' => $result['checkout_url'], 'sp_order_id' => $result['sp_order_id']];
+    }
+
+    /**
+     * Step 3: Verify payment after callback
+     * @param string $spOrderId SurjoPay order ID from callback
+     * @return array Verification result (sp_code 1000 = success)
+     */
+    public function verifyPayment(string $spOrderId): array
+    {
+        $tokenResult = $this->getToken();
+
+        $ch = curl_init($this->baseUrl . '/verification');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode(['order_id' => $spOrderId]),
+            CURLOPT_HTTPHEADER     => [
+                'Content-Type: application/json',
+                'Authorization: ' . $tokenResult['token_type'] . ' ' . $tokenResult['token'],
+            ],
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        $result = json_decode(curl_exec($ch), true);
+        curl_close($ch);
+
+        return $result;
+    }
+}
+```
+
+### Unified Payment Callback Handler (PHP)
+
+```php
+<?php
+// api/payment-callback.php — Handles all gateway callbacks
+declare(strict_types=1);
+require_once __DIR__ . '/../vendor/autoload.php';
+
+$gateway = $_GET['gateway'] ?? '';
+
+try {
+    switch ($gateway) {
+        case 'sslcommerz':
+            $status = $_GET['status'] ?? $_POST['status'] ?? '';
+            $valId = $_POST['val_id'] ?? '';
+            $orderId = $_POST['value_a'] ?? '';
+            $amount = floatval($_POST['amount'] ?? 0);
+
+            if (in_array($status, ['success', 'VALID', 'VALIDATED']) && $valId) {
+                $ssl = new SSLCommerzPayment();
+                // Step 1: Validate with SSLCommerz Validation API
+                $validation = $ssl->validatePayment($valId);
+
+                if ($validation['status'] === 'VALID' || $validation['status'] === 'VALIDATED') {
+                    // Step 2: Verify amount matches server order total
+                    $order = Database::fetchOne("SELECT total, order_number FROM orders WHERE id = ?", [$orderId]);
+                    if ($order && abs($amount - floatval($order['total'])) <= 1) {
+                        Database::update('orders', [
+                            'status' => 'confirmed',
+                            'payment_transaction_id' => $valId,
+                        ], $orderId);
+                        header('Location: ' . getenv('APP_URL') . '/order-success?orderId=' . $orderId);
+                        exit;
+                    }
+                }
+            }
+            header('Location: ' . getenv('APP_URL') . '/checkout?error=' . ($status ?: 'failed'));
+            break;
+
+        case 'aamarpay':
+            $payStatus = $_POST['pay_status'] ?? '';
+            $tranId = $_POST['mer_txnid'] ?? '';
+            $orderId = $_POST['opt_a'] ?? '';
+            $paidAmount = floatval($_POST['amount'] ?? 0);
+
+            if ($payStatus === 'Successful') {
+                $order = Database::fetchOne("SELECT total FROM orders WHERE id = ?", [$orderId]);
+                if ($order && abs($paidAmount - floatval($order['total'])) <= 1) {
+                    // Verify with AamarPay Search API
+                    $aamarpay = new AamarPayPayment();
+                    $verify = $aamarpay->verifyPayment($tranId);
+                    if (($verify['pay_status'] ?? '') === 'Successful') {
+                        Database::update('orders', [
+                            'status' => 'confirmed',
+                            'payment_transaction_id' => $tranId,
+                        ], $orderId);
+                        header('Location: ' . getenv('APP_URL') . '/order-success?orderId=' . $orderId);
+                        exit;
+                    }
+                }
+            }
+            header('Location: ' . getenv('APP_URL') . '/checkout?error=failed');
+            break;
+
+        case 'surjopay':
+            $spOrderId = $_GET['order_id'] ?? $_POST['order_id'] ?? '';
+            if ($spOrderId) {
+                $surjo = new SurjoPayPayment();
+                $verify = $surjo->verifyPayment($spOrderId);
+                if (isset($verify[0]) && ($verify[0]['sp_code'] ?? 0) === 1000) {
+                    $orderId = $verify[0]['value1'] ?? '';
+                    $paidAmount = floatval($verify[0]['amount'] ?? 0);
+                    $order = Database::fetchOne("SELECT total FROM orders WHERE id = ?", [$orderId]);
+                    if ($order && abs($paidAmount - floatval($order['total'])) <= 1) {
+                        Database::update('orders', [
+                            'status' => 'confirmed',
+                            'payment_transaction_id' => $spOrderId,
+                        ], $orderId);
+                        header('Location: ' . getenv('APP_URL') . '/order-success?orderId=' . $orderId);
+                        exit;
+                    }
+                    // Amount mismatch — flag
+                    Database::update('orders', [
+                        'notes' => "⚠️ AMOUNT MISMATCH: Paid ৳{$paidAmount}, Expected ৳{$order['total']}. SP: {$spOrderId}",
+                    ], $orderId);
+                }
+            }
+            header('Location: ' . getenv('APP_URL') . '/checkout?error=failed');
+            break;
+
+        case 'bkash':
+            // bKash callback handling
+            $paymentID = $_GET['paymentID'] ?? '';
+            // ... bKash execute + verify logic
+            break;
+
+        default:
+            header('Location: ' . getenv('APP_URL') . '/checkout?error=unknown_gateway');
+    }
+} catch (\Throwable $e) {
+    error_log("Payment callback error [{$gateway}]: " . $e->getMessage());
+    header('Location: ' . getenv('APP_URL') . '/checkout?error=processing');
+}
+```
+
 ---
 
 ## Email System (Hostinger SMTP)
