@@ -49,18 +49,6 @@ async function decryptCredential(encryptedText: string): Promise<string> {
   }
 }
 
-// Generate HMAC-MD5 verification hash (SSLCommerz verify_sign)
-function md5Hash(input: string): string {
-  // Simple hash for comparison - SSLCommerz uses MD5
-  let hash = 0;
-  for (let i = 0; i < input.length; i++) {
-    const char = input.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return Math.abs(hash).toString(16);
-}
-
 // Get frontend redirect URL
 function getAppUrl(): string {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
