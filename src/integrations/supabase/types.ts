@@ -3328,6 +3328,90 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_log: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          message: string
+          message_type: string | null
+          provider: string | null
+          recipient: string
+          sent_at: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          message: string
+          message_type?: string | null
+          provider?: string | null
+          recipient: string
+          sent_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          message?: string
+          message_type?: string | null
+          provider?: string | null
+          recipient?: string
+          sent_at?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      sms_settings: {
+        Row: {
+          api_key: string | null
+          api_secret: string | null
+          config: Json | null
+          created_at: string
+          id: string
+          is_enabled: boolean | null
+          provider: string | null
+          send_delivery_notification: boolean | null
+          send_order_confirmation: boolean | null
+          send_otp: boolean | null
+          send_shipping_update: boolean | null
+          sender_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          api_key?: string | null
+          api_secret?: string | null
+          config?: Json | null
+          created_at?: string
+          id?: string
+          is_enabled?: boolean | null
+          provider?: string | null
+          send_delivery_notification?: boolean | null
+          send_order_confirmation?: boolean | null
+          send_otp?: boolean | null
+          send_shipping_update?: boolean | null
+          sender_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          api_key?: string | null
+          api_secret?: string | null
+          config?: Json | null
+          created_at?: string
+          id?: string
+          is_enabled?: boolean | null
+          provider?: string | null
+          send_delivery_notification?: boolean | null
+          send_order_confirmation?: boolean | null
+          send_otp?: boolean | null
+          send_shipping_update?: boolean | null
+          sender_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       social_links: {
         Row: {
           created_at: string | null
