@@ -99,7 +99,7 @@ serve(async (req) => {
       );
     }
 
-    const validPaymentMethods = ["cod", "bkash", "nagad", "bank_transfer"];
+    const validPaymentMethods = ["cod", "bkash", "nagad", "bank_transfer", "sslcommerz", "aamarpay", "surjopay"];
     if (!validPaymentMethods.includes(payment_method)) {
       return new Response(
         JSON.stringify({ error: "Invalid payment method" }),

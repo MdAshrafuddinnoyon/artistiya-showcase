@@ -812,6 +812,37 @@ class SSLCommerzPayment
         if ($response['status'] !== 'SUCCESS') throw new \RuntimeException('Payment initiation failed');
         return ['gateway_url' => $response['GatewayPageURL'], 'session_key' => $response['sessionkey']];
     }
+
+    /**
+     * Validate payment via SSLCommerz Validation API
+     * Docs: https://developer.sslcommerz.com/doc/v4/ (Order Validation API)
+     * @param string $valId Validation ID from callback
+     * @return array Validation result with 'status' = VALID|VALIDATED|INVALID_TRANSACTION
+     */
+    public function validatePayment(string $valId): array
+    {
+        $url = $this->baseUrl . '/validator/api/validationserverAPI.php?' . http_build_query([
+            'val_id'       => $valId,
+            'store_id'     => $this->storeId,
+            'store_passwd' => $this->storePass,
+            'format'       => 'json',
+        ]);
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_TIMEOUT        => 30,
+        ]);
+        $response = json_decode(curl_exec($ch), true);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200 || !$response) {
+            throw new \RuntimeException('SSLCommerz validation API request failed');
+        }
+        return $response;
+    }
 }
 ```
 
