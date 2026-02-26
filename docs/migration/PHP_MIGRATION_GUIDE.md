@@ -111,6 +111,10 @@ artistiya/
 │   ├── RateLimit.php         # Rate limiting
 │   ├── Encryption.php        # AES-256 encryption
 │   ├── Sanitizer.php         # Input sanitization
+│   ├── EmailService.php      # PHPMailer SMTP (Hostinger)
+│   ├── EmailTemplateEngine.php # ইমেইল টেম্পলেট রেন্ডারিং
+│   ├── EmailQueue.php        # ইমেইল কিউ সিস্টেম
+│   ├── OrderEmailService.php # অর্ডার ইমেইল অটোমেশন
 │   ├── OrderService.php      # Order processing
 │   ├── PaymentService.php    # Payment handling
 │   └── DeliveryService.php   # Delivery API
@@ -118,8 +122,13 @@ artistiya/
 │   ├── orders.php            # Order API
 │   ├── products.php          # Product API
 │   ├── auth.php              # Auth API
+│   ├── email.php             # Email API
 │   ├── payment-callback.php  # Payment IPN/callback
 │   └── delivery-webhook.php  # Delivery webhooks
+├── templates/
+│   └── emails/               # HTML ইমেইল টেম্পলেটস
+├── cron/
+│   └── process-email-queue.php # Cron job (ইমেইল কিউ)
 ├── public/
 │   ├── index.php             # Entry point
 │   ├── .htaccess             # Apache rules
@@ -127,7 +136,8 @@ artistiya/
 ├── storage/
 │   ├── uploads/              # User uploads
 │   └── logs/                 # Application logs
-├── vendor/                   # Composer packages
+├── vendor/                   # Composer packages (phpmailer/phpmailer)
+├── composer.json
 └── .env                      # Environment variables
 ```
 
@@ -148,12 +158,16 @@ APP_ENV=production
 APP_DEBUG=false
 APP_KEY=base64:your_32_byte_random_key_here
 
-# SMTP Email
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=hello@artistiya.store
-SMTP_PASS=your_app_password
+# Hostinger SMTP Email (Official Settings)
+# Source: hPanel → Emails → Connect Apps & Devices → Manual Configuration
+SMTP_HOST=smtp.hostinger.com
+SMTP_PORT=465
+SMTP_ENCRYPTION=ssl
+SMTP_USER=info@artistiya.store
+SMTP_PASS=your_email_password
+SMTP_FROM_EMAIL=info@artistiya.store
 SMTP_FROM_NAME=Artistiya
+SMTP_REPLY_TO=support@artistiya.store
 
 # Encryption
 CREDENTIALS_ENCRYPTION_KEY=your_32_byte_hex_key
@@ -1092,12 +1106,35 @@ class SteadfastDelivery
 
 ## ইমেইল সিস্টেম (Hostinger SMTP)
 
-Hostinger হোস্টিংয়ে বিল্ট-ইন SMTP সার্ভিস থাকে। এটি দিয়ে অর্ডার কনফার্মেশন, শিপিং আপডেট, ডেলিভারি নোটিফিকেশন, পাসওয়ার্ড রিসেট এবং নিউজলেটার ইমেইল পাঠানো যায়।
+> **📌 সূত্র:** [Hostinger অফিশিয়াল SMTP সেটিংস](https://www.hostinger.com/support/1575756-how-to-get-email-account-configuration-details-for-hostinger-email/) ও [PHPMailer টিউটোরিয়াল](https://www.hostinger.com/uk/tutorials/send-emails-using-php-mail)
 
-### `.env` ইমেইল কনফিগারেশন (Hostinger)
+Hostinger Email-এ বিল্ট-ইন SMTP সার্ভিস থাকে। **PHPMailer** হলো Hostinger-এর অফিশিয়ালি রিকমেন্ডেড লাইব্রেরি — এটি SPF/DKIM অথেনটিকেশন সাপোর্ট করে এবং ইনবক্স ডেলিভারিবিলিটি বাড়ায়।
+
+### Hostinger অফিশিয়াল SMTP কনফিগারেশন (২০২৬)
+
+| প্রোটোকল | হোস্ট | পোর্ট | এনক্রিপশন |
+|-----------|--------|--------|-----------|
+| **SMTP** (Outgoing) | `smtp.hostinger.com` | **465** | **SSL** |
+| **SMTP** (Alternative) | `smtp.hostinger.com` | **587** | **TLS / STARTTLS** |
+| **IMAP** (Incoming) | `imap.hostinger.com` | **993** | **SSL** |
+| **POP3** (Incoming) | `pop.hostinger.com` | **995** | **SSL** |
+
+> **ইউজারনেম:** আপনার পুরো ইমেইল অ্যাড্রেস (যেমন `info@artistiya.store`)
+> **পাসওয়ার্ড:** hPanel → Emails → Email Accounts → Reset Password থেকে সেট করুন
+
+### Hostinger ইমেইল লিমিট
+
+| প্ল্যান | দৈনিক সীমা | প্রতি ঘণ্টা | নোট |
+|---------|-----------|-------------|------|
+| PHP `mail()` ফাংশন | **100/দিন** | **10/মিনিট** | অনুমোদিত নয় (spam ফিল্টার) |
+| **Hostinger Email + PHPMailer** | **3,000/দিন** | কোনো সীমা নেই | ✅ রিকমেন্ডেড |
+| Titan Mail + PHPMailer | 1,000/দিন | 300/ঘণ্টা | বিকল্প |
+
+### `.env` ইমেইল কনফিগারেশন
 
 ```env
-# Hostinger SMTP Configuration
+# Hostinger SMTP Configuration (Official Settings 2026)
+# Source: hPanel → Emails → Connect Apps & Devices → Manual Configuration
 SMTP_HOST=smtp.hostinger.com
 SMTP_PORT=465
 SMTP_ENCRYPTION=ssl
@@ -1107,10 +1144,23 @@ SMTP_FROM_EMAIL=info@artistiya.store
 SMTP_FROM_NAME=Artistiya
 SMTP_REPLY_TO=support@artistiya.store
 
-# Alternative: Port 587 with TLS
-# SMTP_HOST=smtp.hostinger.com
+# Alternative: Port 587 with STARTTLS
 # SMTP_PORT=587
 # SMTP_ENCRYPTION=tls
+```
+
+### PHPMailer ইনস্টলেশন (Hostinger SSH)
+
+```bash
+# ১. hPanel → Advanced → SSH Access থেকে SSH ক্রেডেনশিয়াল নিন
+# ২. SSH দিয়ে কানেক্ট করুন
+ssh u123456789@your-server-ip -p 65002
+
+# ৩. public_html ডিরেক্টরিতে যান
+cd public_html
+
+# ৪. PHPMailer ইনস্টল করুন (Hostinger PHP 8.1+ এ composer2 ব্যবহার করুন)
+composer2 require phpmailer/phpmailer
 ```
 
 ### ফাইল স্ট্রাকচার
@@ -1118,9 +1168,10 @@ SMTP_REPLY_TO=support@artistiya.store
 ```
 artistiya/
 ├── src/
-│   ├── EmailService.php         # মূল ইমেইল ক্লাস (SMTP)
+│   ├── EmailService.php         # PHPMailer-ভিত্তিক ইমেইল সার্ভিস
 │   ├── EmailTemplateEngine.php  # টেম্পলেট রেন্ডারিং
-│   └── EmailQueue.php           # ইমেইল কিউ (ব্যাকগ্রাউন্ড সেন্ড)
+│   ├── EmailQueue.php           # ইমেইল কিউ (ব্যাকগ্রাউন্ড সেন্ড)
+│   └── OrderEmailService.php    # অর্ডার ইমেইল অটোমেশন
 ├── templates/
 │   └── emails/
 │       ├── order-confirmation.html
@@ -1135,11 +1186,17 @@ artistiya/
     └── process-email-queue.php  # Cron job (কিউ প্রসেসিং)
 ```
 
-### `src/EmailService.php` — সম্পূর্ণ SMTP ইমেইল সার্ভিস
+### `src/EmailService.php` — PHPMailer-ভিত্তিক ইমেইল সার্ভিস (Hostinger অফিশিয়াল)
 
 ```php
 <?php
 declare(strict_types=1);
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
+require_once __DIR__ . '/../vendor/autoload.php';
 
 class EmailService
 {
@@ -1151,7 +1208,6 @@ class EmailService
     private string $fromEmail;
     private string $fromName;
     private string $replyTo;
-    private $socket;
     private array $log = [];
 
     public function __construct()
@@ -1168,18 +1224,19 @@ class EmailService
 
     /**
      * ইমেইল পাঠানো — মূল ফাংশন
+     * Hostinger SMTP (PHPMailer) অথবা Resend API ব্যবহার করে
      */
     public function send(string $to, string $subject, string $htmlBody, array $options = []): bool
     {
         try {
-            // DB থেকে email_settings চেক
+            // DB থেকে email_settings চেক করুন (admin প্যানেল থেকে কনফিগার করা)
             $settings = Database::fetchOne("SELECT * FROM email_settings LIMIT 1");
             if ($settings && !$settings['is_enabled']) {
                 $this->log[] = 'Email sending is disabled in settings';
                 return false;
             }
 
-            // Settings override (DB > .env)
+            // DB সেটিংস .env-কে override করবে
             if ($settings) {
                 if ($settings['smtp_host']) $this->host = $settings['smtp_host'];
                 if ($settings['smtp_port']) $this->port = (int)$settings['smtp_port'];
@@ -1195,8 +1252,8 @@ class EmailService
                 return $this->sendViaResend($to, $subject, $htmlBody, $settings['resend_api_key'] ?? '');
             }
 
-            // SMTP দিয়ে পাঠানো
-            return $this->sendViaSMTP($to, $subject, $htmlBody, $options);
+            // PHPMailer দিয়ে Hostinger SMTP সেন্ড
+            return $this->sendViaPHPMailer($to, $subject, $htmlBody, $options);
 
         } catch (\Throwable $e) {
             error_log("Email error: " . $e->getMessage());
@@ -1206,113 +1263,113 @@ class EmailService
     }
 
     /**
-     * Hostinger SMTP দিয়ে ইমেইল পাঠানো
+     * PHPMailer দিয়ে Hostinger SMTP ইমেইল পাঠানো
+     * Official: smtp.hostinger.com | Port 465 (SSL) বা 587 (TLS/STARTTLS)
      */
-    private function sendViaSMTP(string $to, string $subject, string $htmlBody, array $options = []): bool
+    private function sendViaPHPMailer(string $to, string $subject, string $htmlBody, array $options = []): bool
     {
-        $context = stream_context_create([
-            'ssl' => [
-                'verify_peer' => true,
-                'verify_peer_name' => true,
-                'allow_self_signed' => false,
-            ]
-        ]);
+        $mail = new PHPMailer(true); // true = exceptions enabled
 
-        $protocol = ($this->encryption === 'ssl') ? 'ssl://' : 'tcp://';
-        $this->socket = stream_socket_client(
-            $protocol . $this->host . ':' . $this->port,
-            $errno, $errstr, 30,
-            STREAM_CLIENT_CONNECT, $context
-        );
+        try {
+            // ── সার্ভার সেটিংস (Hostinger Official) ──
+            $mail->isSMTP();
+            $mail->Host       = $this->host;           // smtp.hostinger.com
+            $mail->SMTPAuth   = true;
+            $mail->Username   = $this->username;       // info@artistiya.store
+            $mail->Password   = $this->password;       // ইমেইল পাসওয়ার্ড
+            $mail->Port       = $this->port;           // 465 (SSL) বা 587 (TLS)
 
-        if (!$this->socket) {
-            throw new \RuntimeException("SMTP connection failed: $errstr ($errno)");
-        }
-
-        $this->readResponse(220);
-
-        // EHLO
-        $this->sendCommand("EHLO " . gethostname(), 250);
-
-        // STARTTLS (port 587)
-        if ($this->encryption === 'tls') {
-            $this->sendCommand("STARTTLS", 220);
-            stream_socket_enable_crypto($this->socket, true, STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT);
-            $this->sendCommand("EHLO " . gethostname(), 250);
-        }
-
-        // AUTH LOGIN
-        $this->sendCommand("AUTH LOGIN", 334);
-        $this->sendCommand(base64_encode($this->username), 334);
-        $this->sendCommand(base64_encode($this->password), 235);
-
-        // MAIL FROM
-        $this->sendCommand("MAIL FROM:<{$this->fromEmail}>", 250);
-
-        // RCPT TO
-        $recipients = is_array($to) ? $to : [$to];
-        foreach ($recipients as $recipient) {
-            $this->sendCommand("RCPT TO:<{$recipient}>", 250);
-        }
-
-        // CC
-        if (!empty($options['cc'])) {
-            foreach ((array)$options['cc'] as $cc) {
-                $this->sendCommand("RCPT TO:<{$cc}>", 250);
+            // Encryption সেটআপ (Hostinger সাপোর্টেড)
+            if ($this->encryption === 'ssl' || $this->port === 465) {
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS; // SSL/TLS implicit
+            } elseif ($this->encryption === 'tls' || $this->port === 587) {
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS; // STARTTLS explicit
             }
-        }
 
-        // BCC
-        if (!empty($options['bcc'])) {
-            foreach ((array)$options['bcc'] as $bcc) {
-                $this->sendCommand("RCPT TO:<{$bcc}>", 250);
+            // ── ডিবাগ মোড (প্রোডাকশনে 0 রাখুন) ──
+            $mail->SMTPDebug = (getenv('APP_DEBUG') === 'true') ? SMTP::DEBUG_SERVER : SMTP::DEBUG_OFF;
+
+            // ── প্রেরক ──
+            $mail->setFrom($this->fromEmail, $this->fromName);
+            $mail->addReplyTo($this->replyTo, $this->fromName);
+
+            // ── প্রাপক ──
+            $recipients = is_array($to) ? $to : [$to];
+            foreach ($recipients as $recipient) {
+                $mail->addAddress(trim($recipient));
             }
+
+            // CC
+            if (!empty($options['cc'])) {
+                foreach ((array)$options['cc'] as $cc) {
+                    $mail->addCC(trim($cc));
+                }
+            }
+
+            // BCC
+            if (!empty($options['bcc'])) {
+                foreach ((array)$options['bcc'] as $bcc) {
+                    $mail->addBCC(trim($bcc));
+                }
+            }
+
+            // ── কন্টেন্ট ──
+            $mail->isHTML(true);
+            $mail->CharSet  = 'UTF-8';
+            $mail->Encoding = 'base64';
+            $mail->Subject  = $subject;
+            $mail->Body     = $htmlBody;
+            $mail->AltBody  = strip_tags(
+                str_replace(['<br>', '<br/>', '<br />', '</p>', '</div>'], "\n", $htmlBody)
+            );
+
+            // ── অ্যাটাচমেন্ট (ঐচ্ছিক) ──
+            if (!empty($options['attachments'])) {
+                foreach ($options['attachments'] as $attachment) {
+                    if (is_array($attachment)) {
+                        $mail->addAttachment($attachment['path'], $attachment['name'] ?? '');
+                    } else {
+                        $mail->addAttachment($attachment);
+                    }
+                }
+            }
+
+            // ── পাঠান ──
+            $mail->send();
+
+            // সফল হলে লগ রাখুন
+            $this->logEmailSent($to, $subject, 'hostinger_smtp');
+            return true;
+
+        } catch (Exception $e) {
+            $errorMsg = "PHPMailer Error: {$mail->ErrorInfo}";
+            error_log($errorMsg);
+            $this->log[] = $errorMsg;
+            throw new \RuntimeException($errorMsg);
         }
-
-        // DATA
-        $this->sendCommand("DATA", 354);
-
-        // Build email headers
-        $boundary = md5(uniqid((string)time()));
-        $headers = $this->buildHeaders($to, $subject, $boundary, $options);
-        $body = $this->buildBody($htmlBody, $boundary, $options['text_body'] ?? null);
-
-        // Send email content
-        fwrite($this->socket, $headers . "\r\n" . $body . "\r\n.\r\n");
-        $this->readResponse(250);
-
-        // QUIT
-        $this->sendCommand("QUIT", 221);
-        fclose($this->socket);
-
-        // সফল হলে log রাখুন
-        $this->logEmailSent($to, $subject, 'smtp');
-
-        return true;
     }
 
     /**
-     * Resend API দিয়ে পাঠানো (ফলব্যাক)
+     * Resend API দিয়ে পাঠানো (ফলব্যাক / বিকল্প প্রোভাইডার)
      */
     private function sendViaResend(string $to, string $subject, string $htmlBody, string $apiKey): bool
     {
-        if (!$apiKey) {
-            $apiKey = Encryption::decrypt($apiKey);
-        }
+        $decryptedKey = Encryption::decrypt($apiKey);
 
         $ch = curl_init('https://api.resend.com/emails');
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_HTTPHEADER => [
+            CURLOPT_POST           => true,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_HTTPHEADER     => [
                 'Content-Type: application/json',
-                "Authorization: Bearer $apiKey",
+                "Authorization: Bearer $decryptedKey",
             ],
             CURLOPT_POSTFIELDS => json_encode([
-                'from' => "{$this->fromName} <{$this->fromEmail}>",
-                'to' => [$to],
-                'subject' => $subject,
-                'html' => $htmlBody,
+                'from'     => "{$this->fromName} <{$this->fromEmail}>",
+                'to'       => [$to],
+                'subject'  => $subject,
+                'html'     => $htmlBody,
                 'reply_to' => $this->replyTo,
             ]),
         ]);
@@ -1329,76 +1386,47 @@ class EmailService
         return true;
     }
 
-    private function buildHeaders(string $to, string $subject, string $boundary, array $options): string
-    {
-        $headers  = "From: {$this->fromName} <{$this->fromEmail}>\r\n";
-        $headers .= "To: {$to}\r\n";
-        $headers .= "Reply-To: {$this->replyTo}\r\n";
-        $headers .= "Subject: =?UTF-8?B?" . base64_encode($subject) . "?=\r\n";
-        $headers .= "MIME-Version: 1.0\r\n";
-        $headers .= "Content-Type: multipart/alternative; boundary=\"{$boundary}\"\r\n";
-        $headers .= "X-Mailer: Artistiya-PHP/1.0\r\n";
-        $headers .= "Date: " . date('r') . "\r\n";
-        $headers .= "Message-ID: <" . md5(uniqid((string)time())) . "@" . parse_url(getenv('APP_URL'), PHP_URL_HOST) . ">\r\n";
-
-        if (!empty($options['cc'])) {
-            $headers .= "Cc: " . implode(', ', (array)$options['cc']) . "\r\n";
-        }
-
-        return $headers;
-    }
-
-    private function buildBody(string $htmlBody, string $boundary, ?string $textBody = null): string
-    {
-        $plainText = $textBody ?: strip_tags(str_replace(['<br>', '<br/>', '<br />', '</p>'], "\n", $htmlBody));
-
-        $body  = "--{$boundary}\r\n";
-        $body .= "Content-Type: text/plain; charset=UTF-8\r\n";
-        $body .= "Content-Transfer-Encoding: base64\r\n\r\n";
-        $body .= chunk_split(base64_encode($plainText)) . "\r\n";
-
-        $body .= "--{$boundary}\r\n";
-        $body .= "Content-Type: text/html; charset=UTF-8\r\n";
-        $body .= "Content-Transfer-Encoding: base64\r\n\r\n";
-        $body .= chunk_split(base64_encode($htmlBody)) . "\r\n";
-
-        $body .= "--{$boundary}--";
-        return $body;
-    }
-
-    private function sendCommand(string $command, int $expectedCode): string
-    {
-        fwrite($this->socket, $command . "\r\n");
-        return $this->readResponse($expectedCode);
-    }
-
-    private function readResponse(int $expectedCode): string
-    {
-        $response = '';
-        while ($line = fgets($this->socket, 512)) {
-            $response .= $line;
-            if ($line[3] === ' ') break;
-        }
-        $code = (int)substr($response, 0, 3);
-        if ($code !== $expectedCode) {
-            throw new \RuntimeException("SMTP error: expected $expectedCode, got $code — $response");
-        }
-        return $response;
-    }
-
+    /**
+     * ইমেইল লগ ডাটাবেজে সেভ
+     */
     private function logEmailSent(string $to, string $subject, string $provider): void
     {
         try {
             Database::insert('email_log', [
-                'recipient' => $to,
-                'subject' => $subject,
-                'provider' => $provider,
-                'status' => 'sent',
-                'sent_at' => date('Y-m-d H:i:s'),
+                'recipient' => is_array($to) ? implode(', ', $to) : $to,
+                'subject'   => mb_substr($subject, 0, 500),
+                'provider'  => $provider,
+                'status'    => 'sent',
+                'sent_at'   => date('Y-m-d H:i:s'),
             ]);
         } catch (\Throwable $e) {
-            // email_log টেবিল না থাকলে শুধু error_log
             error_log("Email sent to $to: $subject via $provider");
+        }
+    }
+
+    /**
+     * SMTP কানেকশন টেস্ট (admin প্যানেল থেকে কল করুন)
+     */
+    public function testConnection(): array
+    {
+        $mail = new PHPMailer(true);
+        try {
+            $mail->isSMTP();
+            $mail->Host       = $this->host;
+            $mail->SMTPAuth   = true;
+            $mail->Username   = $this->username;
+            $mail->Password   = $this->password;
+            $mail->Port       = $this->port;
+            $mail->SMTPSecure = ($this->port === 465)
+                ? PHPMailer::ENCRYPTION_SMTPS
+                : PHPMailer::ENCRYPTION_STARTTLS;
+
+            $mail->smtpConnect();
+            $mail->smtpClose();
+
+            return ['success' => true, 'message' => 'SMTP কানেকশন সফল!'];
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => "SMTP কানেকশন ব্যর্থ: {$mail->ErrorInfo}"];
         }
     }
 
@@ -2094,13 +2122,19 @@ php_value max_input_vars 1000
 ## মাইগ্রেশন চেকলিস্ট
 
 - [ ] MySQL 8.0+ ইনস্টল ও কনফিগার
-- [ ] `DATABASE_SCHEMA_MYSQL.sql` রান করুন
+- [ ] `DATABASE_SCHEMA_MYSQL.sql` রান করুন (57 টেবিল সহ email_queue ও email_log)
 - [ ] Supabase থেকে সকল টেবিলের ডেটা CSV export
 - [ ] MySQL-এ ডেটা import
-- [ ] `.env` ফাইল কনফিগার
+- [ ] `.env` ফাইল কনফিগার (Hostinger SMTP সেটিংস সহ)
 - [ ] SSL সার্টিফিকেট সেটআপ
 - [ ] পেমেন্ট গেটওয়ে credentials encrypt করে DB-তে সেভ
-- [ ] SMTP email কনফিগার
+- [ ] **Hostinger ইমেইল সেটআপ:**
+  - [ ] hPanel → Emails → Create email account (info@artistiya.store)
+  - [ ] SSH দিয়ে `composer2 require phpmailer/phpmailer` চালান
+  - [ ] `.env`-তে SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS সেট করুন
+  - [ ] `EmailService::testConnection()` কল করে SMTP কানেকশন যাচাই করুন
+  - [ ] hPanel → Cron Jobs → `process-email-queue.php` প্রতি মিনিটে সেট করুন
+  - [ ] টেস্ট ইমেইল পাঠিয়ে ইনবক্সে ডেলিভারি নিশ্চিত করুন
 - [ ] File upload directory তৈরি ও permission সেট (755)
 - [ ] `.htaccess` security rules যোগ
 - [ ] Rate limiting test
@@ -2108,6 +2142,30 @@ php_value max_input_vars 1000
 - [ ] ডেলিভারি API test
 - [ ] সকল CRUD operations test
 - [ ] Production deploy ও final security audit
+
+---
+
+## Composer সেটআপ
+
+```json
+{
+    "name": "artistiya/ecommerce",
+    "description": "Artistiya E-Commerce Platform",
+    "require": {
+        "php": ">=8.1",
+        "phpmailer/phpmailer": "^6.9"
+    },
+    "autoload": {
+        "classmap": ["src/"]
+    }
+}
+```
+
+```bash
+# Hostinger-এ ইনস্টল
+cd public_html
+composer2 require phpmailer/phpmailer
+```
 
 ---
 
