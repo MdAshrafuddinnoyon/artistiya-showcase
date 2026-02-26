@@ -350,8 +350,14 @@ class Auth
         }
 
         $token = self::generateToken($user['id']);
+        $isAdmin = self::isAdmin($user['id']);
         RateLimit::reset($ip, 'login');
-        return ['token' => $token, 'user_id' => $user['id']];
+        return [
+            'token'    => $token,
+            'user_id'  => $user['id'],
+            'is_admin' => $isAdmin,
+            'redirect' => $isAdmin ? '/admin' : '/',
+        ];
     }
 
     public static function isAdmin(string $userId): bool

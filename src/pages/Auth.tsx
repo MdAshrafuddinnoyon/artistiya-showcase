@@ -190,7 +190,7 @@ const Auth = () => {
           setCaptchaInput("");
         } else {
           toast.success("Welcome back!");
-          navigate("/");
+          // Redirect is handled by the useEffect that checks user + isAdmin
         }
       }
     } finally {

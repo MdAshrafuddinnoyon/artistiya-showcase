@@ -204,7 +204,7 @@ const Admin = () => {
   const [activeSection, setActiveSection] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<string[]>(["Overview", "Sales & Orders"]);
+  const [expandedSections, setExpandedSections] = useState<string[]>(["Overview"]);
   const [branding, setBranding] = useState<{
     logo_url: string | null;
     logo_text: string;
