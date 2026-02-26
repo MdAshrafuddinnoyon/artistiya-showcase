@@ -4,8 +4,8 @@
 
 | ফাইল | বিবরণ |
 |------|--------|
-| `DATABASE_SCHEMA_MYSQL.sql` | সম্পূর্ণ MySQL 8.0+ স্কিমা — ৫৫টি টেবিল, ১টি ভিউ, ৪টি ফাংশন, ৬টি ট্রিগার, ২টি প্রসিডিওর |
-| `PHP_MIGRATION_GUIDE.md` | PHP/MySQL মাইগ্রেশন গাইড — API, পেমেন্ট, ডেলিভারি, Auth, ফাইল আপলোড |
+| `DATABASE_SCHEMA_MYSQL.sql` | সম্পূর্ণ MySQL 8.0+ স্কিমা — ৫৭টি টেবিল, ১টি ভিউ, ৪টি ফাংশন, ৬টি ট্রিগার, ২টি প্রসিডিওর |
+| `PHP_MIGRATION_GUIDE.md` | PHP/MySQL মাইগ্রেশন গাইড — API, পেমেন্ট, ডেলিভারি, Auth, ফাইল আপলোড, **Hostinger SMTP ইমেইল** |
 | `SECURITY_HARDENING_GUIDE.md` | SQLi, XSS, CSRF প্রতিরোধ, AES-256, OWASP Top 10 |
 | `FRONTEND_MIGRATION_GUIDE.md` | **ফ্রন্টএন্ড Supabase SDK → PHP API রিপ্লেসমেন্ট গাইড** — ১২৮ ফাইলের সম্পূর্ণ ম্যাপিং, Auth, Storage, Edge Functions |
 
@@ -179,7 +179,7 @@ cp .env.example .env
 
 ## ✅ সম্পূর্ণ প্যারিটি চেকলিস্ট
 
-- [x] ৫৫টি টেবিল (সকল Supabase টেবিল + PHP-specific)
+- [x] ৫৭টি টেবিল (সকল Supabase টেবিল + PHP-specific + email_queue + email_log)
 - [x] ৬টি ট্রিগার (fraud detection, customer sync, auto profile)
 - [x] ৪টি ফাংশন (is_admin, lead/newsletter rate limits, order number)
 - [x] ২টি প্রসিডিওর (credential encrypt/decrypt)
@@ -188,3 +188,5 @@ cp .env.example .env
 - [x] ৪টি Storage bucket equivalent
 - [x] ১২টি Edge Function → PHP API equivalent
 - [x] RLS → PHP middleware mapping
+- [x] Hostinger SMTP ইমেইল সিস্টেম (কিউ, টেম্পলেট, অটো-সেন্ড)
+- [x] অর্ডার কনফার্মেশন / শিপিং / ডেলিভারি অটো-ইমেইল

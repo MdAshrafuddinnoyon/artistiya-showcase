@@ -9,8 +9,9 @@
 6. [API Endpoints](#api-endpoints)
 7. [পেমেন্ট গেটওয়ে](#পেমেন্ট-গেটওয়ে)
 8. [ডেলিভারি API](#ডেলিভারি-api)
-9. [সিকিউরিটি](#সিকিউরিটি)
-10. [ফাইল আপলোড](#ফাইল-আপলোড)
+9. [ইমেইল সিস্টেম (Hostinger SMTP)](#ইমেইল-সিস্টেম-hostinger-smtp)
+10. [সিকিউরিটি](#সিকিউরিটি)
+11. [ফাইল আপলোড](#ফাইল-আপলোড)
 
 ---
 
@@ -1084,6 +1085,921 @@ class SteadfastDelivery
         curl_close($ch);
         return $response;
     }
+}
+```
+
+---
+
+## ইমেইল সিস্টেম (Hostinger SMTP)
+
+Hostinger হোস্টিংয়ে বিল্ট-ইন SMTP সার্ভিস থাকে। এটি দিয়ে অর্ডার কনফার্মেশন, শিপিং আপডেট, ডেলিভারি নোটিফিকেশন, পাসওয়ার্ড রিসেট এবং নিউজলেটার ইমেইল পাঠানো যায়।
+
+### `.env` ইমেইল কনফিগারেশন (Hostinger)
+
+```env
+# Hostinger SMTP Configuration
+SMTP_HOST=smtp.hostinger.com
+SMTP_PORT=465
+SMTP_ENCRYPTION=ssl
+SMTP_USER=info@artistiya.store
+SMTP_PASS=your_email_password
+SMTP_FROM_EMAIL=info@artistiya.store
+SMTP_FROM_NAME=Artistiya
+SMTP_REPLY_TO=support@artistiya.store
+
+# Alternative: Port 587 with TLS
+# SMTP_HOST=smtp.hostinger.com
+# SMTP_PORT=587
+# SMTP_ENCRYPTION=tls
+```
+
+### ফাইল স্ট্রাকচার
+
+```
+artistiya/
+├── src/
+│   ├── EmailService.php         # মূল ইমেইল ক্লাস (SMTP)
+│   ├── EmailTemplateEngine.php  # টেম্পলেট রেন্ডারিং
+│   └── EmailQueue.php           # ইমেইল কিউ (ব্যাকগ্রাউন্ড সেন্ড)
+├── templates/
+│   └── emails/
+│       ├── order-confirmation.html
+│       ├── order-shipped.html
+│       ├── order-delivered.html
+│       ├── password-reset.html
+│       ├── welcome.html
+│       └── newsletter.html
+├── api/
+│   └── email.php                # ইমেইল API endpoint
+└── cron/
+    └── process-email-queue.php  # Cron job (কিউ প্রসেসিং)
+```
+
+### `src/EmailService.php` — সম্পূর্ণ SMTP ইমেইল সার্ভিস
+
+```php
+<?php
+declare(strict_types=1);
+
+class EmailService
+{
+    private string $host;
+    private int $port;
+    private string $encryption;
+    private string $username;
+    private string $password;
+    private string $fromEmail;
+    private string $fromName;
+    private string $replyTo;
+    private $socket;
+    private array $log = [];
+
+    public function __construct()
+    {
+        $this->host       = getenv('SMTP_HOST') ?: 'smtp.hostinger.com';
+        $this->port       = (int)(getenv('SMTP_PORT') ?: 465);
+        $this->encryption = getenv('SMTP_ENCRYPTION') ?: 'ssl';
+        $this->username   = getenv('SMTP_USER') ?: '';
+        $this->password   = getenv('SMTP_PASS') ?: '';
+        $this->fromEmail  = getenv('SMTP_FROM_EMAIL') ?: $this->username;
+        $this->fromName   = getenv('SMTP_FROM_NAME') ?: 'Artistiya';
+        $this->replyTo    = getenv('SMTP_REPLY_TO') ?: $this->fromEmail;
+    }
+
+    /**
+     * ইমেইল পাঠানো — মূল ফাংশন
+     */
+    public function send(string $to, string $subject, string $htmlBody, array $options = []): bool
+    {
+        try {
+            // DB থেকে email_settings চেক
+            $settings = Database::fetchOne("SELECT * FROM email_settings LIMIT 1");
+            if ($settings && !$settings['is_enabled']) {
+                $this->log[] = 'Email sending is disabled in settings';
+                return false;
+            }
+
+            // Settings override (DB > .env)
+            if ($settings) {
+                if ($settings['smtp_host']) $this->host = $settings['smtp_host'];
+                if ($settings['smtp_port']) $this->port = (int)$settings['smtp_port'];
+                if ($settings['smtp_user']) $this->username = Encryption::decrypt($settings['smtp_user']);
+                if ($settings['smtp_password']) $this->password = Encryption::decrypt($settings['smtp_password']);
+                if ($settings['from_email']) $this->fromEmail = $settings['from_email'];
+                if ($settings['from_name']) $this->fromName = $settings['from_name'];
+                if ($settings['reply_to_email']) $this->replyTo = $settings['reply_to_email'];
+            }
+
+            // Resend API ব্যবহার করলে
+            if (($settings['provider'] ?? 'smtp') === 'resend') {
+                return $this->sendViaResend($to, $subject, $htmlBody, $settings['resend_api_key'] ?? '');
+            }
+
+            // SMTP দিয়ে পাঠানো
+            return $this->sendViaSMTP($to, $subject, $htmlBody, $options);
+
+        } catch (\Throwable $e) {
+            error_log("Email error: " . $e->getMessage());
+            $this->log[] = $e->getMessage();
+            return false;
+        }
+    }
+
+    /**
+     * Hostinger SMTP দিয়ে ইমেইল পাঠানো
+     */
+    private function sendViaSMTP(string $to, string $subject, string $htmlBody, array $options = []): bool
+    {
+        $context = stream_context_create([
+            'ssl' => [
+                'verify_peer' => true,
+                'verify_peer_name' => true,
+                'allow_self_signed' => false,
+            ]
+        ]);
+
+        $protocol = ($this->encryption === 'ssl') ? 'ssl://' : 'tcp://';
+        $this->socket = stream_socket_client(
+            $protocol . $this->host . ':' . $this->port,
+            $errno, $errstr, 30,
+            STREAM_CLIENT_CONNECT, $context
+        );
+
+        if (!$this->socket) {
+            throw new \RuntimeException("SMTP connection failed: $errstr ($errno)");
+        }
+
+        $this->readResponse(220);
+
+        // EHLO
+        $this->sendCommand("EHLO " . gethostname(), 250);
+
+        // STARTTLS (port 587)
+        if ($this->encryption === 'tls') {
+            $this->sendCommand("STARTTLS", 220);
+            stream_socket_enable_crypto($this->socket, true, STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT);
+            $this->sendCommand("EHLO " . gethostname(), 250);
+        }
+
+        // AUTH LOGIN
+        $this->sendCommand("AUTH LOGIN", 334);
+        $this->sendCommand(base64_encode($this->username), 334);
+        $this->sendCommand(base64_encode($this->password), 235);
+
+        // MAIL FROM
+        $this->sendCommand("MAIL FROM:<{$this->fromEmail}>", 250);
+
+        // RCPT TO
+        $recipients = is_array($to) ? $to : [$to];
+        foreach ($recipients as $recipient) {
+            $this->sendCommand("RCPT TO:<{$recipient}>", 250);
+        }
+
+        // CC
+        if (!empty($options['cc'])) {
+            foreach ((array)$options['cc'] as $cc) {
+                $this->sendCommand("RCPT TO:<{$cc}>", 250);
+            }
+        }
+
+        // BCC
+        if (!empty($options['bcc'])) {
+            foreach ((array)$options['bcc'] as $bcc) {
+                $this->sendCommand("RCPT TO:<{$bcc}>", 250);
+            }
+        }
+
+        // DATA
+        $this->sendCommand("DATA", 354);
+
+        // Build email headers
+        $boundary = md5(uniqid((string)time()));
+        $headers = $this->buildHeaders($to, $subject, $boundary, $options);
+        $body = $this->buildBody($htmlBody, $boundary, $options['text_body'] ?? null);
+
+        // Send email content
+        fwrite($this->socket, $headers . "\r\n" . $body . "\r\n.\r\n");
+        $this->readResponse(250);
+
+        // QUIT
+        $this->sendCommand("QUIT", 221);
+        fclose($this->socket);
+
+        // সফল হলে log রাখুন
+        $this->logEmailSent($to, $subject, 'smtp');
+
+        return true;
+    }
+
+    /**
+     * Resend API দিয়ে পাঠানো (ফলব্যাক)
+     */
+    private function sendViaResend(string $to, string $subject, string $htmlBody, string $apiKey): bool
+    {
+        if (!$apiKey) {
+            $apiKey = Encryption::decrypt($apiKey);
+        }
+
+        $ch = curl_init('https://api.resend.com/emails');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                "Authorization: Bearer $apiKey",
+            ],
+            CURLOPT_POSTFIELDS => json_encode([
+                'from' => "{$this->fromName} <{$this->fromEmail}>",
+                'to' => [$to],
+                'subject' => $subject,
+                'html' => $htmlBody,
+                'reply_to' => $this->replyTo,
+            ]),
+        ]);
+
+        $response = json_decode(curl_exec($ch), true);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200) {
+            throw new \RuntimeException('Resend API error: ' . json_encode($response));
+        }
+
+        $this->logEmailSent($to, $subject, 'resend');
+        return true;
+    }
+
+    private function buildHeaders(string $to, string $subject, string $boundary, array $options): string
+    {
+        $headers  = "From: {$this->fromName} <{$this->fromEmail}>\r\n";
+        $headers .= "To: {$to}\r\n";
+        $headers .= "Reply-To: {$this->replyTo}\r\n";
+        $headers .= "Subject: =?UTF-8?B?" . base64_encode($subject) . "?=\r\n";
+        $headers .= "MIME-Version: 1.0\r\n";
+        $headers .= "Content-Type: multipart/alternative; boundary=\"{$boundary}\"\r\n";
+        $headers .= "X-Mailer: Artistiya-PHP/1.0\r\n";
+        $headers .= "Date: " . date('r') . "\r\n";
+        $headers .= "Message-ID: <" . md5(uniqid((string)time())) . "@" . parse_url(getenv('APP_URL'), PHP_URL_HOST) . ">\r\n";
+
+        if (!empty($options['cc'])) {
+            $headers .= "Cc: " . implode(', ', (array)$options['cc']) . "\r\n";
+        }
+
+        return $headers;
+    }
+
+    private function buildBody(string $htmlBody, string $boundary, ?string $textBody = null): string
+    {
+        $plainText = $textBody ?: strip_tags(str_replace(['<br>', '<br/>', '<br />', '</p>'], "\n", $htmlBody));
+
+        $body  = "--{$boundary}\r\n";
+        $body .= "Content-Type: text/plain; charset=UTF-8\r\n";
+        $body .= "Content-Transfer-Encoding: base64\r\n\r\n";
+        $body .= chunk_split(base64_encode($plainText)) . "\r\n";
+
+        $body .= "--{$boundary}\r\n";
+        $body .= "Content-Type: text/html; charset=UTF-8\r\n";
+        $body .= "Content-Transfer-Encoding: base64\r\n\r\n";
+        $body .= chunk_split(base64_encode($htmlBody)) . "\r\n";
+
+        $body .= "--{$boundary}--";
+        return $body;
+    }
+
+    private function sendCommand(string $command, int $expectedCode): string
+    {
+        fwrite($this->socket, $command . "\r\n");
+        return $this->readResponse($expectedCode);
+    }
+
+    private function readResponse(int $expectedCode): string
+    {
+        $response = '';
+        while ($line = fgets($this->socket, 512)) {
+            $response .= $line;
+            if ($line[3] === ' ') break;
+        }
+        $code = (int)substr($response, 0, 3);
+        if ($code !== $expectedCode) {
+            throw new \RuntimeException("SMTP error: expected $expectedCode, got $code — $response");
+        }
+        return $response;
+    }
+
+    private function logEmailSent(string $to, string $subject, string $provider): void
+    {
+        try {
+            Database::insert('email_log', [
+                'recipient' => $to,
+                'subject' => $subject,
+                'provider' => $provider,
+                'status' => 'sent',
+                'sent_at' => date('Y-m-d H:i:s'),
+            ]);
+        } catch (\Throwable $e) {
+            // email_log টেবিল না থাকলে শুধু error_log
+            error_log("Email sent to $to: $subject via $provider");
+        }
+    }
+
+    public function getLog(): array
+    {
+        return $this->log;
+    }
+}
+```
+
+### `src/EmailTemplateEngine.php` — ডায়নামিক টেম্পলেট রেন্ডারিং
+
+```php
+<?php
+declare(strict_types=1);
+
+class EmailTemplateEngine
+{
+    /**
+     * DB থেকে বা ফাইল থেকে টেম্পলেট লোড ও রেন্ডার
+     */
+    public static function render(string $templateKey, array $variables = []): string
+    {
+        // প্রথমে DB email_templates থেকে দেখুন
+        $template = Database::fetchOne(
+            "SELECT html_content FROM email_templates WHERE template_key = ? AND is_active = 1",
+            [$templateKey]
+        );
+
+        if ($template) {
+            return self::replaceVariables($template['html_content'], $variables);
+        }
+
+        // ফাইল থেকে ফলব্যাক
+        $filePath = __DIR__ . "/../templates/emails/{$templateKey}.html";
+        if (file_exists($filePath)) {
+            $html = file_get_contents($filePath);
+            return self::replaceVariables($html, $variables);
+        }
+
+        throw new \RuntimeException("Email template not found: $templateKey");
+    }
+
+    /**
+     * ভেরিয়েবল রিপ্লেস: {{variable_name}} → মান
+     */
+    private static function replaceVariables(string $html, array $variables): string
+    {
+        foreach ($variables as $key => $value) {
+            $html = str_replace('{{' . $key . '}}', htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'), $html);
+        }
+        // সাইট ব্র্যান্ডিং যোগ
+        $branding = Database::fetchOne("SELECT * FROM site_branding LIMIT 1");
+        if ($branding) {
+            $html = str_replace('{{site_name}}', htmlspecialchars($branding['site_name'] ?? 'Artistiya', ENT_QUOTES, 'UTF-8'), $html);
+            $html = str_replace('{{site_url}}', htmlspecialchars(getenv('APP_URL') ?: '', ENT_QUOTES, 'UTF-8'), $html);
+            $html = str_replace('{{site_logo}}', htmlspecialchars($branding['logo_url'] ?? '', ENT_QUOTES, 'UTF-8'), $html);
+            $html = str_replace('{{site_phone}}', htmlspecialchars($branding['phone'] ?? '', ENT_QUOTES, 'UTF-8'), $html);
+            $html = str_replace('{{site_email}}', htmlspecialchars($branding['email'] ?? '', ENT_QUOTES, 'UTF-8'), $html);
+        }
+        $html = str_replace('{{year}}', date('Y'), $html);
+        return $html;
+    }
+
+    /**
+     * সাবজেক্ট টেম্পলেট রেন্ডার
+     */
+    public static function renderSubject(string $templateKey, array $variables = []): string
+    {
+        $template = Database::fetchOne(
+            "SELECT subject FROM email_templates WHERE template_key = ? AND is_active = 1",
+            [$templateKey]
+        );
+        $subject = $template['subject'] ?? self::getDefaultSubject($templateKey);
+        foreach ($variables as $key => $value) {
+            $subject = str_replace('{{' . $key . '}}', (string)$value, $subject);
+        }
+        return $subject;
+    }
+
+    private static function getDefaultSubject(string $key): string
+    {
+        return match ($key) {
+            'order-confirmation' => 'অর্ডার কনফার্মেশন — #{{order_number}}',
+            'order-shipped'      => 'আপনার অর্ডার শিপ করা হয়েছে — #{{order_number}}',
+            'order-delivered'    => 'অর্ডার ডেলিভারি সম্পন্ন — #{{order_number}}',
+            'password-reset'     => 'পাসওয়ার্ড রিসেট — Artistiya',
+            'welcome'            => 'স্বাগতম — Artistiya',
+            'newsletter'         => 'Artistiya নিউজলেটার',
+            default              => 'Artistiya — বিজ্ঞপ্তি',
+        };
+    }
+}
+```
+
+### `src/EmailQueue.php` — ব্যাকগ্রাউন্ড ইমেইল কিউ
+
+```php
+<?php
+declare(strict_types=1);
+
+class EmailQueue
+{
+    /**
+     * কিউতে ইমেইল যোগ করুন (তাৎক্ষণিক সেন্ডের বদলে)
+     */
+    public static function enqueue(string $to, string $subject, string $htmlBody, int $priority = 5): string
+    {
+        return Database::insert('email_queue', [
+            'recipient'  => $to,
+            'subject'    => $subject,
+            'html_body'  => $htmlBody,
+            'priority'   => $priority,
+            'status'     => 'pending',
+            'attempts'   => 0,
+            'max_attempts' => 3,
+            'scheduled_at' => date('Y-m-d H:i:s'),
+        ]);
+    }
+
+    /**
+     * Cron Job: পেন্ডিং ইমেইল প্রসেস
+     * crontab: * * * * * php /path/to/cron/process-email-queue.php
+     */
+    public static function processQueue(int $batchSize = 10): int
+    {
+        $emails = Database::fetchAll(
+            "SELECT * FROM email_queue 
+             WHERE status = 'pending' AND attempts < max_attempts AND scheduled_at <= NOW()
+             ORDER BY priority ASC, created_at ASC 
+             LIMIT ?",
+            [$batchSize]
+        );
+
+        $sent = 0;
+        $mailer = new EmailService();
+
+        foreach ($emails as $email) {
+            Database::update('email_queue', [
+                'status' => 'processing',
+                'attempts' => $email['attempts'] + 1,
+            ], $email['id']);
+
+            try {
+                $result = $mailer->send($email['recipient'], $email['subject'], $email['html_body']);
+
+                Database::update('email_queue', [
+                    'status' => $result ? 'sent' : 'failed',
+                    'sent_at' => $result ? date('Y-m-d H:i:s') : null,
+                    'error' => $result ? null : 'Send returned false',
+                ], $email['id']);
+
+                if ($result) $sent++;
+            } catch (\Throwable $e) {
+                Database::update('email_queue', [
+                    'status' => ($email['attempts'] + 1 >= $email['max_attempts']) ? 'failed' : 'pending',
+                    'error' => mb_substr($e->getMessage(), 0, 500),
+                ], $email['id']);
+            }
+
+            usleep(200000); // 200ms বিরতি (Hostinger rate limit)
+        }
+
+        return $sent;
+    }
+}
+```
+
+### `src/OrderEmailService.php` — অর্ডার-ভিত্তিক ইমেইল অটোমেশন
+
+```php
+<?php
+declare(strict_types=1);
+
+class OrderEmailService
+{
+    /**
+     * অর্ডার কনফার্মেশন ইমেইল — অর্ডার তৈরির পরই কল হবে
+     */
+    public static function sendOrderConfirmation(string $orderId): bool
+    {
+        $settings = Database::fetchOne("SELECT * FROM email_settings LIMIT 1");
+        if ($settings && !$settings['send_order_confirmation']) return false;
+
+        $order = self::getOrderData($orderId);
+        if (!$order) return false;
+
+        $html = EmailTemplateEngine::render('order-confirmation', [
+            'customer_name'  => $order['customer_name'],
+            'order_number'   => $order['order_number'],
+            'order_date'     => date('d M Y, h:i A', strtotime($order['created_at'])),
+            'items_html'     => self::buildItemsHtml($order['items']),
+            'subtotal'       => number_format($order['subtotal'], 0),
+            'shipping_cost'  => number_format($order['shipping_cost'], 0),
+            'discount'       => number_format($order['discount_amount'] ?? 0, 0),
+            'total'          => number_format($order['total'], 0),
+            'payment_method' => self::getPaymentLabel($order['payment_method']),
+            'address'        => self::formatAddress($order['address']),
+            'track_url'      => getenv('APP_URL') . '/track-order?order=' . $order['order_number'],
+        ]);
+
+        $subject = EmailTemplateEngine::renderSubject('order-confirmation', [
+            'order_number' => $order['order_number'],
+        ]);
+
+        // কাস্টমারকে পাঠান
+        $customerEmail = $order['customer_email'] ?? null;
+        if ($customerEmail) {
+            EmailQueue::enqueue($customerEmail, $subject, $html, 1);
+        }
+
+        // অ্যাডমিনকে কপি পাঠান
+        $adminEmail = $settings['from_email'] ?? getenv('SMTP_FROM_EMAIL');
+        if ($adminEmail) {
+            EmailQueue::enqueue($adminEmail, "[Admin] $subject", $html, 3);
+        }
+
+        return true;
+    }
+
+    /**
+     * শিপিং আপডেট ইমেইল
+     */
+    public static function sendShippingUpdate(string $orderId, string $trackingNumber = '', string $courierName = ''): bool
+    {
+        $settings = Database::fetchOne("SELECT * FROM email_settings LIMIT 1");
+        if ($settings && !$settings['send_shipping_update']) return false;
+
+        $order = self::getOrderData($orderId);
+        if (!$order) return false;
+
+        $html = EmailTemplateEngine::render('order-shipped', [
+            'customer_name'  => $order['customer_name'],
+            'order_number'   => $order['order_number'],
+            'tracking_number' => $trackingNumber ?: 'N/A',
+            'courier_name'   => $courierName ?: 'কুরিয়ার সার্ভিস',
+            'items_html'     => self::buildItemsHtml($order['items']),
+            'address'        => self::formatAddress($order['address']),
+            'track_url'      => getenv('APP_URL') . '/track-order?order=' . $order['order_number'],
+        ]);
+
+        $subject = EmailTemplateEngine::renderSubject('order-shipped', [
+            'order_number' => $order['order_number'],
+        ]);
+
+        $customerEmail = $order['customer_email'] ?? null;
+        if ($customerEmail) {
+            EmailQueue::enqueue($customerEmail, $subject, $html, 1);
+        }
+
+        return true;
+    }
+
+    /**
+     * ডেলিভারি কনফার্মেশন ইমেইল
+     */
+    public static function sendDeliveryConfirmation(string $orderId): bool
+    {
+        $settings = Database::fetchOne("SELECT * FROM email_settings LIMIT 1");
+        if ($settings && !$settings['send_delivery_notification']) return false;
+
+        $order = self::getOrderData($orderId);
+        if (!$order) return false;
+
+        $html = EmailTemplateEngine::render('order-delivered', [
+            'customer_name' => $order['customer_name'],
+            'order_number'  => $order['order_number'],
+            'total'         => number_format($order['total'], 0),
+            'review_url'    => getenv('APP_URL') . '/dashboard?tab=orders',
+        ]);
+
+        $subject = EmailTemplateEngine::renderSubject('order-delivered', [
+            'order_number' => $order['order_number'],
+        ]);
+
+        $customerEmail = $order['customer_email'] ?? null;
+        if ($customerEmail) {
+            EmailQueue::enqueue($customerEmail, $subject, $html, 2);
+        }
+
+        return true;
+    }
+
+    /**
+     * পাসওয়ার্ড রিসেট ইমেইল
+     */
+    public static function sendPasswordReset(string $email, string $resetToken): bool
+    {
+        $html = EmailTemplateEngine::render('password-reset', [
+            'reset_url' => getenv('APP_URL') . '/auth?reset_token=' . $resetToken,
+            'expires_in' => '১ ঘণ্টা',
+        ]);
+
+        $subject = EmailTemplateEngine::renderSubject('password-reset', []);
+        return (new EmailService())->send($email, $subject, $html);
+    }
+
+    /**
+     * ওয়েলকাম ইমেইল (নতুন রেজিস্ট্রেশন)
+     */
+    public static function sendWelcome(string $email, string $fullName): bool
+    {
+        $html = EmailTemplateEngine::render('welcome', [
+            'customer_name' => $fullName,
+            'shop_url'      => getenv('APP_URL') . '/shop',
+        ]);
+
+        $subject = EmailTemplateEngine::renderSubject('welcome', []);
+        EmailQueue::enqueue($email, $subject, $html, 5);
+        return true;
+    }
+
+    // ─── Helper Methods ───
+
+    private static function getOrderData(string $orderId): ?array
+    {
+        $order = Database::fetchOne(
+            "SELECT o.*, a.full_name, a.phone, a.division, a.district, a.thana, a.address_line 
+             FROM orders o LEFT JOIN addresses a ON o.address_id = a.id 
+             WHERE o.id = ?",
+            [$orderId]
+        );
+        if (!$order) return null;
+
+        $items = Database::fetchAll(
+            "SELECT * FROM order_items WHERE order_id = ?",
+            [$orderId]
+        );
+
+        // কাস্টমার ইমেইল খুঁজুন
+        $customerEmail = null;
+        if ($order['user_id']) {
+            $customer = Database::fetchOne(
+                "SELECT email FROM customers WHERE user_id = ?",
+                [$order['user_id']]
+            );
+            $customerEmail = $customer['email'] ?? null;
+            
+            if (!$customerEmail) {
+                $profile = Database::fetchOne(
+                    "SELECT email FROM profiles WHERE user_id = ?",
+                    [$order['user_id']]
+                );
+                $customerEmail = $profile['email'] ?? null;
+            }
+        }
+
+        return [
+            'order_number'   => $order['order_number'],
+            'created_at'     => $order['created_at'],
+            'subtotal'       => $order['subtotal'],
+            'shipping_cost'  => $order['shipping_cost'],
+            'discount_amount'=> $order['discount_amount'],
+            'total'          => $order['total'],
+            'payment_method' => $order['payment_method'],
+            'customer_name'  => $order['full_name'] ?? 'গ্রাহক',
+            'customer_email' => $customerEmail,
+            'items'          => $items,
+            'address' => [
+                'full_name'    => $order['full_name'],
+                'phone'        => $order['phone'],
+                'division'     => $order['division'],
+                'district'     => $order['district'],
+                'thana'        => $order['thana'],
+                'address_line' => $order['address_line'],
+            ],
+        ];
+    }
+
+    private static function buildItemsHtml(array $items): string
+    {
+        $html = '<table style="width:100%;border-collapse:collapse;margin:16px 0;">';
+        $html .= '<tr style="background:#f5f5f5;"><th style="padding:8px;text-align:left;border:1px solid #ddd;">পণ্য</th><th style="padding:8px;text-align:center;border:1px solid #ddd;">পরিমাণ</th><th style="padding:8px;text-align:right;border:1px solid #ddd;">মূল্য</th></tr>';
+        
+        foreach ($items as $item) {
+            $lineTotal = $item['product_price'] * $item['quantity'];
+            $html .= '<tr>';
+            $html .= '<td style="padding:8px;border:1px solid #ddd;">' . htmlspecialchars($item['product_name']) . '</td>';
+            $html .= '<td style="padding:8px;text-align:center;border:1px solid #ddd;">' . $item['quantity'] . '</td>';
+            $html .= '<td style="padding:8px;text-align:right;border:1px solid #ddd;">৳' . number_format($lineTotal, 0) . '</td>';
+            $html .= '</tr>';
+        }
+        $html .= '</table>';
+        return $html;
+    }
+
+    private static function formatAddress(array $addr): string
+    {
+        return implode(', ', array_filter([
+            $addr['address_line'] ?? '',
+            $addr['thana'] ?? '',
+            $addr['district'] ?? '',
+            $addr['division'] ?? '',
+        ]));
+    }
+
+    private static function getPaymentLabel(string $method): string
+    {
+        return match ($method) {
+            'cod'           => 'ক্যাশ অন ডেলিভারি',
+            'bkash'         => 'বিকাশ',
+            'nagad'         => 'নগদ',
+            'bank_transfer' => 'ব্যাংক ট্রান্সফার',
+            'sslcommerz'    => 'SSLCommerz',
+            'aamarpay'      => 'AamarPay',
+            'surjopay'      => 'SurjoPay',
+            default         => $method,
+        };
+    }
+}
+```
+
+### `api/email.php` — ইমেইল API Endpoint
+
+```php
+<?php
+// api/email.php — অর্ডার ইমেইল পাঠানোর API
+declare(strict_types=1);
+require_once __DIR__ . '/../vendor/autoload.php';
+
+header('Content-Type: application/json');
+
+try {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        exit(json_encode(['error' => 'Method not allowed']));
+    }
+
+    // Auth check
+    $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    $userId = Auth::validateToken(str_replace('Bearer ', '', $authHeader));
+    if (!$userId) {
+        http_response_code(401);
+        exit(json_encode(['error' => 'Unauthorized']));
+    }
+
+    $body = json_decode(file_get_contents('php://input'), true);
+    $orderId = $body['orderId'] ?? '';
+    $type = $body['type'] ?? 'confirmation';
+
+    if (!$orderId) {
+        http_response_code(400);
+        exit(json_encode(['error' => 'Order ID required']));
+    }
+
+    // অর্ডার ownership চেক
+    $order = Database::fetchOne("SELECT user_id FROM orders WHERE id = ?", [$orderId]);
+    if (!$order) {
+        http_response_code(404);
+        exit(json_encode(['error' => 'Order not found']));
+    }
+
+    $isAdmin = Auth::isAdmin($userId);
+    if ($order['user_id'] !== $userId && !$isAdmin) {
+        http_response_code(403);
+        exit(json_encode(['error' => 'Unauthorized access']));
+    }
+
+    $result = match ($type) {
+        'confirmation' => OrderEmailService::sendOrderConfirmation($orderId),
+        'shipped'      => OrderEmailService::sendShippingUpdate($orderId, $body['tracking_number'] ?? '', $body['courier_name'] ?? ''),
+        'delivered'    => OrderEmailService::sendDeliveryConfirmation($orderId),
+        default        => throw new \InvalidArgumentException('Invalid email type'),
+    };
+
+    echo json_encode(['success' => $result]);
+
+} catch (\Throwable $e) {
+    error_log("Email API error: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['error' => 'Failed to process email request']);
+}
+```
+
+### `cron/process-email-queue.php` — Cron Job
+
+```php
+<?php
+// crontab: * * * * * php /home/user/public_html/cron/process-email-queue.php
+require_once __DIR__ . '/../vendor/autoload.php';
+
+$sent = EmailQueue::processQueue(10);
+echo date('Y-m-d H:i:s') . " — Processed: $sent emails\n";
+```
+
+### ইমেইল টেম্পলেট উদাহরণ: `templates/emails/order-confirmation.html`
+
+```html
+<!DOCTYPE html>
+<html lang="bn">
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f7f7f7;font-family:'Segoe UI',Tahoma,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff;">
+  <!-- Header -->
+  <tr><td style="background:#1a1a2e;padding:24px;text-align:center;">
+    <img src="{{site_logo}}" alt="{{site_name}}" width="140" style="max-width:140px;">
+  </td></tr>
+
+  <!-- Body -->
+  <tr><td style="padding:32px 24px;">
+    <h1 style="color:#1a1a2e;font-size:22px;margin:0 0 16px;">অর্ডার কনফার্মেশন ✅</h1>
+    <p style="color:#333;font-size:15px;line-height:1.6;">
+      প্রিয় <strong>{{customer_name}}</strong>,<br>
+      আপনার অর্ডার <strong>#{{order_number}}</strong> সফলভাবে গৃহীত হয়েছে।
+    </p>
+
+    <div style="background:#f0f8ff;border-left:4px solid #2196F3;padding:12px 16px;margin:20px 0;border-radius:4px;">
+      <strong>📅 অর্ডারের তারিখ:</strong> {{order_date}}<br>
+      <strong>💳 পেমেন্ট:</strong> {{payment_method}}<br>
+      <strong>📍 ঠিকানা:</strong> {{address}}
+    </div>
+
+    <!-- Order Items -->
+    {{items_html}}
+
+    <!-- Totals -->
+    <table style="width:100%;margin:16px 0;border-collapse:collapse;">
+      <tr><td style="padding:6px 0;color:#666;">সাবটোটাল:</td><td style="text-align:right;padding:6px 0;">৳{{subtotal}}</td></tr>
+      <tr><td style="padding:6px 0;color:#666;">শিপিং:</td><td style="text-align:right;padding:6px 0;">৳{{shipping_cost}}</td></tr>
+      <tr><td style="padding:6px 0;color:#666;">ডিসকাউন্ট:</td><td style="text-align:right;padding:6px 0;color:#e53935;">-৳{{discount}}</td></tr>
+      <tr style="border-top:2px solid #1a1a2e;"><td style="padding:10px 0;font-size:18px;font-weight:bold;">মোট:</td><td style="text-align:right;padding:10px 0;font-size:18px;font-weight:bold;color:#1a1a2e;">৳{{total}}</td></tr>
+    </table>
+
+    <div style="text-align:center;margin:24px 0;">
+      <a href="{{track_url}}" style="display:inline-block;background:#1a1a2e;color:#fff;padding:14px 32px;text-decoration:none;border-radius:6px;font-size:15px;font-weight:bold;">📦 অর্ডার ট্র্যাক করুন</a>
+    </div>
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style="background:#f5f5f5;padding:20px 24px;text-align:center;color:#999;font-size:12px;">
+    <p>© {{year}} {{site_name}} | {{site_phone}} | {{site_email}}</p>
+    <p>এই ইমেইলটি স্বয়ংক্রিয়ভাবে পাঠানো হয়েছে।</p>
+  </td></tr>
+</table>
+</body>
+</html>
+```
+
+### MySQL `email_queue` ও `email_log` টেবিল
+
+এই টেবিলগুলো `DATABASE_SCHEMA_MYSQL.sql`-এ যোগ করতে হবে:
+
+```sql
+-- ইমেইল কিউ
+CREATE TABLE IF NOT EXISTS email_queue (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    recipient VARCHAR(255) NOT NULL,
+    subject VARCHAR(500) NOT NULL,
+    html_body LONGTEXT NOT NULL,
+    priority TINYINT DEFAULT 5,
+    status ENUM('pending','processing','sent','failed') DEFAULT 'pending',
+    attempts TINYINT DEFAULT 0,
+    max_attempts TINYINT DEFAULT 3,
+    error TEXT NULL,
+    scheduled_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    sent_at DATETIME NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_status_priority (status, priority, scheduled_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ইমেইল লগ
+CREATE TABLE IF NOT EXISTS email_log (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    recipient VARCHAR(255) NOT NULL,
+    subject VARCHAR(500) NOT NULL,
+    provider VARCHAR(50) DEFAULT 'smtp',
+    status VARCHAR(20) DEFAULT 'sent',
+    sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_recipient (recipient),
+    INDEX idx_sent_at (sent_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+### Hostinger Cron Job সেটআপ
+
+```
+Hostinger hPanel > Cron Jobs > Add New:
+
+Command:  php /home/u123456/public_html/cron/process-email-queue.php
+Schedule: Every 1 minute (*/1 * * * *)
+```
+
+### অর্ডার API-তে ইন্টিগ্রেশন
+
+`api/orders.php`-এ অর্ডার তৈরির পর এই লাইন যোগ করুন:
+
+```php
+// অর্ডার তৈরির পর স্বয়ংক্রিয়ভাবে কনফার্মেশন ইমেইল
+OrderEmailService::sendOrderConfirmation($orderId);
+```
+
+অর্ডার স্ট্যাটাস আপডেটের সময়:
+
+```php
+// api/orders.php — স্ট্যাটাস আপডেট হ্যান্ডলার
+if ($newStatus === 'shipped') {
+    OrderEmailService::sendShippingUpdate($orderId, $trackingNumber, $courierName);
+}
+if ($newStatus === 'delivered') {
+    OrderEmailService::sendDeliveryConfirmation($orderId);
 }
 ```
 
