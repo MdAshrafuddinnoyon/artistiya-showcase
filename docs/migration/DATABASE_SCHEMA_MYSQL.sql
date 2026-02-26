@@ -1720,7 +1720,41 @@ INSERT INTO site_settings (`key`, `value`) VALUES
   ('storage_buckets', '["custom-designs", "product-images", "media", "testimonials"]')
 ON DUPLICATE KEY UPDATE `value` = VALUES(`value`);
 
+-- ─────────────────────────────────────────────
+-- EMAIL QUEUE & LOG TABLES
+-- ─────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS `email_queue` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `recipient` VARCHAR(255) NOT NULL,
+  `subject` VARCHAR(500) NOT NULL,
+  `html_body` LONGTEXT NOT NULL,
+  `priority` TINYINT DEFAULT 5,
+  `status` ENUM('pending','processing','sent','failed') DEFAULT 'pending',
+  `attempts` TINYINT DEFAULT 0,
+  `max_attempts` TINYINT DEFAULT 3,
+  `error` TEXT NULL,
+  `scheduled_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `sent_at` DATETIME NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  INDEX `idx_eq_status_priority` (`status`, `priority`, `scheduled_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `email_log` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `recipient` VARCHAR(255) NOT NULL,
+  `subject` VARCHAR(500) NOT NULL,
+  `provider` VARCHAR(50) DEFAULT 'smtp',
+  `status` VARCHAR(20) DEFAULT 'sent',
+  `sent_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  INDEX `idx_el_recipient` (`recipient`),
+  INDEX `idx_el_sent_at` (`sent_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ============================================================
 -- END OF COMPLETE SCHEMA
--- Total: 55 tables + 1 view + 4 functions + 6 triggers + 2 procedures
+-- Total: 57 tables + 1 view + 4 functions + 6 triggers + 2 procedures
 -- ============================================================
