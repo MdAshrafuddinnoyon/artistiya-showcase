@@ -8,6 +8,7 @@ import { useAdmin } from "@/hooks/useAdmin";
 import { useCart } from "@/hooks/useCart";
 import { supabase } from "@/integrations/supabase/client";
 import CartDrawer from "@/components/modals/CartDrawer";
+import AuthModal from "@/components/modals/AuthModal";
 import CustomOrderModal from "@/components/modals/CustomOrderModal";
 import MobileAppHeader from "@/components/mobile/MobileAppHeader";
 import MobileAppBottomNav from "@/components/mobile/MobileAppBottomNav";
@@ -67,6 +68,7 @@ const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
   const [customOrderOpen, setCustomOrderOpen] = useState(false);
   const [headerButtonEnabled, setHeaderButtonEnabled] = useState(true);
   const [headerButtonText, setHeaderButtonText] = useState("Custom Design");
@@ -375,11 +377,14 @@ const Header = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Link to="/auth">
-                  <Button variant="ghost" size="icon" className="text-foreground/80 hover:text-gold hover:bg-transparent">
-                    <User className="h-5 w-5" />
-                  </Button>
-                </Link>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-foreground/80 hover:text-gold hover:bg-transparent"
+                  onClick={() => setAuthOpen(true)}
+                >
+                  <User className="h-5 w-5" />
+                </Button>
               )}
 
               {/* Cart Button */}
@@ -409,22 +414,23 @@ const Header = () => {
         branding={branding}
       />
 
-      {/* Mobile Drawer */}
       <MobileDrawer
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
         onCustomOrderClick={() => setCustomOrderOpen(true)}
+        onAuthClick={() => setAuthOpen(true)}
         branding={branding}
       />
 
       {/* Modals */}
       <CartDrawer open={cartOpen} onOpenChange={setCartOpen} />
       <CustomOrderModal open={customOrderOpen} onOpenChange={setCustomOrderOpen} />
+      <AuthModal open={authOpen} onOpenChange={setAuthOpen} />
       
-      {/* Mobile Bottom Navigation - App style */}
       <MobileAppBottomNav 
         onSearchClick={() => {}} 
-        onCartClick={() => setCartOpen(true)} 
+        onCartClick={() => setCartOpen(true)}
+        onAccountClick={() => setAuthOpen(true)}
       />
     </>
   );

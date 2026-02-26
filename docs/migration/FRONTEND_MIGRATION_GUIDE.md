@@ -317,6 +317,9 @@ $token = JWT::encode([
     'exp' => time() + 86400 * 7, // 7 days
 ]);
 
+// Check admin role for redirect
+$isAdmin = getUserRole($user['id']) === 'admin';
+
 echo json_encode([
     'user' => [
         'id' => $user['id'],
@@ -324,6 +327,8 @@ echo json_encode([
         'user_metadata' => json_decode($user['raw_user_meta_data'], true),
     ],
     'token' => $token,
+    'is_admin' => $isAdmin,
+    'redirect' => $isAdmin ? '/admin' : '/',
 ]);
 
 // api/auth/signup.php

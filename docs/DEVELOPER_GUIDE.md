@@ -307,6 +307,25 @@ public.sync_customer_on_order() → trigger
 
 ## অথেন্টিকেশন সিস্টেম
 
+### লগইন/সাইনআপ পপ-আপ মোডাল
+
+লগইন এবং সাইনআপ ফাংশন এখন একটি পপ-আপ মোডাল (Dialog) হিসেবে কাজ করে, আলাদা পেজে রিডাইরেক্ট করে না।
+
+```typescript
+// AuthModal.tsx - পপ-আপ লগইন/সাইনআপ
+import AuthModal from "@/components/modals/AuthModal";
+
+// যেকোনো কম্পোনেন্ট থেকে ব্যবহার:
+const [authOpen, setAuthOpen] = useState(false);
+<AuthModal open={authOpen} onOpenChange={setAuthOpen} />
+```
+
+**বৈশিষ্ট্যসমূহ:**
+- ডাইনামিক ব্র্যান্ডিং: `site_branding` টেবিল থেকে লোগো ও টেক্সট রিয়েল-টাইম লোড হয়
+- রিয়েল-টাইম সিঙ্ক: অ্যাডমিন প্যানেল থেকে লোগো পরিবর্তন করলে তৎক্ষণাৎ পপ-আপে আপডেট হয়
+- Math CAPTCHA সিকিউরিটি ভেরিফিকেশন
+- Role-based redirect: অ্যাডমিন → /admin, কাস্টমার → / (হোম)
+
 ### ইউজার রোল
 
 ```typescript

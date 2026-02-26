@@ -8,15 +8,16 @@ import { cn } from "@/lib/utils";
 interface MobileAppBottomNavProps {
   onSearchClick?: () => void;
   onCartClick?: () => void;
+  onAccountClick?: () => void;
 }
 
-const MobileAppBottomNav = ({ onCartClick }: MobileAppBottomNavProps) => {
+const MobileAppBottomNav = ({ onCartClick, onAccountClick }: MobileAppBottomNavProps) => {
   const location = useLocation();
   const { user } = useAuth();
   const { itemCount } = useCart();
   const { wishlistItems } = useWishlist();
 
-  const accountHref = user ? "/dashboard" : "/auth";
+  const accountHref = user ? "/dashboard" : undefined;
   const wishlistCount = wishlistItems?.length || 0;
 
   const navItems = [
@@ -40,7 +41,8 @@ const MobileAppBottomNav = ({ onCartClick }: MobileAppBottomNavProps) => {
     { 
       icon: User, 
       label: "Account", 
-      href: accountHref 
+      href: accountHref,
+      action: !user ? onAccountClick : undefined,
     },
   ];
 
