@@ -393,13 +393,17 @@ useEffect(() => {
 |--------|-----|--------|
 | `bkash-payment` | `/bkash-payment` | bKash পেমেন্ট প্রসেস |
 | `nagad-payment` | `/nagad-payment` | Nagad পেমেন্ট প্রসেস |
+| `sslcommerz-payment` | `/sslcommerz-payment` | SSLCommerz পেমেন্ট |
+| `aamarpay-payment` | `/aamarpay-payment` | AamarPay পেমেন্ট |
+| `surjopay-payment` | `/surjopay-payment` | SurjoPay পেমেন্ট |
+| `create-order` | `/create-order` | সিকিউর সার্ভার-সাইড অর্ডার প্রসেসিং |
 | `send-order-email` | `/send-order-email` | অর্ডার ইমেইল |
+| `send-sms` | `/send-sms` | SMS নোটিফিকেশন (Twilio, BulkSMSBD, GreenWeb, SMSQ, Infobip) |
 | `generate-invoice` | `/generate-invoice` | PDF ইনভয়েস |
 | `generate-delivery-slip` | `/generate-delivery-slip` | ডেলিভারি স্লিপ |
 | `encrypt-credentials` | `/encrypt-credentials` | ক্রেডেনশিয়াল এনক্রিপশন |
 | `fetch-google-reviews` | `/fetch-google-reviews` | গুগল রিভিউ |
 | `delivery-api` | `/delivery-api` | ডেলিভারি পার্টনার API (Pathao, Steadfast, RedX, eCourier, Paperfly, Delivery Tiger) |
-| `send-sms` | `/send-sms` | SMS নোটিফিকেশন |
 
 ### ডেলিভারি ডিসপ্যাচ সিস্টেম
 
@@ -409,6 +413,8 @@ useEffect(() => {
 2. **বাল্ক ডিসপ্যাচ**: একাধিক অর্ডার সিলেক্ট করে "Dispatch" বাটনে ক্লিক করুন
 3. সিস্টেম `delivery-api` Edge Function কল করে সংশ্লিষ্ট কুরিয়ারের API-তে অর্ডার তৈরি করে
 4. সফল হলে অর্ডারের স্ট্যাটাস "shipped" এ আপডেট হয় এবং ট্র্যাকিং নম্বর সেভ হয়
+
+**Pathao অটো-অথেনটিকেশন**: Pathao কুরিয়ারের জন্য সিস্টেম স্বয়ংক্রিয়ভাবে access token সংগ্রহ করে (config-এ `client_id`, `client_secret`, `username`, `password` থাকতে হবে)। আলাদাভাবে auth কল করার প্রয়োজন নেই।
 
 ```typescript
 // DeliveryDispatchModal.tsx

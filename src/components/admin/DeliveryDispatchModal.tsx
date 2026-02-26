@@ -15,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -369,9 +368,9 @@ const DeliveryDispatchModal = ({
                         <div className="flex items-center gap-2">
                           <Truck className="h-4 w-4" />
                           {p.name}
-                          <Badge variant="outline" className="text-xs ml-1">
+                          <span className="text-xs ml-1 px-1.5 py-0.5 rounded border border-border text-muted-foreground">
                             {p.provider_type}
-                          </Badge>
+                          </span>
                         </div>
                       </SelectItem>
                     ))}

@@ -1352,20 +1352,34 @@ class DeliveryService
     // PATHAO COURIER — https://merchant.pathao.com/
     // ══════════════════════════════════════════════
 
+    /**
+     * Get Pathao access token (auto-authenticate)
+     * Mirrors Edge Function behavior: auto-authenticates if no access_token in config.
+     */
     private function getPathaoToken(): string
     {
-        $baseUrl = $this->config['is_sandbox'] ?? true
-            ? 'https://hermes-api.p-stageenv.xyz'
+        // Use cached token if available
+        if (!empty($this->config['access_token'])) {
+            return $this->config['access_token'];
+        }
+
+        $baseUrl = ($this->config['is_sandbox'] ?? true)
+            ? 'https://hermes-api.pathao.com'
             : 'https://api-hermes.pathao.com';
 
         $res = $this->curlPost($baseUrl . '/aladdin/api/v1/issue-token', [
-            'client_id'     => $this->config['client_id'] ?? '',
-            'client_secret' => $this->config['client_secret'] ?? '',
+            'client_id'     => $this->apiKey ?: ($this->config['client_id'] ?? ''),
+            'client_secret' => $this->apiSecret ?: ($this->config['client_secret'] ?? ''),
             'username'      => $this->config['username'] ?? '',
-            'password'      => Encryption::decrypt($this->config['password'] ?? ''),
+            'password'      => isset($this->config['password']) ? Encryption::decrypt($this->config['password']) : '',
             'grant_type'    => 'password',
         ]);
-        return $res['access_token'] ?? '';
+
+        $token = $res['access_token'] ?? '';
+        if (empty($token)) {
+            throw new \RuntimeException('Pathao authentication failed. Configure client_id, client_secret, username, password in delivery_providers config.');
+        }
+        return $token;
     }
 
     private function createPathaoParcel(array $order, array $address): array
@@ -1997,6 +2011,11 @@ const getAreas = async (provider: string, city?: string) => {
 ```
 
 > **Note:** No external Composer packages needed — all courier APIs use direct cURL calls.
+> **Pathao Auto-Authentication**: Both the Edge Function (`delivery-api`) and PHP `DeliveryService` 
+> automatically authenticate with Pathao's API by calling `/aladdin/api/v1/issue-token` before each request.
+> No need to manually run an 'auth' action first. Just ensure `client_id`, `client_secret`, `username`, 
+> and `password` are stored in the `delivery_providers.config` JSON field.
+>
 > For Pathao, Steadfast, RedX: API keys are obtained from their respective merchant dashboards.
 > Store API credentials encrypted in `delivery_providers` table via admin panel.
 
