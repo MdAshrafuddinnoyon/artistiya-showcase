@@ -398,6 +398,34 @@ useEffect(() => {
 | `generate-delivery-slip` | `/generate-delivery-slip` | ডেলিভারি স্লিপ |
 | `encrypt-credentials` | `/encrypt-credentials` | ক্রেডেনশিয়াল এনক্রিপশন |
 | `fetch-google-reviews` | `/fetch-google-reviews` | গুগল রিভিউ |
+| `delivery-api` | `/delivery-api` | ডেলিভারি পার্টনার API (Pathao, Steadfast, RedX, eCourier, Paperfly, Delivery Tiger) |
+| `send-sms` | `/send-sms` | SMS নোটিফিকেশন |
+
+### ডেলিভারি ডিসপ্যাচ সিস্টেম
+
+অ্যাডমিন ড্যাশবোর্ড থেকে সিঙ্গেল বা বাল্ক অর্ডার ডেলিভারি পার্টনারে ডিসপ্যাচ করা যায়:
+
+1. **সিঙ্গেল ডিসপ্যাচ**: প্রতিটি অর্ডারের পাশে Send আইকন ক্লিক করে ডেলিভারি পার্টনার সিলেক্ট করুন
+2. **বাল্ক ডিসপ্যাচ**: একাধিক অর্ডার সিলেক্ট করে "Dispatch" বাটনে ক্লিক করুন
+3. সিস্টেম `delivery-api` Edge Function কল করে সংশ্লিষ্ট কুরিয়ারের API-তে অর্ডার তৈরি করে
+4. সফল হলে অর্ডারের স্ট্যাটাস "shipped" এ আপডেট হয় এবং ট্র্যাকিং নম্বর সেভ হয়
+
+```typescript
+// DeliveryDispatchModal.tsx
+// বাল্ক/সিঙ্গেল অর্ডার ডিসপ্যাচ
+const { data, error } = await supabase.functions.invoke('delivery-api', {
+  body: {
+    provider_type: 'steadfast',
+    action: 'create_order',
+    provider_id: 'uuid',
+    order_number: 'ORD-001',
+    recipient_name: 'Customer',
+    recipient_phone: '01700000000',
+    recipient_address: 'Dhaka, Bangladesh',
+    cod_amount: 1500
+  }
+});
+```
 
 ### Edge Function কল
 
