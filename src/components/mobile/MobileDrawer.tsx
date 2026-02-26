@@ -9,13 +9,14 @@ interface MobileDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onCustomOrderClick: () => void;
+  onAuthClick: () => void;
   branding: {
     logo_text: string;
     logo_text_secondary: string;
   };
 }
 
-const MobileDrawer = ({ isOpen, onClose, onCustomOrderClick, branding }: MobileDrawerProps) => {
+const MobileDrawer = ({ isOpen, onClose, onCustomOrderClick, onAuthClick, branding }: MobileDrawerProps) => {
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdmin();
 
@@ -97,11 +98,9 @@ const MobileDrawer = ({ isOpen, onClose, onCustomOrderClick, branding }: MobileD
               </div>
             ) : (
               <div className="p-4 border-b border-border">
-                <Link to="/auth" onClick={onClose}>
-                  <Button variant="gold" className="w-full">
-                    Login / Sign Up
-                  </Button>
-                </Link>
+                <Button variant="gold" className="w-full" onClick={() => { onAuthClick(); onClose(); }}>
+                  Login / Sign Up
+                </Button>
               </div>
             )}
 
