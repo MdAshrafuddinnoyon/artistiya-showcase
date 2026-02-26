@@ -139,8 +139,31 @@ async function handlePathao(action: string, params: any, config: any, apiKey: st
     return jsonResponse(await response.json(), response.ok ? 200 : 400);
   }
 
-  const accessToken = config.access_token || params.access_token;
-  if (!accessToken) return jsonResponse({ error: "Access token required. Run 'auth' first." }, 400);
+  let accessToken = config.access_token || params.access_token;
+  
+  // Auto-authenticate if no access token is available
+  if (!accessToken) {
+    try {
+      const authResponse = await fetch(`${baseUrl}/aladdin/api/v1/issue-token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: apiKey || config.client_id,
+          client_secret: apiSecret || config.client_secret,
+          username: config.username,
+          password: config.password,
+          grant_type: "password",
+        }),
+      });
+      const authData = await authResponse.json();
+      accessToken = authData?.access_token || authData?.token;
+      if (!accessToken) {
+        return jsonResponse({ error: "Pathao authentication failed. Please configure valid credentials in Delivery Providers settings." }, 400);
+      }
+    } catch (e) {
+      return jsonResponse({ error: "Failed to authenticate with Pathao API" }, 500);
+    }
+  }
 
   const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${accessToken}` };
 
