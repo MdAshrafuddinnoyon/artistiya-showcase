@@ -591,6 +591,7 @@ const AdminEmailSettings = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="twilio">Twilio</SelectItem>
+                      <SelectItem value="firebase">Google Firebase</SelectItem>
                       <SelectItem value="bulksmsbd">BulkSMSBD</SelectItem>
                       <SelectItem value="smsq">SMSQ</SelectItem>
                       <SelectItem value="greenweb">Green Web SMS</SelectItem>
@@ -600,20 +601,53 @@ const AdminEmailSettings = () => {
                     </SelectContent>
                   </Select>
 
+                  {/* Provider-specific help */}
+                  {smsSettings.provider === "twilio" && (
+                    <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg text-sm">
+                      <p className="font-medium text-blue-600">Twilio Setup</p>
+                      <p className="text-muted-foreground mt-1">
+                        Get <strong>Account SID</strong> and <strong>Auth Token</strong> from{" "}
+                        <a href="https://console.twilio.com" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">console.twilio.com</a>.
+                        Use your Twilio phone number as Sender ID.
+                      </p>
+                    </div>
+                  )}
+
+                  {smsSettings.provider === "firebase" && (
+                    <div className="p-3 bg-orange-500/10 border border-orange-500/30 rounded-lg text-sm">
+                      <p className="font-medium text-orange-600">Google Firebase SMS</p>
+                      <p className="text-muted-foreground mt-1">
+                        Use Firebase Identity Platform for OTP, or a Cloud Function endpoint for general SMS.
+                        Get your <strong>Web API Key</strong> from{" "}
+                        <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">Firebase Console</a>{" "}
+                        → Project Settings → General.
+                      </p>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
                     <div>
-                      <Label htmlFor="sms_api_key">API Key / Account SID</Label>
+                      <Label htmlFor="sms_api_key">
+                        {smsSettings.provider === "twilio" ? "Account SID" :
+                         smsSettings.provider === "firebase" ? "Firebase Web API Key" :
+                         "API Key"}
+                      </Label>
                       <Input
                         id="sms_api_key"
                         type="password"
                         value={smsSettings.api_key || ""}
                         onChange={(e) => updateSMSSettings("api_key", e.target.value)}
-                        placeholder="Enter API Key"
+                        placeholder={smsSettings.provider === "twilio" ? "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" :
+                                     smsSettings.provider === "firebase" ? "AIzaSy..." : "Enter API Key"}
                         className="mt-1.5"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="sms_api_secret">API Secret / Auth Token</Label>
+                      <Label htmlFor="sms_api_secret">
+                        {smsSettings.provider === "twilio" ? "Auth Token" :
+                         smsSettings.provider === "firebase" ? "Service Account Key (optional)" :
+                         "API Secret"}
+                      </Label>
                       <Input
                         id="sms_api_secret"
                         type="password"
@@ -638,6 +672,48 @@ const AdminEmailSettings = () => {
                     </div>
                   </div>
 
+                  {/* Firebase-specific fields */}
+                  {smsSettings.provider === "firebase" && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+                      <div>
+                        <Label>Firebase Project ID</Label>
+                        <Input
+                          value={(smsSettings.config as any)?.firebase_project_id || ""}
+                          onChange={(e) => updateSMSSettings("config", { ...smsSettings.config, firebase_project_id: e.target.value })}
+                          placeholder="my-project-12345"
+                          className="mt-1.5"
+                        />
+                      </div>
+                      <div>
+                        <Label>Cloud Function URL (optional)</Label>
+                        <Input
+                          value={(smsSettings.config as any)?.firebase_function_url || ""}
+                          onChange={(e) => updateSMSSettings("config", { ...smsSettings.config, firebase_function_url: e.target.value })}
+                          placeholder="https://us-central1-project.cloudfunctions.net/sendSMS"
+                          className="mt-1.5"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          If provided, general SMS messages will be sent via this Cloud Function.
+                          Without it, only OTP via Firebase Identity Platform is supported.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Infobip-specific */}
+                  {smsSettings.provider === "infobip" && (
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <Label>Infobip Base URL</Label>
+                      <Input
+                        value={(smsSettings.config as any)?.infobip_base_url || ""}
+                        onChange={(e) => updateSMSSettings("config", { ...smsSettings.config, infobip_base_url: e.target.value })}
+                        placeholder="https://xxxxx.api.infobip.com"
+                        className="mt-1.5"
+                      />
+                    </div>
+                  )}
+
+                  {/* Custom API */}
                   {smsSettings.provider === "custom" && (
                     <div className="p-4 bg-muted/50 rounded-lg">
                       <Label htmlFor="sms_custom_url">Custom API Endpoint URL</Label>
@@ -706,6 +782,54 @@ const AdminEmailSettings = () => {
                 </CardContent>
               </Card>
 
+              {/* Test SMS */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Send Test SMS</CardTitle>
+                  <CardDescription>Verify your SMS configuration is working correctly</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-3">
+                    <Input
+                      value={testPhone}
+                      onChange={(e) => setTestPhone(e.target.value)}
+                      placeholder="Enter phone number (e.g. +8801XXXXXXXXX)"
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={async () => {
+                        if (!testPhone) { toast.error("Please enter a phone number"); return; }
+                        if (!smsSettings?.is_enabled) { toast.error("Please enable SMS first"); return; }
+                        setTesting(true);
+                        try {
+                          const { error } = await supabase.functions.invoke("send-sms", {
+                            body: {
+                              phone: testPhone,
+                              message: `Test SMS from Artistiya. Your SMS configuration with ${smsSettings.provider} is working correctly!`,
+                              type: "test",
+                            },
+                          });
+                          if (error) throw error;
+                          toast.success(`Test SMS sent to ${testPhone}`);
+                        } catch (error: any) {
+                          toast.error(error.message || "Failed to send test SMS");
+                        } finally {
+                          setTesting(false);
+                        }
+                      }}
+                      disabled={testing || !smsSettings.is_enabled}
+                    >
+                      <TestTube className="h-4 w-4 mr-2" />
+                      {testing ? "Sending..." : "Send Test"}
+                    </Button>
+                  </div>
+                  {!smsSettings.is_enabled && (
+                    <p className="text-xs text-yellow-500 mt-2">Enable SMS notifications above to send test messages</p>
+                  )}
+                </CardContent>
+              </Card>
+
               {/* Save Button */}
               <div className="flex justify-end">
                 <Button variant="gold" onClick={handleSaveSMS} disabled={saving}>
@@ -720,7 +844,9 @@ const AdminEmailSettings = () => {
                   <h3 className="font-medium text-foreground mb-2">SMS Setup Guide</h3>
                   <ul className="space-y-2 text-sm text-muted-foreground">
                     <li>• <strong>Twilio:</strong> Get Account SID and Auth Token from <a href="https://console.twilio.com" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">console.twilio.com</a></li>
+                    <li>• <strong>Firebase:</strong> Use Firebase Identity Platform for OTP verification, or deploy a Cloud Function for general SMS dispatch</li>
                     <li>• <strong>BulkSMSBD / SMSQ / Green Web:</strong> Popular Bangladesh SMS gateways — get API key from their dashboard</li>
+                    <li>• <strong>Infobip / Vonage:</strong> Enterprise-grade global SMS — get credentials from their portal</li>
                     <li>• <strong>Sender ID:</strong> Must be approved by the provider (e.g., "Artistiya")</li>
                     <li>• <strong>OTP:</strong> OTP messages are sent instantly (not queued) for security</li>
                     <li>• <strong>Custom API:</strong> Use any SMS gateway by providing the endpoint URL</li>

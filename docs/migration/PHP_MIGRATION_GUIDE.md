@@ -1430,6 +1430,7 @@ class SMSService
 
             $result = match ($this->provider) {
                 'twilio'    => $this->sendViaTwilio($cleanPhone, $message),
+                'firebase'  => $this->sendViaFirebase($cleanPhone, $message),
                 'bulksmsbd' => $this->sendViaBulkSMSBD($cleanPhone, $message),
                 'smsq'      => $this->sendViaSMSQ($cleanPhone, $message),
                 'greenweb'  => $this->sendViaGreenWeb($cleanPhone, $message),
@@ -1468,6 +1469,50 @@ class SMSService
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
         if ($httpCode >= 400) throw new \RuntimeException('Twilio error: ' . ($response['message'] ?? 'Unknown'));
+        return true;
+    }
+
+    private function sendViaFirebase(string $to, string $message): bool
+    {
+        // Option 1: Firebase Cloud Function endpoint for general SMS
+        $functionUrl = $this->config['firebase_function_url'] ?? '';
+        if ($functionUrl) {
+            $ch = curl_init($functionUrl);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_HTTPHEADER => [
+                    'Content-Type: application/json',
+                    "Authorization: Bearer {$this->apiKey}",
+                ],
+                CURLOPT_POSTFIELDS => json_encode([
+                    'phone'   => $to,
+                    'message' => $message,
+                ]),
+            ]);
+            $response = json_decode(curl_exec($ch), true);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            if ($httpCode >= 400) throw new \RuntimeException('Firebase function error: ' . json_encode($response));
+            return true;
+        }
+
+        // Option 2: Firebase Identity Platform (OTP only)
+        $projectId = $this->config['firebase_project_id'] ?? '';
+        if (!$projectId) throw new \RuntimeException('Firebase project ID or function URL required');
+
+        $url = "https://identitytoolkit.googleapis.com/v1/accounts:sendVerificationCode?key={$this->apiKey}";
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_POSTFIELDS => json_encode(['phoneNumber' => $to]),
+        ]);
+        $response = json_decode(curl_exec($ch), true);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($httpCode >= 400) throw new \RuntimeException('Firebase Identity error: ' . json_encode($response));
         return true;
     }
 
