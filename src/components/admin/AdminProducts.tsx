@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Search, Image, Upload, Eye, EyeOff, Download } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Image, Upload, Eye, EyeOff, Download, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -404,6 +404,10 @@ const AdminProducts = () => {
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
         <h1 className="font-display text-2xl text-foreground">Products</h1>
         <div className="flex gap-3 flex-wrap">
+          <Button variant="outline" size="sm" onClick={fetchProducts} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input

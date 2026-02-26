@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Edit, Trash2, Bell, Send, Globe, User, Eye } from "lucide-react";
+import { Plus, Edit, Trash2, Bell, Send, Globe, User, Eye, RefreshCw, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,7 +57,54 @@ const AdminNotifications = () => {
 
   useEffect(() => {
     fetchNotifications();
+
+    // Realtime subscription with notification sound
+    const channel = supabase
+      .channel('admin_notifications_realtime')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications' },
+        () => {
+          playNotificationSound();
+          fetchNotifications();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            playNotificationSound();
+            toast.info("New order received!", { duration: 5000 });
+          }
+          fetchNotifications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
+
+  const playNotificationSound = () => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(1100, audioContext.currentTime + 0.1);
+      oscillator.frequency.setValueAtTime(880, audioContext.currentTime + 0.2);
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.4);
+    } catch (e) {
+      // Audio not supported or blocked by browser
+    }
+  };
 
   const fetchNotifications = async () => {
     try {
@@ -176,9 +223,13 @@ const AdminNotifications = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-display text-foreground">Notifications</h2>
-          <p className="text-sm text-muted-foreground">Send notifications to users</p>
+          <p className="text-sm text-muted-foreground">Send notifications to users — real-time alerts with sound</p>
         </div>
-
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={fetchNotifications} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="gold" onClick={resetForm}>
@@ -304,6 +355,7 @@ const AdminNotifications = () => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Notifications List */}
