@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Eye, Truck, CheckCircle, XCircle, Clock, Search, AlertTriangle, Shield, FileText, Printer, Download, Loader2, Calendar, Filter, MapPin } from "lucide-react";
+import { Eye, Truck, CheckCircle, XCircle, Clock, Search, AlertTriangle, Shield, FileText, Printer, Download, Loader2, Calendar, Filter, MapPin, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -462,6 +462,10 @@ const AdminOrders = () => {
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <h1 className="font-display text-2xl text-foreground">Orders</h1>
           <div className="flex flex-wrap gap-3">
+            <Button variant="outline" size="sm" onClick={fetchOrders} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input

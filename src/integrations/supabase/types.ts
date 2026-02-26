@@ -1783,10 +1783,19 @@ export type Database = {
           company_email: string | null
           company_name: string | null
           company_phone: string | null
+          company_tagline: string | null
           created_at: string
+          digital_signature_url: string | null
           footer_note: string | null
           id: string
           logo_url: string | null
+          show_social_links: boolean | null
+          signatory_name: string | null
+          signatory_title: string | null
+          social_facebook: string | null
+          social_instagram: string | null
+          social_website: string | null
+          social_whatsapp: string | null
           terms_and_conditions: string | null
           updated_at: string
         }
@@ -1795,10 +1804,19 @@ export type Database = {
           company_email?: string | null
           company_name?: string | null
           company_phone?: string | null
+          company_tagline?: string | null
           created_at?: string
+          digital_signature_url?: string | null
           footer_note?: string | null
           id?: string
           logo_url?: string | null
+          show_social_links?: boolean | null
+          signatory_name?: string | null
+          signatory_title?: string | null
+          social_facebook?: string | null
+          social_instagram?: string | null
+          social_website?: string | null
+          social_whatsapp?: string | null
           terms_and_conditions?: string | null
           updated_at?: string
         }
@@ -1807,10 +1825,19 @@ export type Database = {
           company_email?: string | null
           company_name?: string | null
           company_phone?: string | null
+          company_tagline?: string | null
           created_at?: string
+          digital_signature_url?: string | null
           footer_note?: string | null
           id?: string
           logo_url?: string | null
+          show_social_links?: boolean | null
+          signatory_name?: string | null
+          signatory_title?: string | null
+          social_facebook?: string | null
+          social_instagram?: string | null
+          social_website?: string | null
+          social_whatsapp?: string | null
           terms_and_conditions?: string | null
           updated_at?: string
         }

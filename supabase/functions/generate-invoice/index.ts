@@ -135,6 +135,15 @@ serve(async (req) => {
       logo_url: settings?.logo_url || siteBranding?.logo_url || null,
       footer_note: settings?.footer_note || "Thank you for your purchase!",
       terms_and_conditions: settings?.terms_and_conditions || "",
+      company_tagline: settings?.company_tagline || "Handcrafted with love",
+      digital_signature_url: settings?.digital_signature_url || null,
+      signatory_name: settings?.signatory_name || null,
+      signatory_title: settings?.signatory_title || null,
+      show_social_links: settings?.show_social_links ?? true,
+      social_facebook: settings?.social_facebook || siteBranding?.social_facebook || null,
+      social_instagram: settings?.social_instagram || siteBranding?.social_instagram || null,
+      social_whatsapp: settings?.social_whatsapp || siteBranding?.social_whatsapp || null,
+      social_website: settings?.social_website || null,
     };
 
     // Fetch logo as base64 for PDF embedding
@@ -168,9 +177,18 @@ serve(async (req) => {
     `).join("");
 
     const socialLinks = [];
-    if (siteBranding?.social_facebook) socialLinks.push(`<a href="${siteBranding.social_facebook}" style="color: #b8a88a; text-decoration: none; margin: 0 8px;">Facebook</a>`);
-    if (siteBranding?.social_instagram) socialLinks.push(`<a href="${siteBranding.social_instagram}" style="color: #b8a88a; text-decoration: none; margin: 0 8px;">Instagram</a>`);
-    if (siteBranding?.social_whatsapp) socialLinks.push(`<a href="https://wa.me/${siteBranding.social_whatsapp}" style="color: #b8a88a; text-decoration: none; margin: 0 8px;">WhatsApp</a>`);
+    if (invoiceSettings.show_social_links) {
+      if (invoiceSettings.social_facebook) socialLinks.push(`<a href="${invoiceSettings.social_facebook}" style="color: #b8a88a; text-decoration: none; margin: 0 8px;">Facebook</a>`);
+      if (invoiceSettings.social_instagram) socialLinks.push(`<a href="${invoiceSettings.social_instagram}" style="color: #b8a88a; text-decoration: none; margin: 0 8px;">Instagram</a>`);
+      if (invoiceSettings.social_whatsapp) socialLinks.push(`<a href="https://wa.me/${invoiceSettings.social_whatsapp}" style="color: #b8a88a; text-decoration: none; margin: 0 8px;">WhatsApp</a>`);
+      if (invoiceSettings.social_website) socialLinks.push(`<a href="${invoiceSettings.social_website}" style="color: #b8a88a; text-decoration: none; margin: 0 8px;">Website</a>`);
+    }
+
+    // Fetch digital signature as base64
+    let signatureBase64: string | null = null;
+    if (invoiceSettings.digital_signature_url) {
+      signatureBase64 = await fetchLogoAsBase64(invoiceSettings.digital_signature_url);
+    }
 
     const invoiceHtml = `
 <!DOCTYPE html>
@@ -216,7 +234,11 @@ serve(async (req) => {
     .logo-section { display: flex; align-items: center; gap: 16px; }
     .logo-section img { max-height: 70px; max-width: 140px; object-fit: contain; }
     .company-name { font-size: 26px; font-weight: 700; color: #2d2926; letter-spacing: -0.5px; }
-    .company-tagline { font-size: 11px; color: #b8a88a; letter-spacing: 3px; text-transform: uppercase; margin-top: 2px; }
+     .company-tagline { font-size: 11px; color: #b8a88a; letter-spacing: 3px; text-transform: uppercase; margin-top: 2px; }
+     .signature-section { margin-top: 30px; text-align: right; padding-right: 40px; }
+     .signature-section img { max-height: 60px; margin-bottom: 4px; }
+     .signature-section .sig-name { font-weight: 700; font-size: 14px; color: #2d2926; }
+     .signature-section .sig-title { font-size: 12px; color: #8a8580; }
     .company-info { font-size: 12px; color: #8a8580; margin-top: 8px; line-height: 1.8; }
     
     .invoice-badge {
@@ -384,7 +406,7 @@ serve(async (req) => {
       ${logoBase64 ? `<img src="${logoBase64}" alt="Logo" />` : ''}
       <div>
         <div class="company-name">${invoiceSettings.company_name}</div>
-        <div class="company-tagline">Handcrafted with love</div>
+        <div class="company-tagline">${invoiceSettings.company_tagline}</div>
         <div class="company-info">
           ${invoiceSettings.company_address}<br>
           ${invoiceSettings.company_email} &bull; ${invoiceSettings.company_phone}
@@ -493,11 +515,19 @@ serve(async (req) => {
     ${invoiceSettings.terms_and_conditions}
   </div>` : ''}
 
+  ${(signatureBase64 || invoiceSettings.signatory_name) ? `
+  <div class="signature-section">
+    ${signatureBase64 ? `<img src="${signatureBase64}" alt="Authorized Signature" />` : ''}
+    ${invoiceSettings.signatory_name ? `<div class="sig-name">${invoiceSettings.signatory_name}</div>` : ''}
+    ${invoiceSettings.signatory_title ? `<div class="sig-title">${invoiceSettings.signatory_title}</div>` : ''}
+    <div style="font-size:10px;color:#aaa;margin-top:4px;">Authorized Signatory</div>
+  </div>` : ''}
+
   <!-- Footer -->
   <div class="footer">
     <div class="thank-you">${invoiceSettings.footer_note}</div>
     ${socialLinks.length > 0 ? `<div class="social-links">${socialLinks.join(' &bull; ')}</div>` : ''}
-    <div class="auto-gen">This is a computer-generated invoice. No signature required.</div>
+    <div class="auto-gen">${(signatureBase64 || invoiceSettings.signatory_name) ? 'Digitally signed invoice.' : 'This is a computer-generated invoice.'}</div>
   </div>
 </body>
 </html>`;
