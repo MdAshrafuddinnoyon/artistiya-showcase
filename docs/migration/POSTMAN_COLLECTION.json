@@ -1,865 +1,241 @@
 {
   "info": {
-    "name": "Artistiya E-Commerce PHP API",
-    "description": "Complete API collection for Artistiya PHP backend — covers Auth, Products, Orders, Payments, Delivery, Email, SMS, OTP, Storage, and Admin endpoints.",
+    "name": "Artistiya PHP Backend API v2.0",
+    "description": "Complete API collection for Artistiya e-commerce — PHP/MySQL backend. 100+ endpoints across 19 folders: Auth, Products, Orders, Payments, Delivery, Email, SMS, OTP, Custom Orders, Invoices, CRM, Content, Cart, Reviews, Promos, Newsletter, Storage, Settings, Health.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_postman_id": "artistiya-php-api-v1"
+    "_postman_id": "artistiya-php-api-v2"
   },
   "variable": [
     { "key": "base_url", "value": "https://yourdomain.com/api", "type": "string" },
-    { "key": "auth_token", "value": "", "type": "string" }
+    { "key": "jwt_token", "value": "", "type": "string" },
+    { "key": "admin_token", "value": "", "type": "string" }
   ],
   "auth": {
     "type": "bearer",
-    "bearer": [{ "key": "token", "value": "{{auth_token}}", "type": "string" }]
+    "bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
   },
   "item": [
     {
-      "name": "🔐 Authentication",
+      "name": "01. Authentication",
       "item": [
-        {
-          "name": "Register",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/auth/signup",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"securePass123\",\n  \"full_name\": \"Test User\"\n}"
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Login",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var jsonData = pm.response.json();",
-                  "if (jsonData.token) {",
-                  "  pm.collectionVariables.set('auth_token', jsonData.token);",
-                  "  console.log('Token saved');",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/auth/login",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"securePass123\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Get Session",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/auth/session",
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{auth_token}}" }] }
-          }
-        },
-        {
-          "name": "Logout",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/auth/logout",
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{auth_token}}" }] }
-          }
-        },
-        {
-          "name": "Reset Password Request",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/auth/reset-password",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"email\": \"user@example.com\"\n}" }
-          }
-        }
+        { "name": "Register", "request": { "method": "POST", "url": "{{base_url}}/auth/register", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"email\":\"test@example.com\",\"password\":\"SecurePass123!\",\"full_name\":\"Test User\"}" } } },
+        { "name": "Login", "event": [{ "listen": "test", "script": { "exec": ["var r=pm.response.json();if(r.token)pm.collectionVariables.set('jwt_token',r.token);"] } }], "request": { "method": "POST", "url": "{{base_url}}/auth/login", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"email\":\"test@example.com\",\"password\":\"SecurePass123!\"}" } } },
+        { "name": "Admin Login", "event": [{ "listen": "test", "script": { "exec": ["var r=pm.response.json();if(r.token)pm.collectionVariables.set('admin_token',r.token);"] } }], "request": { "method": "POST", "url": "{{base_url}}/auth/login", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"email\":\"admin@artistiya.store\",\"password\":\"AdminPass123!\"}" } } },
+        { "name": "Get Profile", "request": { "method": "GET", "url": "{{base_url}}/auth/profile" } },
+        { "name": "Update Profile", "request": { "method": "PUT", "url": "{{base_url}}/auth/profile", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"full_name\":\"Updated Name\",\"phone\":\"+8801700000000\"}" } } },
+        { "name": "Change Password", "request": { "method": "POST", "url": "{{base_url}}/auth/change-password", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"current_password\":\"OldPass123!\",\"new_password\":\"NewPass456!\"}" } } },
+        { "name": "Forgot Password", "request": { "method": "POST", "url": "{{base_url}}/auth/forgot-password", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"email\":\"test@example.com\"}" } } },
+        { "name": "Reset Password", "request": { "method": "POST", "url": "{{base_url}}/auth/reset-password", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"token\":\"reset-token\",\"new_password\":\"NewPass789!\"}" } } },
+        { "name": "Logout", "request": { "method": "POST", "url": "{{base_url}}/auth/logout" } }
       ]
     },
     {
-      "name": "📦 Products",
+      "name": "02. Products",
       "item": [
-        {
-          "name": "List Products",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{base_url}}/products?limit=12&order=created_at.desc&eq.is_active=1",
-              "host": ["{{base_url}}"],
-              "path": ["products"],
-              "query": [
-                { "key": "limit", "value": "12" },
-                { "key": "order", "value": "created_at.desc" },
-                { "key": "eq.is_active", "value": "1" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get Product by ID",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/products?eq.id={{product_id}}&single=true"
-          }
-        },
-        {
-          "name": "Get Product by Slug",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/products?eq.slug=handwoven-basket&single=true"
-          }
-        },
-        {
-          "name": "Search Products",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/products?ilike.name=%25basket%25&eq.is_active=1&limit=20"
-          }
-        },
-        {
-          "name": "Filter by Category",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/products?eq.category_id={{category_id}}&eq.is_active=1&order=display_order.asc"
-          }
-        },
-        {
-          "name": "Filter by Price Range",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/products?gte.price=500&lte.price=5000&eq.is_active=1"
-          }
-        },
-        {
-          "name": "Get Featured Products",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/products?eq.is_featured=1&eq.is_active=1&limit=8"
-          }
-        },
-        {
-          "name": "Get New Arrivals",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/products?eq.is_new_arrival=1&eq.is_active=1&order=created_at.desc&limit=8"
-          }
-        },
-        {
-          "name": "Create Product (Admin)",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/products",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"New Product\",\n  \"slug\": \"new-product\",\n  \"price\": 1500,\n  \"description\": \"Product description\",\n  \"category_id\": \"uuid-here\",\n  \"is_active\": true,\n  \"stock_quantity\": 10\n}"
-            }
-          }
-        },
-        {
-          "name": "Update Product (Admin)",
-          "request": {
-            "method": "PATCH",
-            "url": "{{base_url}}/products?eq.id={{product_id}}",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"price\": 1800,\n  \"stock_quantity\": 5\n}"
-            }
-          }
-        },
-        {
-          "name": "Delete Product (Admin)",
-          "request": {
-            "method": "DELETE",
-            "url": "{{base_url}}/products?eq.id={{product_id}}"
-          }
-        }
+        { "name": "List Products", "request": { "method": "GET", "url": "{{base_url}}/products?page=1&limit=20&sort=created_at&order=desc" } },
+        { "name": "Get Product", "request": { "method": "GET", "url": "{{base_url}}/products/:id" } },
+        { "name": "Search Products", "request": { "method": "GET", "url": "{{base_url}}/products/search?q=handmade&category=jewelry" } },
+        { "name": "Create Product (Admin)", "request": { "method": "POST", "url": "{{base_url}}/admin/products", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"name\":\"Handmade Vase\",\"price\":2500,\"category_id\":\"cat-id\",\"description\":\"Beautiful ceramic vase\",\"stock_quantity\":10}" } } },
+        { "name": "Update Product (Admin)", "request": { "method": "PUT", "url": "{{base_url}}/admin/products/:id", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"price\":2800,\"stock_quantity\":15}" } } },
+        { "name": "Delete Product (Admin)", "request": { "method": "DELETE", "url": "{{base_url}}/admin/products/:id", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Bulk Upload (Admin)", "request": { "method": "POST", "url": "{{base_url}}/admin/products/bulk-upload", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": "products.csv" }] } } },
+        { "name": "Export CSV (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/products/export?format=csv", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } }
       ]
     },
     {
-      "name": "📁 Categories",
+      "name": "03. Categories",
       "item": [
-        {
-          "name": "List Categories",
-          "request": { "method": "GET", "url": "{{base_url}}/categories?order=display_order.asc" }
-        },
-        {
-          "name": "Get Category by Slug",
-          "request": { "method": "GET", "url": "{{base_url}}/categories?eq.slug=jewelry&single=true" }
-        },
-        {
-          "name": "Create Category (Admin)",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/categories",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"New Category\",\n  \"slug\": \"new-category\"\n}" }
-          }
-        },
-        {
-          "name": "Update Category (Admin)",
-          "request": {
-            "method": "PATCH",
-            "url": "{{base_url}}/categories?eq.id={{category_id}}",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Updated Name\"\n}" }
-          }
-        },
-        {
-          "name": "Delete Category (Admin)",
-          "request": { "method": "DELETE", "url": "{{base_url}}/categories?eq.id={{category_id}}" }
-        }
+        { "name": "List Categories", "request": { "method": "GET", "url": "{{base_url}}/categories" } },
+        { "name": "Get Category", "request": { "method": "GET", "url": "{{base_url}}/categories/:slug" } },
+        { "name": "Create (Admin)", "request": { "method": "POST", "url": "{{base_url}}/admin/categories", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"name\":\"Jewelry\",\"slug\":\"jewelry\"}" } } },
+        { "name": "Export CSV", "request": { "method": "GET", "url": "{{base_url}}/admin/categories/export?format=csv", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Import CSV", "request": { "method": "POST", "url": "{{base_url}}/admin/categories/import", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": "categories.csv" }] } } }
       ]
     },
     {
-      "name": "🛒 Orders",
+      "name": "04. Orders",
       "item": [
-        {
-          "name": "Create Order",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/orders",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"items\": [\n    { \"product_id\": \"uuid\", \"quantity\": 2 }\n  ],\n  \"address\": {\n    \"full_name\": \"Customer Name\",\n    \"phone\": \"01712345678\",\n    \"division\": \"Dhaka\",\n    \"district\": \"Dhaka\",\n    \"thana\": \"Dhanmondi\",\n    \"address_line\": \"House 12, Road 5\"\n  },\n  \"payment_method\": \"cod\",\n  \"promo_code\": \"SAVE10\",\n  \"notes\": \"Please wrap carefully\"\n}"
-            }
-          }
-        },
-        {
-          "name": "List Orders (Admin)",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/orders?order=created_at.desc&limit=50"
-          }
-        },
-        {
-          "name": "Get Order by ID",
-          "request": { "method": "GET", "url": "{{base_url}}/orders?eq.id={{order_id}}&single=true&select=*,order_items(*),addresses(*)" }
-        },
-        {
-          "name": "Get My Orders",
-          "request": { "method": "GET", "url": "{{base_url}}/orders?eq.user_id=me&order=created_at.desc" }
-        },
-        {
-          "name": "Update Order Status (Admin)",
-          "request": {
-            "method": "PATCH",
-            "url": "{{base_url}}/orders?eq.id={{order_id}}",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"status\": \"confirmed\"\n}" }
-          }
-        },
-        {
-          "name": "Track Order (Public)",
-          "request": { "method": "GET", "url": "{{base_url}}/orders?eq.order_number=ART-20260308-1234&single=true&select=order_number,status,tracking_number,created_at" }
-        }
+        { "name": "Create Order", "request": { "method": "POST", "url": "{{base_url}}/orders", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"address_id\":\"addr-id\",\"payment_method\":\"cod\",\"items\":[{\"product_id\":\"prod-id\",\"quantity\":2}]}" } } },
+        { "name": "My Orders", "request": { "method": "GET", "url": "{{base_url}}/orders/my" } },
+        { "name": "Order Detail", "request": { "method": "GET", "url": "{{base_url}}/orders/:id" } },
+        { "name": "Track Order", "request": { "method": "GET", "url": "{{base_url}}/orders/track/:orderNumber" } },
+        { "name": "List (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/orders?status=pending&page=1", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Update Status (Admin)", "request": { "method": "PUT", "url": "{{base_url}}/admin/orders/:id/status", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"status\":\"shipped\",\"tracking_number\":\"TRK123\"}" } } },
+        { "name": "Export CSV (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/orders/export?format=csv", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Export Excel (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/orders/export?format=xlsx", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } }
       ]
     },
     {
-      "name": "💳 Payments",
+      "name": "05. Payments",
       "item": [
-        {
-          "name": "Initiate SSLCommerz",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/functions/sslcommerz-payment",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"order_id\": \"uuid\",\n  \"amount\": 2500,\n  \"customer_name\": \"Name\",\n  \"customer_phone\": \"01712345678\",\n  \"customer_email\": \"c@e.com\"\n}" }
-          }
-        },
-        {
-          "name": "Initiate bKash",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/functions/bkash-payment",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"order_id\": \"uuid\",\n  \"amount\": 2500\n}" }
-          }
-        },
-        {
-          "name": "Initiate Nagad",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/functions/nagad-payment",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"order_id\": \"uuid\",\n  \"amount\": 2500\n}" }
-          }
-        },
-        {
-          "name": "Initiate AamarPay",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/functions/aamarpay-payment",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"order_id\": \"uuid\",\n  \"amount\": 2500,\n  \"customer_name\": \"Name\",\n  \"customer_phone\": \"01712345678\"\n}" }
-          }
-        },
-        {
-          "name": "Initiate SurjoPay",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/functions/surjopay-payment",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"order_id\": \"uuid\",\n  \"amount\": 2500,\n  \"customer_name\": \"Name\",\n  \"customer_phone\": \"01712345678\"\n}" }
-          }
-        },
-        {
-          "name": "Payment Callback (Webhook)",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/payment-callback?gateway=sslcommerz",
-            "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded" }],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                { "key": "val_id", "value": "validation_id_here" },
-                { "key": "status", "value": "VALID" },
-                { "key": "amount", "value": "2500" },
-                { "key": "value_a", "value": "order_uuid" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "List Payment Providers (Admin)",
-          "request": { "method": "GET", "url": "{{base_url}}/payment_providers?eq.is_active=1" }
-        }
+        { "name": "SSLCommerz Init", "request": { "method": "POST", "url": "{{base_url}}/payments/sslcommerz/init", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"order_id\":\"order-id\",\"amount\":5000}" } } },
+        { "name": "SSLCommerz IPN", "request": { "method": "POST", "url": "{{base_url}}/payments/sslcommerz/ipn" } },
+        { "name": "bKash Create", "request": { "method": "POST", "url": "{{base_url}}/payments/bkash/create", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"order_id\":\"order-id\",\"amount\":5000}" } } },
+        { "name": "bKash Execute", "request": { "method": "POST", "url": "{{base_url}}/payments/bkash/execute", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"paymentID\":\"PAY123\"}" } } },
+        { "name": "Nagad Init", "request": { "method": "POST", "url": "{{base_url}}/payments/nagad/init", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"order_id\":\"order-id\",\"amount\":5000}" } } },
+        { "name": "aamarPay Init", "request": { "method": "POST", "url": "{{base_url}}/payments/aamarpay/init", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"order_id\":\"order-id\",\"amount\":5000}" } } },
+        { "name": "SurjoPay Init", "request": { "method": "POST", "url": "{{base_url}}/payments/surjopay/init", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"order_id\":\"order-id\",\"amount\":5000}" } } },
+        { "name": "Providers (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/payment-providers", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Update Provider (Admin)", "request": { "method": "PUT", "url": "{{base_url}}/admin/payment-providers/:id", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"is_active\":true}" } } }
       ]
     },
     {
-      "name": "🚚 Delivery",
+      "name": "06. Email System",
       "item": [
-        {
-          "name": "Dispatch Order to Courier",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/functions/delivery-api",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"provider_type\": \"steadfast\",\n  \"action\": \"create_order\",\n  \"provider_id\": \"uuid\",\n  \"order_number\": \"ART-20260308-1234\",\n  \"recipient_name\": \"Customer\",\n  \"recipient_phone\": \"01712345678\",\n  \"recipient_address\": \"House 12, Road 5, Dhanmondi, Dhaka\",\n  \"cod_amount\": 2500\n}"
-            }
-          }
-        },
-        {
-          "name": "Bulk Dispatch (Steadfast)",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/functions/delivery-api",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"provider_type\": \"steadfast\",\n  \"action\": \"bulk_create\",\n  \"provider_id\": \"uuid\",\n  \"orders\": [\n    {\n      \"invoice\": \"ART-20260308-0001\",\n      \"recipient_name\": \"Customer 1\",\n      \"recipient_phone\": \"01712345678\",\n      \"recipient_address\": \"Address 1\",\n      \"cod_amount\": 1500\n    },\n    {\n      \"invoice\": \"ART-20260308-0002\",\n      \"recipient_name\": \"Customer 2\",\n      \"recipient_phone\": \"01787654321\",\n      \"recipient_address\": \"Address 2\",\n      \"cod_amount\": 2000\n    }\n  ]\n}"
-            }
-          }
-        },
-        {
-          "name": "Track Parcel",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/functions/delivery-api",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"provider_type\": \"steadfast\",\n  \"action\": \"track\",\n  \"provider_id\": \"uuid\",\n  \"tracking_id\": \"TRACK123\"\n}" }
-          }
-        },
-        {
-          "name": "Get Areas/Zones",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/functions/delivery-api",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"provider_type\": \"pathao\",\n  \"action\": \"get_areas\",\n  \"provider_id\": \"uuid\"\n}" }
-          }
-        },
-        {
-          "name": "Calculate Price",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/functions/delivery-api",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"provider_type\": \"pathao\",\n  \"action\": \"price_plan\",\n  \"provider_id\": \"uuid\",\n  \"store_id\": \"1234\",\n  \"item_type\": 2,\n  \"delivery_type\": 48,\n  \"item_weight\": 0.5,\n  \"recipient_city\": 1,\n  \"recipient_zone\": 1\n}" }
-          }
-        },
-        {
-          "name": "Delivery Webhook (Callback)",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/delivery-webhook",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"consignment_id\": \"TRACK123\",\n  \"status\": \"delivered\",\n  \"provider\": \"steadfast\"\n}" }
-          }
-        },
-        {
-          "name": "List Delivery Providers (Admin)",
-          "request": { "method": "GET", "url": "{{base_url}}/delivery_providers?eq.is_active=1" }
-        }
+        { "name": "Get Settings (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/email/settings", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Update Settings (Admin)", "request": { "method": "PUT", "url": "{{base_url}}/admin/email/settings", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"provider\":\"smtp\",\"smtp_host\":\"smtp.hostinger.com\",\"smtp_port\":465,\"smtp_user\":\"info@yourdomain.com\",\"smtp_password\":\"password\",\"from_email\":\"info@yourdomain.com\",\"from_name\":\"Artistiya\",\"is_enabled\":true}" } } },
+        { "name": "Send Test Email (Admin)", "request": { "method": "POST", "url": "{{base_url}}/admin/email/test", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"to\":\"test@example.com\"}" } } },
+        { "name": "Order Confirmation", "request": { "method": "POST", "url": "{{base_url}}/email/order-confirmation", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"order_id\":\"order-id\"}" } } },
+        { "name": "Shipping Update", "request": { "method": "POST", "url": "{{base_url}}/email/shipping-update", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"order_id\":\"order-id\"}" } } },
+        { "name": "Delivery Notification", "request": { "method": "POST", "url": "{{base_url}}/email/delivery-notification", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"order_id\":\"order-id\"}" } } },
+        { "name": "Templates (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/email/templates", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Update Template (Admin)", "request": { "method": "PUT", "url": "{{base_url}}/admin/email/templates/:id", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"subject\":\"Order #{order_number}\",\"html_content\":\"<h1>Thank you!</h1>\"}" } } },
+        { "name": "Queue Status (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/email/queue?status=pending", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Retry Failed (Admin)", "request": { "method": "POST", "url": "{{base_url}}/admin/email/queue/retry", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"ids\":[\"id1\",\"id2\"]}" } } }
       ]
     },
     {
-      "name": "📧 Email",
+      "name": "07. SMS & OTP",
       "item": [
-        {
-          "name": "Send Order Confirmation Email",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/functions/send-order-email",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"order_id\": \"uuid\",\n  \"type\": \"order_confirmation\"\n}" }
-          }
-        },
-        {
-          "name": "Send Shipping Update Email",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/functions/send-order-email",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"order_id\": \"uuid\",\n  \"type\": \"shipping_update\",\n  \"tracking_number\": \"TRACK123\"\n}" }
-          }
-        },
-        {
-          "name": "Get Email Settings (Admin)",
-          "request": { "method": "GET", "url": "{{base_url}}/email_settings?single=true" }
-        },
-        {
-          "name": "Update Email Settings (Admin)",
-          "request": {
-            "method": "PATCH",
-            "url": "{{base_url}}/email_settings?eq.id={{settings_id}}",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"provider\": \"smtp\",\n  \"smtp_host\": \"smtp.hostinger.com\",\n  \"smtp_port\": 465,\n  \"is_enabled\": true\n}" }
-          }
-        },
-        {
-          "name": "List Email Templates (Admin)",
-          "request": { "method": "GET", "url": "{{base_url}}/email_templates" }
-        }
+        { "name": "SMS Settings (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/sms/settings", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Update SMS (Admin)", "request": { "method": "PUT", "url": "{{base_url}}/admin/sms/settings", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"provider\":\"twilio\",\"api_key\":\"ACxxx\",\"is_enabled\":true}" } } },
+        { "name": "Test SMS (Admin)", "request": { "method": "POST", "url": "{{base_url}}/admin/sms/test", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"phone\":\"+8801700000000\",\"message\":\"Test SMS\"}" } } },
+        { "name": "Send OTP", "request": { "method": "POST", "url": "{{base_url}}/otp/send", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"phone\":\"+8801700000000\",\"purpose\":\"login\"}" } } },
+        { "name": "Verify OTP", "request": { "method": "POST", "url": "{{base_url}}/otp/verify", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"phone\":\"+8801700000000\",\"code\":\"123456\",\"purpose\":\"login\"}" } } },
+        { "name": "SMS Log (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/sms/log?page=1", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } }
       ]
     },
     {
-      "name": "📱 SMS & OTP",
+      "name": "08. Delivery",
       "item": [
-        {
-          "name": "Send SMS",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/functions/send-sms",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"01712345678\",\n  \"message\": \"Your order has been confirmed.\"\n}" }
-          }
-        },
-        {
-          "name": "Send OTP",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/otp/send",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"01712345678\",\n  \"purpose\": \"order_verification\"\n}" }
-          }
-        },
-        {
-          "name": "Verify OTP",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/otp/verify",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"01712345678\",\n  \"code\": \"123456\",\n  \"purpose\": \"order_verification\"\n}" }
-          }
-        },
-        {
-          "name": "Get SMS Settings (Admin)",
-          "request": { "method": "GET", "url": "{{base_url}}/sms_settings?single=true" }
-        }
+        { "name": "Delivery Zones", "request": { "method": "GET", "url": "{{base_url}}/delivery/zones" } },
+        { "name": "Calculate Shipping", "request": { "method": "POST", "url": "{{base_url}}/delivery/calculate", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"division\":\"Dhaka\",\"district\":\"Dhaka\"}" } } },
+        { "name": "Dispatch (Admin)", "request": { "method": "POST", "url": "{{base_url}}/admin/delivery/dispatch", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"order_id\":\"order-id\",\"provider\":\"pathao\"}" } } },
+        { "name": "Partners (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/delivery/partners", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Providers (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/delivery/providers", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } }
       ]
     },
     {
-      "name": "📂 Storage",
+      "name": "09. Invoices & Documents",
       "item": [
-        {
-          "name": "Upload File",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/storage/product-images/upload",
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                { "key": "file", "type": "file", "src": "" },
-                { "key": "path", "value": "products/image.jpg", "type": "text" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Delete File",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/storage/product-images/delete",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"paths\": [\"products/old-image.jpg\"]\n}" }
-          }
-        },
-        {
-          "name": "Get Public URL",
-          "request": { "method": "GET", "url": "{{base_url}}/storage/product-images/products/image.jpg" }
-        }
+        { "name": "Generate Invoice", "request": { "method": "POST", "url": "{{base_url}}/documents/invoice", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"order_id\":\"order-id\"}" } } },
+        { "name": "Generate Delivery Slip", "request": { "method": "POST", "url": "{{base_url}}/documents/delivery-slip", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"order_id\":\"order-id\"}" } } },
+        { "name": "Invoice Settings (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/invoice/settings", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Update Invoice Settings (Admin)", "request": { "method": "PUT", "url": "{{base_url}}/admin/invoice/settings", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"company_name\":\"Artistiya\",\"company_tagline\":\"Handcrafted with love\",\"footer_note\":\"Thank you!\"}" } } },
+        { "name": "Preview Invoice (Admin)", "request": { "method": "POST", "url": "{{base_url}}/admin/invoice/preview", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"order_id\":\"order-id\"}" } } },
+        { "name": "Bulk Download (Admin)", "request": { "method": "POST", "url": "{{base_url}}/admin/invoice/bulk-download", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"order_ids\":[\"id1\",\"id2\"]}" } } }
       ]
     },
     {
-      "name": "🏠 Homepage & CMS",
+      "name": "10. Custom Orders",
       "item": [
-        {
-          "name": "Get Hero Slides",
-          "request": { "method": "GET", "url": "{{base_url}}/hero_slides?eq.is_active=1&order=display_order.asc" }
-        },
-        {
-          "name": "Get Featured Sections",
-          "request": { "method": "GET", "url": "{{base_url}}/featured_sections?eq.is_active=1" }
-        },
-        {
-          "name": "Get Homepage Content",
-          "request": { "method": "GET", "url": "{{base_url}}/homepage_content?eq.is_active=1&order=display_order.asc" }
-        },
-        {
-          "name": "Get Homepage Sections",
-          "request": { "method": "GET", "url": "{{base_url}}/homepage_sections?eq.is_active=1&order=display_order.asc" }
-        },
-        {
-          "name": "Get Testimonials",
-          "request": { "method": "GET", "url": "{{base_url}}/testimonials?eq.is_active=1&order=display_order.asc" }
-        },
-        {
-          "name": "Get FAQ Items",
-          "request": { "method": "GET", "url": "{{base_url}}/faq_items?eq.is_active=1&order=display_order.asc" }
-        },
-        {
-          "name": "Get Content Page by Key",
-          "request": { "method": "GET", "url": "{{base_url}}/content_pages?eq.page_key=about&eq.is_active=1&single=true" }
-        },
-        {
-          "name": "Get Site Branding",
-          "request": { "method": "GET", "url": "{{base_url}}/site_branding?single=true" }
-        },
-        {
-          "name": "Get Announcement Bar",
-          "request": { "method": "GET", "url": "{{base_url}}/announcement_bar?eq.is_active=1&order=display_order.asc" }
-        },
-        {
-          "name": "Get Instagram Posts",
-          "request": { "method": "GET", "url": "{{base_url}}/instagram_posts?eq.is_active=1&order=display_order.asc" }
-        }
+        { "name": "Submit Custom Order", "request": { "method": "POST", "url": "{{base_url}}/custom-orders", "body": { "mode": "formdata", "formdata": [{ "key": "description", "value": "Custom leather bag", "type": "text" }, { "key": "budget_min", "value": "2000", "type": "text" }, { "key": "budget_max", "value": "5000", "type": "text" }, { "key": "reference_image", "type": "file", "src": "design.jpg" }] } } },
+        { "name": "My Custom Orders", "request": { "method": "GET", "url": "{{base_url}}/custom-orders/my" } },
+        { "name": "List (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/custom-orders?status=pending", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Update (Admin)", "request": { "method": "PUT", "url": "{{base_url}}/admin/custom-orders/:id", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"status\":\"in_progress\",\"estimated_price\":3500}" } } },
+        { "name": "Export CSV (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/custom-orders/export?format=csv", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Customization Settings (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/customization/settings", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Update Customization (Admin)", "request": { "method": "PUT", "url": "{{base_url}}/admin/customization/settings", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"custom_order_enabled\":true,\"require_image\":false,\"show_budget_fields\":true}" } } }
       ]
     },
     {
-      "name": "📝 Blog",
+      "name": "11. Customers & CRM",
       "item": [
-        {
-          "name": "List Blog Posts",
-          "request": { "method": "GET", "url": "{{base_url}}/blog_posts?eq.is_published=1&order=published_at.desc&limit=10" }
-        },
-        {
-          "name": "Get Blog Post by Slug",
-          "request": { "method": "GET", "url": "{{base_url}}/blog_posts?eq.slug=my-post&single=true" }
-        },
-        {
-          "name": "List Blog Categories",
-          "request": { "method": "GET", "url": "{{base_url}}/blog_categories?eq.is_active=1&order=display_order.asc" }
-        },
-        {
-          "name": "Get Blog Settings",
-          "request": { "method": "GET", "url": "{{base_url}}/blog_settings?single=true" }
-        }
+        { "name": "List Customers (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/customers?page=1", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Get Customer (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/customers/:id", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Update Customer (Admin)", "request": { "method": "PUT", "url": "{{base_url}}/admin/customers/:id", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"discount_percentage\":10,\"is_premium_member\":true}" } } },
+        { "name": "Export CSV (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/customers/export?format=csv", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Import CSV (Admin)", "request": { "method": "POST", "url": "{{base_url}}/admin/customers/import", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": "customers.csv" }] } } },
+        { "name": "CRM Dashboard (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/crm/dashboard", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "CRM Reports (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/crm/reports?type=sales", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Generate Report (Admin)", "request": { "method": "POST", "url": "{{base_url}}/admin/crm/reports", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"report_type\":\"sales_summary\",\"date_from\":\"2026-01-01\",\"date_to\":\"2026-03-31\"}" } } },
+        { "name": "Blocked Customers (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/customers/blocked", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Block Customer (Admin)", "request": { "method": "POST", "url": "{{base_url}}/admin/customers/block", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"phone\":\"+8801700000000\",\"block_reason\":\"Fake orders\"}" } } }
       ]
     },
     {
-      "name": "❤️ Wishlist",
+      "name": "12. Content",
       "item": [
-        {
-          "name": "Get My Wishlist",
-          "request": { "method": "GET", "url": "{{base_url}}/wishlist_items?eq.user_id=me&select=*,products(*)" }
-        },
-        {
-          "name": "Add to Wishlist",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/wishlist_items",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"product_id\": \"uuid\"\n}" }
-          }
-        },
-        {
-          "name": "Remove from Wishlist",
-          "request": { "method": "DELETE", "url": "{{base_url}}/wishlist_items?eq.product_id={{product_id}}" }
-        }
+        { "name": "Homepage Sections", "request": { "method": "GET", "url": "{{base_url}}/content/homepage" } },
+        { "name": "Hero Slides", "request": { "method": "GET", "url": "{{base_url}}/content/hero-slides" } },
+        { "name": "Testimonials", "request": { "method": "GET", "url": "{{base_url}}/content/testimonials" } },
+        { "name": "FAQ", "request": { "method": "GET", "url": "{{base_url}}/content/faq" } },
+        { "name": "Blog Posts", "request": { "method": "GET", "url": "{{base_url}}/blog/posts?page=1" } },
+        { "name": "Content Page", "request": { "method": "GET", "url": "{{base_url}}/content/pages/:pageKey" } },
+        { "name": "Branding", "request": { "method": "GET", "url": "{{base_url}}/content/branding" } },
+        { "name": "Gallery", "request": { "method": "GET", "url": "{{base_url}}/content/gallery" } },
+        { "name": "Collections", "request": { "method": "GET", "url": "{{base_url}}/collections" } },
+        { "name": "Announcements", "request": { "method": "GET", "url": "{{base_url}}/content/announcements" } }
       ]
     },
     {
-      "name": "🎟️ Promo Codes",
+      "name": "13. Cart & Wishlist",
       "item": [
-        {
-          "name": "Validate Promo Code",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/promo_codes?eq.code=SAVE10&eq.is_active=1&single=true"
-          }
-        },
-        {
-          "name": "List Promo Codes (Admin)",
-          "request": { "method": "GET", "url": "{{base_url}}/promo_codes?order=created_at.desc" }
-        },
-        {
-          "name": "Create Promo Code (Admin)",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/promo_codes",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"code\": \"SUMMER25\",\n  \"discount_type\": \"percentage\",\n  \"discount_value\": 25,\n  \"usage_limit\": 100\n}" }
-          }
-        }
+        { "name": "Get Cart", "request": { "method": "GET", "url": "{{base_url}}/cart" } },
+        { "name": "Add to Cart", "request": { "method": "POST", "url": "{{base_url}}/cart", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"product_id\":\"prod-id\",\"quantity\":1}" } } },
+        { "name": "Update Cart", "request": { "method": "PUT", "url": "{{base_url}}/cart/:id", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"quantity\":3}" } } },
+        { "name": "Remove from Cart", "request": { "method": "DELETE", "url": "{{base_url}}/cart/:id" } },
+        { "name": "Get Wishlist", "request": { "method": "GET", "url": "{{base_url}}/wishlist" } },
+        { "name": "Add to Wishlist", "request": { "method": "POST", "url": "{{base_url}}/wishlist", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"product_id\":\"prod-id\"}" } } },
+        { "name": "Remove Wishlist", "request": { "method": "DELETE", "url": "{{base_url}}/wishlist/:productId" } }
       ]
     },
     {
-      "name": "👥 Customers & CRM (Admin)",
+      "name": "14. Reviews",
       "item": [
-        {
-          "name": "List Customers",
-          "request": { "method": "GET", "url": "{{base_url}}/customers?order=total_spent.desc&limit=50" }
-        },
-        {
-          "name": "Get Customer by ID",
-          "request": { "method": "GET", "url": "{{base_url}}/customers?eq.id={{customer_id}}&single=true" }
-        },
-        {
-          "name": "Update Customer Notes",
-          "request": {
-            "method": "PATCH",
-            "url": "{{base_url}}/customers?eq.id={{customer_id}}",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"notes\": \"VIP customer\",\n  \"discount_percentage\": 10\n}" }
-          }
-        },
-        {
-          "name": "List Leads",
-          "request": { "method": "GET", "url": "{{base_url}}/leads?order=created_at.desc" }
-        },
-        {
-          "name": "List Newsletter Subscribers",
-          "request": { "method": "GET", "url": "{{base_url}}/newsletter_subscribers?eq.is_active=1&order=created_at.desc" }
-        },
-        {
-          "name": "List Abandoned Carts",
-          "request": { "method": "GET", "url": "{{base_url}}/abandoned_carts?eq.is_recovered=0&order=last_activity_at.desc" }
-        },
-        {
-          "name": "List Blocked Customers",
-          "request": { "method": "GET", "url": "{{base_url}}/blocked_customers?eq.is_active=1" }
-        }
+        { "name": "Product Reviews", "request": { "method": "GET", "url": "{{base_url}}/reviews/:productId" } },
+        { "name": "Submit Review", "request": { "method": "POST", "url": "{{base_url}}/reviews", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"product_id\":\"prod-id\",\"rating\":5,\"review_text\":\"Excellent!\"}" } } },
+        { "name": "Manage (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/reviews?status=pending", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Approve (Admin)", "request": { "method": "PUT", "url": "{{base_url}}/admin/reviews/:id", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"is_approved\":true}" } } }
       ]
     },
     {
-      "name": "🎨 Custom Orders",
+      "name": "15. Promo Codes",
       "item": [
-        {
-          "name": "Submit Custom Order",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/custom_order_requests",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"description\": \"Custom bracelet with initials\",\n  \"reference_image_url\": \"https://...\",\n  \"budget_min\": 500,\n  \"budget_max\": 2000,\n  \"full_name\": \"Name\",\n  \"phone\": \"01712345678\"\n}"
-            }
-          }
-        },
-        {
-          "name": "List Custom Orders (Admin)",
-          "request": { "method": "GET", "url": "{{base_url}}/custom_order_requests?order=created_at.desc" }
-        },
-        {
-          "name": "Update Custom Order Status (Admin)",
-          "request": {
-            "method": "PATCH",
-            "url": "{{base_url}}/custom_order_requests?eq.id={{request_id}}",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"status\": \"approved\",\n  \"estimated_price\": 1500,\n  \"estimated_time\": \"5-7 days\",\n  \"admin_notes\": \"Materials ready\"\n}" }
-          }
-        }
+        { "name": "Validate Code", "request": { "method": "POST", "url": "{{base_url}}/promo/validate", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"code\":\"SAVE20\",\"cart_total\":5000}" } } },
+        { "name": "List (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/promo-codes", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Create (Admin)", "request": { "method": "POST", "url": "{{base_url}}/admin/promo-codes", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"code\":\"SAVE20\",\"discount_type\":\"percentage\",\"discount_value\":20,\"min_order_amount\":1000}" } } }
       ]
     },
     {
-      "name": "⭐ Reviews",
+      "name": "16. Newsletter & Leads",
       "item": [
-        {
-          "name": "Get Product Reviews",
-          "request": { "method": "GET", "url": "{{base_url}}/product_reviews?eq.product_id={{product_id}}&eq.status=approved&order=created_at.desc" }
-        },
-        {
-          "name": "Submit Review",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/product_reviews",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"product_id\": \"uuid\",\n  \"order_number\": \"ART-20260308-1234\",\n  \"rating\": 5,\n  \"review_text\": \"Excellent quality!\",\n  \"reviewer_name\": \"Name\"\n}" }
-          }
-        },
-        {
-          "name": "Moderate Review (Admin)",
-          "request": {
-            "method": "PATCH",
-            "url": "{{base_url}}/product_reviews?eq.id={{review_id}}",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"status\": \"approved\"\n}" }
-          }
-        }
+        { "name": "Subscribe", "request": { "method": "POST", "url": "{{base_url}}/newsletter/subscribe", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"email\":\"sub@example.com\"}" } } },
+        { "name": "Submit Lead", "request": { "method": "POST", "url": "{{base_url}}/leads", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"name\":\"John\",\"email\":\"john@example.com\",\"message\":\"Bulk order inquiry\"}" } } },
+        { "name": "Subscribers (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/newsletter/subscribers", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Leads (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/leads", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Export Subscribers", "request": { "method": "GET", "url": "{{base_url}}/admin/newsletter/export?format=csv", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } }
       ]
     },
     {
-      "name": "⚙️ Settings (Admin)",
+      "name": "17. Storage",
       "item": [
-        {
-          "name": "Get Checkout Settings",
-          "request": { "method": "GET", "url": "{{base_url}}/checkout_settings?single=true" }
-        },
-        {
-          "name": "Get Fraud Settings",
-          "request": { "method": "GET", "url": "{{base_url}}/checkout_fraud_settings?single=true" }
-        },
-        {
-          "name": "Get Shop Settings",
-          "request": { "method": "GET", "url": "{{base_url}}/shop_settings?single=true" }
-        },
-        {
-          "name": "Get Customization Settings",
-          "request": { "method": "GET", "url": "{{base_url}}/customization_settings?single=true" }
-        },
-        {
-          "name": "Get Invoice Settings",
-          "request": { "method": "GET", "url": "{{base_url}}/invoice_settings?single=true" }
-        },
-        {
-          "name": "Get Theme Settings",
-          "request": { "method": "GET", "url": "{{base_url}}/theme_settings" }
-        },
-        {
-          "name": "List Delivery Zones",
-          "request": { "method": "GET", "url": "{{base_url}}/delivery_zones?eq.is_active=1&order=division.asc" }
-        },
-        {
-          "name": "List Collections",
-          "request": { "method": "GET", "url": "{{base_url}}/collections?eq.is_active=1&order=display_order.asc" }
-        },
-        {
-          "name": "List Team Members",
-          "request": { "method": "GET", "url": "{{base_url}}/team_members?eq.is_active=1&order=display_order.asc" }
-        },
-        {
-          "name": "Generate Invoice",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/functions/generate-invoice",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"order_id\": \"uuid\"\n}" }
-          }
-        },
-        {
-          "name": "Generate Delivery Slip",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/functions/generate-delivery-slip",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"order_id\": \"uuid\"\n}" }
-          }
-        }
+        { "name": "Upload File", "request": { "method": "POST", "url": "{{base_url}}/storage/upload", "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": "image.jpg" }, { "key": "bucket", "value": "product-images", "type": "text" }] } } },
+        { "name": "Delete File", "request": { "method": "DELETE", "url": "{{base_url}}/storage/delete", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"bucket\":\"product-images\",\"path\":\"file.jpg\"}" } } },
+        { "name": "Media Manager (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/media?bucket=product-images", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } }
       ]
     },
     {
-      "name": "🔔 Notifications",
+      "name": "18. Settings (Admin)",
       "item": [
-        {
-          "name": "Get My Notifications",
-          "request": { "method": "GET", "url": "{{base_url}}/notifications?eq.user_id=me&order=created_at.desc&limit=20" }
-        },
-        {
-          "name": "Mark as Read",
-          "request": {
-            "method": "PATCH",
-            "url": "{{base_url}}/notifications?eq.id={{notification_id}}",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"is_read\": true\n}" }
-          }
-        }
+        { "name": "Shop Settings", "request": { "method": "GET", "url": "{{base_url}}/admin/settings/shop", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Checkout Settings", "request": { "method": "GET", "url": "{{base_url}}/admin/settings/checkout", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Fraud Settings", "request": { "method": "GET", "url": "{{base_url}}/admin/settings/fraud", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Theme Settings", "request": { "method": "GET", "url": "{{base_url}}/admin/settings/theme", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Currency Rates", "request": { "method": "GET", "url": "{{base_url}}/admin/settings/currency", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Site Branding", "request": { "method": "GET", "url": "{{base_url}}/admin/settings/branding", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Social Links", "request": { "method": "GET", "url": "{{base_url}}/admin/settings/social", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Menu Manager", "request": { "method": "GET", "url": "{{base_url}}/admin/settings/menu", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Footer Links", "request": { "method": "GET", "url": "{{base_url}}/admin/settings/footer", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } }
       ]
     },
     {
-      "name": "📊 Gallery & Media",
+      "name": "19. Health & System",
       "item": [
-        {
-          "name": "List Gallery Albums",
-          "request": { "method": "GET", "url": "{{base_url}}/gallery_albums?eq.is_active=1&order=display_order.asc" }
-        },
-        {
-          "name": "List Gallery Items",
-          "request": { "method": "GET", "url": "{{base_url}}/gallery_items?eq.album_id={{album_id}}&eq.is_active=1&order=display_order.asc" }
-        },
-        {
-          "name": "List Certifications",
-          "request": { "method": "GET", "url": "{{base_url}}/certifications?eq.is_active=1&order=display_order.asc" }
-        },
-        {
-          "name": "List YouTube Videos",
-          "request": { "method": "GET", "url": "{{base_url}}/youtube_videos?eq.is_active=1&order=display_order.asc" }
-        }
-      ]
-    },
-    {
-      "name": "📋 Newsletter",
-      "item": [
-        {
-          "name": "Subscribe to Newsletter",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/newsletter_subscribers",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"email\": \"subscriber@example.com\",\n  \"full_name\": \"Subscriber\",\n  \"source\": \"footer\"\n}" }
-          }
-        },
-        {
-          "name": "Get Newsletter Settings",
-          "request": { "method": "GET", "url": "{{base_url}}/newsletter_settings?single=true" }
-        }
-      ]
-    },
-    {
-      "name": "💱 Currency",
-      "item": [
-        {
-          "name": "List Active Currencies",
-          "request": { "method": "GET", "url": "{{base_url}}/currency_rates?eq.is_active=1" }
-        }
-      ]
-    },
-    {
-      "name": "🔗 Navigation & Menus",
-      "item": [
-        {
-          "name": "Get Header Menu",
-          "request": { "method": "GET", "url": "{{base_url}}/menu_items?eq.menu_type=header&eq.is_active=1&order=display_order.asc&select=*,menu_sub_items(*)" }
-        },
-        {
-          "name": "Get Footer Links",
-          "request": { "method": "GET", "url": "{{base_url}}/footer_link_groups?eq.is_active=1&order=display_order.asc&select=*,footer_links(*)" }
-        },
-        {
-          "name": "Get Social Links",
-          "request": { "method": "GET", "url": "{{base_url}}/social_links?eq.is_active=1&order=display_order.asc" }
-        }
+        { "name": "Health Check", "request": { "method": "GET", "url": "{{base_url}}/health" } },
+        { "name": "DB Status (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/system/db-status", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "System Info (Admin)", "request": { "method": "GET", "url": "{{base_url}}/admin/system/info", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } },
+        { "name": "Clear Cache (Admin)", "request": { "method": "POST", "url": "{{base_url}}/admin/system/clear-cache", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}" }] } } }
       ]
     }
   ]

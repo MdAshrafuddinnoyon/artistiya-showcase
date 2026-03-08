@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Settings, Save, Loader2, Palette, ToggleLeft, Percent, Type, Link as LinkIcon, FileText, MessageSquare } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Settings, Save, Loader2, Palette, ToggleLeft, Percent, Type, Link as LinkIcon, FileText, MessageSquare, Download, Upload, RefreshCw, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,8 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import CRMExportTools from "./crm/CRMExportTools";
 
 interface CustomizationSettings {
   id: string;
@@ -21,7 +23,6 @@ interface CustomizationSettings {
   default_advance_percent: number;
   min_advance_percent: number;
   max_advance_percent: number;
-  // Form customization
   form_title: string;
   form_title_bn: string;
   form_subtitle: string;
@@ -60,9 +61,14 @@ const AdminCustomizationSettings = () => {
   const [settings, setSettings] = useState<CustomizationSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [customOrders, setCustomOrders] = useState<any[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchSettings();
+    fetchCustomOrders();
   }, []);
 
   const fetchSettings = async () => {
@@ -99,6 +105,22 @@ const AdminCustomizationSettings = () => {
       setSettings(defaultSettings);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCustomOrders = async () => {
+    setLoadingOrders(true);
+    try {
+      const { data, error } = await supabase
+        .from("custom_order_requests")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setCustomOrders(data || []);
+    } catch (error) {
+      console.error("Error fetching custom orders:", error);
+    } finally {
+      setLoadingOrders(false);
     }
   };
 
@@ -172,6 +194,105 @@ const AdminCustomizationSettings = () => {
     }
   };
 
+  // Excel/CSV Import
+  const handleImportCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const text = e.target?.result as string;
+        const lines = text.split("\n").filter(l => l.trim());
+        if (lines.length < 2) { toast.error("CSV file is empty or invalid"); return; }
+
+        const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ""));
+        const records: Record<string, string>[] = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(",").map(v => v.trim().replace(/^"|"$/g, ""));
+          const record: Record<string, string> = {};
+          headers.forEach((h, idx) => { record[h] = values[idx] || ""; });
+          records.push(record);
+        }
+
+        // Map CSV columns to settings fields
+        if (records.length > 0) {
+          const row = records[0];
+          const updatedSettings = { ...settings! };
+          
+          if (row.header_button_text) updatedSettings.header_button_text = row.header_button_text;
+          if (row.header_button_text_bn) updatedSettings.header_button_text_bn = row.header_button_text_bn;
+          if (row.form_title) updatedSettings.form_title = row.form_title;
+          if (row.form_title_bn) updatedSettings.form_title_bn = row.form_title_bn;
+          if (row.form_subtitle) updatedSettings.form_subtitle = row.form_subtitle;
+          if (row.form_subtitle_bn) updatedSettings.form_subtitle_bn = row.form_subtitle_bn;
+          if (row.success_message) updatedSettings.success_message = row.success_message;
+          if (row.success_message_bn) updatedSettings.success_message_bn = row.success_message_bn;
+          if (row.default_advance_percent) updatedSettings.default_advance_percent = Number(row.default_advance_percent);
+          if (row.custom_order_enabled) updatedSettings.custom_order_enabled = row.custom_order_enabled === "true";
+          if (row.require_image) updatedSettings.require_image = row.require_image === "true";
+          if (row.show_budget_fields) updatedSettings.show_budget_fields = row.show_budget_fields === "true";
+
+          setSettings(updatedSettings);
+          toast.success(`Imported ${records.length} settings from CSV`);
+        }
+      } catch (err) {
+        console.error("Import error:", err);
+        toast.error("Failed to import CSV file");
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // Export settings as CSV
+  const handleExportSettings = () => {
+    if (!settings) return;
+    const data = [{
+      custom_order_enabled: settings.custom_order_enabled,
+      header_button_enabled: settings.header_button_enabled,
+      header_button_text: settings.header_button_text,
+      header_button_text_bn: settings.header_button_text_bn,
+      header_button_link: settings.header_button_link || "",
+      default_advance_percent: settings.default_advance_percent,
+      min_advance_percent: settings.min_advance_percent,
+      max_advance_percent: settings.max_advance_percent,
+      form_title: settings.form_title,
+      form_title_bn: settings.form_title_bn,
+      form_subtitle: settings.form_subtitle,
+      form_subtitle_bn: settings.form_subtitle_bn,
+      require_image: settings.require_image,
+      show_budget_fields: settings.show_budget_fields,
+      success_message: settings.success_message,
+      success_message_bn: settings.success_message_bn,
+    }];
+
+    const headers = Object.keys(data[0]);
+    const csvContent = [
+      headers.join(","),
+      ...data.map(row => headers.map(h => `"${String((row as any)[h]).replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `customization_settings_${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success("Settings exported to CSV");
+  };
+
+  // Reset to defaults
+  const handleResetDefaults = () => {
+    if (!settings) return;
+    setSettings({ ...defaultSettings, id: settings.id });
+    toast.info("Settings reset to defaults. Click Save to apply.");
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -188,9 +309,40 @@ const AdminCustomizationSettings = () => {
     );
   }
 
+  // Custom orders export data
+  const ordersExportData = customOrders.map(o => ({
+    id: o.id,
+    status: o.status,
+    description: o.description,
+    budget_min: o.budget_min,
+    budget_max: o.budget_max,
+    full_name: o.full_name,
+    phone: o.phone,
+    email: o.email,
+    estimated_price: o.estimated_price,
+    advance_amount: o.advance_amount,
+    advance_paid: o.advance_paid,
+    created_at: o.created_at,
+  }));
+
+  const ordersExportColumns = [
+    { key: "id", label: "ID" },
+    { key: "status", label: "Status" },
+    { key: "description", label: "Description" },
+    { key: "full_name", label: "Customer" },
+    { key: "phone", label: "Phone" },
+    { key: "email", label: "Email" },
+    { key: "budget_min", label: "Budget Min" },
+    { key: "budget_max", label: "Budget Max" },
+    { key: "estimated_price", label: "Estimated Price" },
+    { key: "advance_amount", label: "Advance" },
+    { key: "advance_paid", label: "Advance Paid" },
+    { key: "created_at", label: "Created" },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-2xl font-display text-gold flex items-center gap-2">
             <Palette className="h-6 w-6" />
@@ -200,137 +352,128 @@ const AdminCustomizationSettings = () => {
             Manage custom order system, header button, form fields, and advance payment
           </p>
         </div>
-        <Button 
-          variant="gold" 
-          onClick={handleSave}
-          disabled={saving}
-        >
-          {saving ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4 mr-2" />
-          )}
-          Save All Settings
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            className="hidden"
+            onChange={handleImportCSV}
+          />
+          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="h-4 w-4 mr-2" />
+            Import CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportSettings}>
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleResetDefaults}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Reset Defaults
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)}>
+            <Eye className="h-4 w-4 mr-2" />
+            Preview Form
+          </Button>
+          <Button 
+            variant="gold" 
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            Save All Settings
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="form">Form Customization</TabsTrigger>
           <TabsTrigger value="payment">Payment</TabsTrigger>
+          <TabsTrigger value="orders">Custom Orders</TabsTrigger>
         </TabsList>
 
         {/* General Tab */}
         <TabsContent value="general" className="space-y-6">
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Feature Toggles */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <ToggleLeft className="h-5 w-5 text-gold" />
                   Feature Controls
                 </CardTitle>
-                <CardDescription>
-                  Enable or disable customization features
-                </CardDescription>
+                <CardDescription>Enable or disable customization features</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <Label className="text-foreground font-medium">Custom Order System</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Allow customers to request custom product orders
-                    </p>
+                    <p className="text-sm text-muted-foreground">Allow customers to request custom product orders</p>
                   </div>
-                  <Switch
-                    checked={settings.custom_order_enabled}
-                    onCheckedChange={(checked) => 
-                      setSettings({ ...settings, custom_order_enabled: checked })
-                    }
-                  />
+                  <Switch checked={settings.custom_order_enabled} onCheckedChange={(checked) => setSettings({ ...settings, custom_order_enabled: checked })} />
                 </div>
-
                 <Separator />
-
                 <div className="flex items-center justify-between">
                   <div>
                     <Label className="text-foreground font-medium">Header Button</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Show custom order button in the header
-                    </p>
+                    <p className="text-sm text-muted-foreground">Show custom order button in the header</p>
                   </div>
-                  <Switch
-                    checked={settings.header_button_enabled}
-                    onCheckedChange={(checked) => 
-                      setSettings({ ...settings, header_button_enabled: checked })
-                    }
-                  />
+                  <Switch checked={settings.header_button_enabled} onCheckedChange={(checked) => setSettings({ ...settings, header_button_enabled: checked })} />
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-foreground font-medium">Require Image Upload</Label>
+                    <p className="text-sm text-muted-foreground">Make image upload mandatory for custom orders</p>
+                  </div>
+                  <Switch checked={settings.require_image} onCheckedChange={(checked) => setSettings({ ...settings, require_image: checked })} />
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-foreground font-medium">Show Budget Fields</Label>
+                    <p className="text-sm text-muted-foreground">Display minimum/maximum budget fields</p>
+                  </div>
+                  <Switch checked={settings.show_budget_fields} onCheckedChange={(checked) => setSettings({ ...settings, show_budget_fields: checked })} />
                 </div>
               </CardContent>
             </Card>
 
-            {/* Header Button Customization */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Type className="h-5 w-5 text-gold" />
                   Header Button Settings
                 </CardTitle>
-                <CardDescription>
-                  Customize the header button text and behavior
-                </CardDescription>
+                <CardDescription>Customize the header button text and behavior</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
                   <Label htmlFor="buttonText">Button Text (English)</Label>
-                  <Input
-                    id="buttonText"
-                    value={settings.header_button_text}
-                    onChange={(e) => 
-                      setSettings({ ...settings, header_button_text: e.target.value })
-                    }
-                    placeholder="Custom Design"
-                    className="mt-1"
-                  />
+                  <Input id="buttonText" value={settings.header_button_text} onChange={(e) => setSettings({ ...settings, header_button_text: e.target.value })} placeholder="Custom Design" className="mt-1" />
                 </div>
-
                 <div>
                   <Label htmlFor="buttonTextBn">Button Text (বাংলা)</Label>
-                  <Input
-                    id="buttonTextBn"
-                    value={settings.header_button_text_bn}
-                    onChange={(e) => 
-                      setSettings({ ...settings, header_button_text_bn: e.target.value })
-                    }
-                    placeholder="কাস্টম ডিজাইন"
-                    className="mt-1"
-                  />
+                  <Input id="buttonTextBn" value={settings.header_button_text_bn} onChange={(e) => setSettings({ ...settings, header_button_text_bn: e.target.value })} placeholder="কাস্টম ডিজাইন" className="mt-1" />
                 </div>
-
                 <div>
                   <Label htmlFor="buttonLink" className="flex items-center gap-2">
                     <LinkIcon className="h-4 w-4" />
                     Custom Link (Optional)
                   </Label>
-                  <Input
-                    id="buttonLink"
-                    value={settings.header_button_link || ""}
-                    onChange={(e) => 
-                      setSettings({ ...settings, header_button_link: e.target.value || null })
-                    }
-                    placeholder="/custom-order or leave empty for modal"
-                    className="mt-1"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Leave empty to open custom order modal
-                  </p>
+                  <Input id="buttonLink" value={settings.header_button_link || ""} onChange={(e) => setSettings({ ...settings, header_button_link: e.target.value || null })} placeholder="/custom-order or leave empty for modal" className="mt-1" />
+                  <p className="text-xs text-muted-foreground mt-1">Leave empty to open custom order modal</p>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Preview Card */}
           <Card className="border-gold/30 bg-gold/5">
             <CardHeader>
               <CardTitle className="text-gold">Button Preview</CardTitle>
@@ -367,153 +510,59 @@ const AdminCustomizationSettings = () => {
         {/* Form Customization Tab */}
         <TabsContent value="form" className="space-y-6">
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Form Texts */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5 text-gold" />
                   Form Title & Subtitle
                 </CardTitle>
-                <CardDescription>
-                  Customize the form header texts
-                </CardDescription>
+                <CardDescription>Customize the form header texts</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
                   <Label>Form Title (English)</Label>
-                  <Input
-                    value={settings.form_title}
-                    onChange={(e) => setSettings({ ...settings, form_title: e.target.value })}
-                    placeholder="Submit Your Design"
-                    className="mt-1"
-                  />
+                  <Input value={settings.form_title} onChange={(e) => setSettings({ ...settings, form_title: e.target.value })} placeholder="Submit Your Design" className="mt-1" />
                 </div>
                 <div>
                   <Label>Form Title (বাংলা)</Label>
-                  <Input
-                    value={settings.form_title_bn}
-                    onChange={(e) => setSettings({ ...settings, form_title_bn: e.target.value })}
-                    placeholder="আপনার ডিজাইন জমা দিন"
-                    className="mt-1"
-                  />
+                  <Input value={settings.form_title_bn} onChange={(e) => setSettings({ ...settings, form_title_bn: e.target.value })} placeholder="আপনার ডিজাইন জমা দিন" className="mt-1" />
                 </div>
                 <div>
                   <Label>Subtitle (English)</Label>
-                  <Textarea
-                    value={settings.form_subtitle}
-                    onChange={(e) => setSettings({ ...settings, form_subtitle: e.target.value })}
-                    placeholder="Upload your design idea..."
-                    className="mt-1"
-                    rows={2}
-                  />
+                  <Textarea value={settings.form_subtitle} onChange={(e) => setSettings({ ...settings, form_subtitle: e.target.value })} placeholder="Upload your design idea..." className="mt-1" rows={2} />
                 </div>
                 <div>
                   <Label>Subtitle (বাংলা)</Label>
-                  <Textarea
-                    value={settings.form_subtitle_bn}
-                    onChange={(e) => setSettings({ ...settings, form_subtitle_bn: e.target.value })}
-                    placeholder="আপনার ডিজাইন আইডিয়া আপলোড করুন..."
-                    className="mt-1"
-                    rows={2}
-                  />
+                  <Textarea value={settings.form_subtitle_bn} onChange={(e) => setSettings({ ...settings, form_subtitle_bn: e.target.value })} placeholder="আপনার ডিজাইন আইডিয়া আপলোড করুন..." className="mt-1" rows={2} />
                 </div>
               </CardContent>
             </Card>
 
-            {/* Form Fields */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5 text-gold" />
                   Form Fields
                 </CardTitle>
-                <CardDescription>
-                  Configure form field labels and behavior
-                </CardDescription>
+                <CardDescription>Customize field labels and placeholders</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label>Description Label</Label>
-                  <Input
-                    value={settings.form_description_label}
-                    onChange={(e) => setSettings({ ...settings, form_description_label: e.target.value })}
-                    placeholder="Detailed Description"
-                    className="mt-1"
-                  />
+                  <Label>Description Field Label</Label>
+                  <Input value={settings.form_description_label} onChange={(e) => setSettings({ ...settings, form_description_label: e.target.value })} placeholder="Detailed Description" className="mt-1" />
                 </div>
                 <div>
                   <Label>Description Placeholder</Label>
-                  <Textarea
-                    value={settings.form_description_placeholder}
-                    onChange={(e) => setSettings({ ...settings, form_description_placeholder: e.target.value })}
-                    placeholder="Describe your preferred colors..."
-                    className="mt-1"
-                    rows={2}
-                  />
+                  <Textarea value={settings.form_description_placeholder} onChange={(e) => setSettings({ ...settings, form_description_placeholder: e.target.value })} placeholder="Describe your preferred colors..." className="mt-1" rows={2} />
                 </div>
-
                 <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-foreground font-medium">Require Image</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Make reference image mandatory
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.require_image}
-                    onCheckedChange={(checked) => 
-                      setSettings({ ...settings, require_image: checked })
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-foreground font-medium">Show Budget Fields</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Display min/max budget inputs
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.show_budget_fields}
-                    onCheckedChange={(checked) => 
-                      setSettings({ ...settings, show_budget_fields: checked })
-                    }
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Success Messages */}
-            <Card className="md:col-span-2">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-green-500">
-                  ✓ Success Messages
-                </CardTitle>
-                <CardDescription>
-                  Messages shown after successful submission
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid md:grid-cols-2 gap-4">
                 <div>
                   <Label>Success Message (English)</Label>
-                  <Input
-                    value={settings.success_message}
-                    onChange={(e) => setSettings({ ...settings, success_message: e.target.value })}
-                    placeholder="Your custom order request has been submitted!"
-                    className="mt-1"
-                  />
+                  <Textarea value={settings.success_message} onChange={(e) => setSettings({ ...settings, success_message: e.target.value })} className="mt-1" rows={2} />
                 </div>
                 <div>
                   <Label>Success Message (বাংলা)</Label>
-                  <Input
-                    value={settings.success_message_bn}
-                    onChange={(e) => setSettings({ ...settings, success_message_bn: e.target.value })}
-                    placeholder="আপনার কাস্টম অর্ডার রিকোয়েস্ট জমা দেওয়া হয়েছে!"
-                    className="mt-1"
-                  />
+                  <Textarea value={settings.success_message_bn} onChange={(e) => setSettings({ ...settings, success_message_bn: e.target.value })} className="mt-1" rows={2} />
                 </div>
               </CardContent>
             </Card>
@@ -528,103 +577,152 @@ const AdminCustomizationSettings = () => {
                 <Percent className="h-5 w-5 text-gold" />
                 Advance Payment Settings
               </CardTitle>
-              <CardDescription>
-                Configure advance payment percentages for custom orders
-              </CardDescription>
+              <CardDescription>Configure advance payment percentage for custom orders</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div>
-                <Label htmlFor="defaultPercent">Default Advance Percentage</Label>
-                <div className="flex items-center gap-2 mt-1">
-                  <Input
-                    id="defaultPercent"
-                    type="number"
-                    min={settings.min_advance_percent}
-                    max={settings.max_advance_percent}
-                    value={settings.default_advance_percent}
-                    onChange={(e) => 
-                      setSettings({ 
-                        ...settings, 
-                        default_advance_percent: parseInt(e.target.value) || 50 
-                      })
-                    }
-                    className="w-24"
-                  />
-                  <span className="text-muted-foreground">%</span>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label>Default Advance %</Label>
+                  <Input type="number" min="0" max="100" value={settings.default_advance_percent} onChange={(e) => setSettings({ ...settings, default_advance_percent: Number(e.target.value) })} className="mt-1" />
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Applied when product doesn't have specific settings
+                <div>
+                  <Label>Minimum %</Label>
+                  <Input type="number" min="0" max="100" value={settings.min_advance_percent} onChange={(e) => setSettings({ ...settings, min_advance_percent: Number(e.target.value) })} className="mt-1" />
+                </div>
+                <div>
+                  <Label>Maximum %</Label>
+                  <Input type="number" min="0" max="100" value={settings.max_advance_percent} onChange={(e) => setSettings({ ...settings, max_advance_percent: Number(e.target.value) })} className="mt-1" />
+                </div>
+              </div>
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  Customers will pay <strong className="text-foreground">{settings.default_advance_percent}%</strong> advance 
+                  (range: {settings.min_advance_percent}% - {settings.max_advance_percent}%) when placing custom orders.
                 </p>
-              </div>
-
-              <Separator />
-
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <Label htmlFor="minPercent">Minimum Allowed</Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Input
-                      id="minPercent"
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={settings.min_advance_percent}
-                      onChange={(e) => 
-                        setSettings({ 
-                          ...settings, 
-                          min_advance_percent: parseInt(e.target.value) || 20 
-                        })
-                      }
-                      className="w-24"
-                    />
-                    <span className="text-muted-foreground">%</span>
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="maxPercent">Maximum Allowed</Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Input
-                      id="maxPercent"
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={settings.max_advance_percent}
-                      onChange={(e) => 
-                        setSettings({ 
-                          ...settings, 
-                          max_advance_percent: parseInt(e.target.value) || 100 
-                        })
-                      }
-                      className="w-24"
-                    />
-                    <span className="text-muted-foreground">%</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Info Card */}
-          <Card className="border-gold/30 bg-gold/5">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-3">
-                <Settings className="h-5 w-5 text-gold mt-0.5" />
-                <div>
-                  <h4 className="font-medium text-gold">How Custom Orders Work</h4>
-                  <ul className="text-sm text-muted-foreground mt-2 space-y-1.5">
-                    <li>• Products marked as "Customization Only" show request button instead of Add to Cart</li>
-                    <li>• Header button opens the custom order form modal (or redirects if link is set)</li>
-                    <li>• For product-specific orders, customers complete delivery info and pay advance</li>
-                    <li>• Advance payment (% of product price) is collected via bKash/Nagad</li>
-                    <li>• COD option allows customers to skip advance payment</li>
-                    <li>• You can set per-product advance percentage in the product editor</li>
-                  </ul>
-                </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Custom Orders Tab */}
+        <TabsContent value="orders" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">Custom Order Requests</h3>
+              <p className="text-sm text-muted-foreground">{customOrders.length} total requests</p>
+            </div>
+            <div className="flex gap-2">
+              <CRMExportTools
+                data={ordersExportData}
+                filename="custom_orders"
+                title="Custom Order Requests Report"
+                columns={ordersExportColumns}
+              />
+              <Button variant="outline" size="sm" onClick={fetchCustomOrders} disabled={loadingOrders}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${loadingOrders ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
+            </div>
+          </div>
+
+          {loadingOrders ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-gold" />
+            </div>
+          ) : customOrders.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                No custom order requests yet
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left p-3 font-medium text-muted-foreground">Customer</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Description</th>
+                    <th className="text-right p-3 font-medium text-muted-foreground">Budget</th>
+                    <th className="text-right p-3 font-medium text-muted-foreground">Estimated</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {customOrders.map((order) => (
+                    <tr key={order.id} className="border-b border-border/50 hover:bg-muted/30">
+                      <td className="p-3">
+                        <div className="font-medium">{order.full_name || "N/A"}</div>
+                        <div className="text-xs text-muted-foreground">{order.phone || order.email || ""}</div>
+                      </td>
+                      <td className="p-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          order.status === "completed" ? "bg-green-500/10 text-green-500" :
+                          order.status === "in_progress" ? "bg-blue-500/10 text-blue-500" :
+                          order.status === "rejected" ? "bg-red-500/10 text-red-500" :
+                          "bg-yellow-500/10 text-yellow-500"
+                        }`}>
+                          {order.status || "pending"}
+                        </span>
+                      </td>
+                      <td className="p-3 max-w-[200px] truncate">{order.description}</td>
+                      <td className="p-3 text-right">
+                        {order.budget_min || order.budget_max ? `৳${order.budget_min || 0} - ৳${order.budget_max || 0}` : "-"}
+                      </td>
+                      <td className="p-3 text-right">
+                        {order.estimated_price ? `৳${Number(order.estimated_price).toLocaleString()}` : "-"}
+                      </td>
+                      <td className="p-3 text-muted-foreground">
+                        {new Date(order.created_at).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
+
+      {/* Form Preview Dialog */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Form Preview</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 p-4 bg-muted/30 rounded-lg">
+            <h3 className="text-lg font-semibold">{settings.form_title}</h3>
+            <p className="text-sm text-muted-foreground">{settings.form_subtitle}</p>
+            <div className="space-y-3">
+              <div>
+                <Label className="text-sm font-medium">{settings.form_description_label}</Label>
+                <Textarea placeholder={settings.form_description_placeholder} disabled className="mt-1" rows={3} />
+              </div>
+              {settings.require_image && (
+                <div>
+                  <Label className="text-sm font-medium">Reference Image *</Label>
+                  <div className="mt-1 border-2 border-dashed border-border rounded-lg p-6 text-center text-muted-foreground">
+                    Upload your design reference
+                  </div>
+                </div>
+              )}
+              {settings.show_budget_fields && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-sm">Min Budget (৳)</Label>
+                    <Input disabled placeholder="500" className="mt-1" />
+                  </div>
+                  <div>
+                    <Label className="text-sm">Max Budget (৳)</Label>
+                    <Input disabled placeholder="5000" className="mt-1" />
+                  </div>
+                </div>
+              )}
+              <Button variant="gold" className="w-full" disabled>Submit Request</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

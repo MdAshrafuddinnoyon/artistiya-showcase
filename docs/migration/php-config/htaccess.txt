@@ -1,0 +1,97 @@
+# Artistiya E-Commerce — Apache Configuration
+# Copy this to public_html/.htaccess
+
+# Enable URL rewriting
+RewriteEngine On
+RewriteBase /
+
+# Force HTTPS
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# API routing — send /api/* to api/index.php
+RewriteCond %{REQUEST_URI} ^/api/
+RewriteRule ^api/(.*)$ api/index.php?route=$1 [QSA,L]
+
+# Frontend SPA — serve index.html for non-file routes
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !^/api/
+RewriteCond %{REQUEST_URI} !^/storage/
+RewriteRule ^(.*)$ index.html [QSA,L]
+
+# Serve storage files directly
+RewriteCond %{REQUEST_URI} ^/storage/
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# Security headers
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set X-XSS-Protection "1; mode=block"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+</IfModule>
+
+# Protect sensitive files
+<FilesMatch "\.(env|lock|log|sql)$">
+  Require all denied
+</FilesMatch>
+
+<Files ".env.php">
+  Require all denied
+</Files>
+
+<Files "install.php">
+  Require all denied
+</Files>
+
+<Files "config.php">
+  Require all denied
+</Files>
+
+# Block directory listing
+Options -Indexes
+
+# GZIP compression
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json application/xml image/svg+xml
+</IfModule>
+
+# Browser caching
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType text/css "access plus 1 month"
+  ExpiresByType application/javascript "access plus 1 month"
+  ExpiresByType application/json "access plus 1 hour"
+  ExpiresByType text/html "access plus 1 hour"
+</IfModule>
+
+# PHP settings (Hostinger shared hosting)
+<IfModule mod_php.c>
+  php_value upload_max_filesize 20M
+  php_value post_max_size 25M
+  php_value memory_limit 256M
+  php_value max_execution_time 300
+  php_value max_input_vars 5000
+  php_flag display_errors Off
+  php_flag log_errors On
+</IfModule>
+
+# CORS for API
+<IfModule mod_headers.c>
+  <If "%{REQUEST_URI} =~ m#^/api/#">
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+  </If>
+</IfModule>
+
+# Handle OPTIONS preflight
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=200,L]
