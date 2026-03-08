@@ -5,11 +5,35 @@
 | File | Description |
 |------|-------------|
 | `DATABASE_SCHEMA_MYSQL.sql` | Complete MySQL 8.0+ schema — 60+ tables, 1 view, 4 functions, 6 triggers, 2 procedures |
+| `install.php` | **🚀 Auto-Installer Script** — One-click setup: DB creation, schema install, seed import, admin user, self-delete |
 | `PHP_MIGRATION_GUIDE.md` | PHP/MySQL migration guide — API, Payment, Delivery, Auth, Email (Hostinger SMTP), SMS, OTP, File Upload |
 | `SECURITY_HARDENING_GUIDE.md` | SQLi, XSS, CSRF prevention, AES-256, OWASP Top 10 |
 | `FRONTEND_MIGRATION_GUIDE.md` | Frontend Supabase SDK → PHP API replacement guide — 128 file mapping, Auth, Storage, Edge Functions |
 | `POSTMAN_COLLECTION.json` | **Postman v2.1 Collection** — 90+ API requests across 18 folders (Auth, Products, Orders, Payments, Delivery, Email, SMS, CRM, etc.) |
 | `API_TEST_GUIDE.md` | API verification checklist, security tests, parity matrix, automated health check script |
+
+## 🚀 Quick Start — Auto-Installer
+
+### How to use `install.php`:
+
+1. Upload entire `docs/migration/` folder to your hosting root (or a subfolder)
+2. Open `https://yourdomain.com/install.php` in browser
+3. Follow the 5-step wizard:
+   - **Step 1**: System requirements check (PHP 8.0+, PDO, extensions)
+   - **Step 2**: Enter MySQL credentials → auto-creates database if needed
+   - **Step 3**: Install schema (60+ tables) + optional seed data import (.sql file)
+   - **Step 4**: Create admin user (Argon2ID hashed, role assigned)
+   - **Step 5**: Done! Installer self-deletes, config files generated
+
+### Auto-generated files:
+- `config/database.php` — PDO connection config
+- `.env.php` — App key, JWT secret, encryption key, DB credentials
+
+### Security:
+- Script creates `install.lock` to prevent re-installation
+- Script auto-deletes itself after admin creation
+- Passwords hashed with Argon2ID
+- Encryption keys auto-generated (64-char hex)
 
 ## 📦 Frontend API Client
 
