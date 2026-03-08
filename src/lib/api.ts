@@ -39,9 +39,10 @@ class ApiClient {
     options: RequestOptions = {}
   ): Promise<{ data: T | null; error: Error | null }> {
     try {
+      const existingHeaders = (options.headers || {}) as Record<string, string>;
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        ...(options.headers || {}),
+        ...existingHeaders,
       };
 
       const token = this.getToken();
