@@ -76,3 +76,4 @@
 - [x] Postman collection with 90+ test requests
 - [x] Frontend PHP API client (src/lib/api.ts)
 - [x] Automated API health check script
+- [x] **Auto-Installer (install.php)** — 5-step wizard with self-delete
