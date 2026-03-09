@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Heart, Eye, ArrowRight } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import { useWishlist } from "@/hooks/useWishlist";
 import QuickViewModal from "@/components/product/QuickViewModal";
 import WhatsAppOrderButton from "@/components/product/WhatsAppOrderButton";

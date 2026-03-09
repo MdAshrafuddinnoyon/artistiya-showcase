@@ -26,7 +26,7 @@ import {
 import BulkSelectionToolbar from "./BulkSelectionToolbar";
 import OrderExportTools from "./OrderExportTools";
 import DeliveryDispatchModal from "./DeliveryDispatchModal";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import { toast } from "sonner";
 
 interface Order {
