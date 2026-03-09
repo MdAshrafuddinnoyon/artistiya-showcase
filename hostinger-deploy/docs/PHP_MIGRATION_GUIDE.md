@@ -1,0 +1,3276 @@
+# Artistiya E-Commerce: PHP/MySQL Migration Guide
+
+## Table of Contents
+1. [Requirements](#requirements)
+2. [Hosting Setup](#hosting-setup)
+3. [Database Migration](#database-migration)
+4. [PHP Configuration](#php-configuration)
+5. [Authentication System](#authentication-system)
+6. [API Endpoints](#api-endpoints)
+7. [Payment Gateways](#payment-gateways)
+8. [Delivery API](#delivery-api)
+9. [Email System (Hostinger SMTP)](#email-system-hostinger-smtp)
+10. [SMS System](#sms-system)
+11. [Security](#security)
+12. [File Upload](#file-upload)
+
+---
+
+## Requirements
+
+| Component | Minimum Version |
+|-----------|----------------|
+| PHP | 8.1+ |
+| MySQL | 8.0+ |
+| Composer | 2.x |
+| Apache/Nginx | Latest stable |
+| SSL Certificate | Required (Let's Encrypt) |
+| PHP Extensions | pdo_mysql, openssl, mbstring, json, curl, gd/imagick, fileinfo |
+
+---
+
+## Hosting Setup (Hostinger/cPanel)
+
+### 1. Create Database
+
+```
+1. cPanel > MySQL Databases > Create New Database
+2. Database name: artistiya_store
+3. Create user: artistiya_user
+4. Add user to database with ALL PRIVILEGES
+```
+
+### 2. Set PHP Version
+
+```
+cPanel > PHP Version > Select PHP 8.1+
+Enable extensions: pdo_mysql, openssl, mbstring, curl, gd
+```
+
+### 3. SSL Certificate
+
+```
+cPanel > SSL/TLS > Let's Encrypt > Install
+Redirect all HTTP requests to HTTPS
+```
+
+---
+
+## Database Migration
+
+### Step 1: Import MySQL Schema
+
+```bash
+mysql -u artistiya_user -p artistiya_store < document/migration/DATABASE_SCHEMA_MYSQL.sql
+```
+
+### Step 2: Export Data from Supabase
+
+Supabase Dashboard > SQL Editor:
+```sql
+-- Export each table as CSV
+COPY (SELECT * FROM products) TO STDOUT WITH CSV HEADER;
+COPY (SELECT * FROM categories) TO STDOUT WITH CSV HEADER;
+COPY (SELECT * FROM orders) TO STDOUT WITH CSV HEADER;
+-- ... repeat for all tables
+```
+
+### Step 3: Import Data to MySQL
+
+```bash
+# Import CSV files
+LOAD DATA INFILE '/path/to/products.csv'
+INTO TABLE products
+FIELDS TERMINATED BY ','
+ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS;
+```
+
+### Step 4: UUID Migration
+
+Supabase UUIDs to MySQL UUIDs: No changes needed as MySQL 8.0+ supports UUID() natively.
+
+### Step 5: Upgrade Existing Categories Table (if needed)
+
+If your MySQL `categories` table was created before the icon fields were added, run:
+
+```sql
+-- Mobile icon fields (safe to run on existing databases — IF NOT EXISTS guard)
+ALTER TABLE `categories`
+  ADD COLUMN IF NOT EXISTS `mobile_image_url` TEXT         NULL COMMENT 'Mobile slider circle image'      AFTER `image_url`,
+  ADD COLUMN IF NOT EXISTS `icon_name`        VARCHAR(100) NULL COMMENT 'Lucide icon name (optional)'     AFTER `mobile_image_url`,
+  ADD COLUMN IF NOT EXISTS `icon_emoji`       VARCHAR(20)  NULL COMMENT 'Emoji icon (e.g. 💍, 👜, 🎨)'   AFTER `icon_name`,
+  ADD COLUMN IF NOT EXISTS `updated_at`       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER `created_at`;
+
+-- Index for performance
+ALTER TABLE `categories`
+  ADD INDEX IF NOT EXISTS `idx_categories_display_order` (`display_order`);
+```
+
+> **Mobile icon priority**: `mobile_image_url` → `image_url` → `icon_emoji` → default emoji (🛍️)
+
+---
+
+## PHP Configuration
+
+### File Structure
+
+```
+artistiya/
+├── config/
+│   ├── database.php          # DB connection
+│   ├── app.php               # App settings
+│   ├── payment.php           # Payment gateway config
+│   ├── delivery.php          # Delivery API config
+│   └── security.php          # Security settings
+├── src/
+│   ├── Database.php          # PDO wrapper
+│   ├── Auth.php              # Authentication
+│   ├── CSRF.php              # CSRF protection
+│   ├── RateLimit.php         # Rate limiting
+│   ├── Encryption.php        # AES-256 encryption
+│   ├── Sanitizer.php         # Input sanitization
+│   ├── EmailService.php      # PHPMailer SMTP (Hostinger)
+│   ├── EmailTemplateEngine.php # Email template rendering
+│   ├── EmailQueue.php        # Email queue system
+│   ├── OrderEmailService.php # Order email automation
+│   ├── SMSService.php        # SMS gateway integration
+│   ├── SMSTemplateEngine.php # SMS message templates
+│   ├── OrderSMSService.php   # Order SMS automation
+│   ├── OTPService.php        # OTP generation & verification
+│   ├── OrderService.php      # Order processing
+│   ├── PaymentService.php    # Payment handling
+│   └── DeliveryService.php   # Delivery API
+├── api/
+│   ├── orders.php            # Order API
+│   ├── products.php          # Product API
+│   ├── auth.php              # Auth API
+│   ├── email.php             # Email API
+│   ├── sms.php               # SMS API
+│   ├── otp.php               # OTP API
+│   ├── payment-callback.php  # Payment IPN/callback
+│   └── delivery-webhook.php  # Delivery webhooks
+├── templates/
+│   └── emails/               # HTML email templates
+├── cron/
+│   └── process-email-queue.php # Cron job (email queue)
+├── public/
+│   ├── index.php             # Entry point
+│   ├── .htaccess             # Apache rules
+│   └── assets/               # Static files
+├── storage/
+│   ├── uploads/              # User uploads
+│   └── logs/                 # Application logs
+├── vendor/                   # Composer packages
+├── composer.json
+└── .env                      # Environment variables
+```
+
+### `.env` File
+
+```env
+# Database
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=artistiya_store
+DB_USER=artistiya_user
+DB_PASS=your_secure_password_here
+DB_CHARSET=utf8mb4
+
+# App
+APP_URL=https://artistiya.store
+APP_ENV=production
+APP_DEBUG=false
+APP_KEY=base64:your_32_byte_random_key_here
+
+# Hostinger SMTP Email (Official Settings)
+# Source: hPanel > Emails > Connect Apps & Devices > Manual Configuration
+SMTP_HOST=smtp.hostinger.com
+SMTP_PORT=465
+SMTP_ENCRYPTION=ssl
+SMTP_USER=info@artistiya.store
+SMTP_PASS=your_email_password
+SMTP_FROM_EMAIL=info@artistiya.store
+SMTP_FROM_NAME=Artistiya
+SMTP_REPLY_TO=support@artistiya.store
+
+# SMS Gateway (Dynamic — configure in admin panel)
+SMS_PROVIDER=twilio
+SMS_API_KEY=
+SMS_API_SECRET=
+SMS_SENDER_ID=Artistiya
+
+# Encryption
+CREDENTIALS_ENCRYPTION_KEY=your_32_byte_hex_key
+
+# Payment Gateways (encrypted in DB, these are fallbacks)
+SSLCOMMERZ_STORE_ID=
+SSLCOMMERZ_STORE_PASS=
+BKASH_APP_KEY=
+BKASH_APP_SECRET=
+NAGAD_MERCHANT_ID=
+NAGAD_MERCHANT_KEY=
+
+# Delivery
+PATHAO_API_KEY=
+STEADFAST_API_KEY=
+```
+
+### `config/database.php`
+
+```php
+<?php
+// Database Configuration
+return [
+    'driver'    => 'mysql',
+    'host'      => getenv('DB_HOST') ?: 'localhost',
+    'port'      => getenv('DB_PORT') ?: '3306',
+    'database'  => getenv('DB_NAME') ?: 'artistiya_store',
+    'username'  => getenv('DB_USER') ?: 'root',
+    'password'  => getenv('DB_PASS') ?: '',
+    'charset'   => 'utf8mb4',
+    'collation' => 'utf8mb4_unicode_ci',
+    'options'   => [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES   => false,
+        PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci",
+    ],
+];
+```
+
+### `src/Database.php` — PDO Wrapper (Injection-Proof)
+
+```php
+<?php
+declare(strict_types=1);
+
+class Database
+{
+    private static ?PDO $instance = null;
+
+    public static function connect(): PDO
+    {
+        if (self::$instance === null) {
+            $config = require __DIR__ . '/../config/database.php';
+            $dsn = sprintf(
+                '%s:host=%s;port=%s;dbname=%s;charset=%s',
+                $config['driver'],
+                $config['host'],
+                $config['port'],
+                $config['database'],
+                $config['charset']
+            );
+            self::$instance = new PDO($dsn, $config['username'], $config['password'], $config['options']);
+        }
+        return self::$instance;
+    }
+
+    public static function query(string $sql, array $params = []): \PDOStatement
+    {
+        $stmt = self::connect()->prepare($sql);
+        $stmt->execute($params);
+        return $stmt;
+    }
+
+    public static function fetchOne(string $sql, array $params = []): ?array
+    {
+        $result = self::query($sql, $params)->fetch();
+        return $result ?: null;
+    }
+
+    public static function fetchAll(string $sql, array $params = []): array
+    {
+        return self::query($sql, $params)->fetchAll();
+    }
+
+    public static function insert(string $table, array $data): string
+    {
+        $id = self::generateUUID();
+        $data['id'] = $id;
+        $columns = implode(', ', array_map(fn($k) => "`$k`", array_keys($data)));
+        $placeholders = implode(', ', array_fill(0, count($data), '?'));
+        self::query("INSERT INTO `$table` ($columns) VALUES ($placeholders)", array_values($data));
+        return $id;
+    }
+
+    public static function update(string $table, array $data, string $id): bool
+    {
+        $sets = implode(', ', array_map(fn($k) => "`$k` = ?", array_keys($data)));
+        $values = array_values($data);
+        $values[] = $id;
+        $stmt = self::query("UPDATE `$table` SET $sets WHERE id = ?", $values);
+        return $stmt->rowCount() > 0;
+    }
+
+    public static function delete(string $table, string $id): bool
+    {
+        $stmt = self::query("DELETE FROM `$table` WHERE id = ?", [$id]);
+        return $stmt->rowCount() > 0;
+    }
+
+    private static function generateUUID(): string
+    {
+        $data = random_bytes(16);
+        $data[6] = chr(ord($data[6]) & 0x0f | 0x40);
+        $data[8] = chr(ord($data[8]) & 0x3f | 0x80);
+        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
+    }
+}
+```
+
+---
+
+## Authentication System
+
+### `src/Auth.php`
+
+```php
+<?php
+declare(strict_types=1);
+
+class Auth
+{
+    public static function register(string $email, string $password, string $fullName): array
+    {
+        $email = filter_var(trim($email), FILTER_VALIDATE_EMAIL);
+        if (!$email) throw new \InvalidArgumentException('Invalid email');
+        if (strlen($password) < 8) throw new \InvalidArgumentException('Password must be at least 8 characters');
+
+        $existing = Database::fetchOne("SELECT id FROM users WHERE email = ?", [$email]);
+        if ($existing) throw new \RuntimeException('Email already registered');
+
+        $userId = Database::insert('users', [
+            'email' => $email,
+            'password_hash' => password_hash($password, PASSWORD_ARGON2ID, [
+                'memory_cost' => 65536, 'time_cost' => 4, 'threads' => 3,
+            ]),
+        ]);
+
+        Database::insert('profiles', [
+            'user_id' => $userId,
+            'full_name' => Sanitizer::cleanString($fullName, 100),
+            'email' => $email,
+        ]);
+
+        Database::insert('user_roles', ['user_id' => $userId, 'role' => 'customer']);
+        return ['user_id' => $userId, 'email' => $email];
+    }
+
+    public static function login(string $email, string $password, string $ip): array
+    {
+        RateLimit::check($ip, 'login', 5, 900);
+        $user = Database::fetchOne("SELECT id, email, password_hash FROM users WHERE email = ?", [$email]);
+
+        if (!$user || !password_verify($password, $user['password_hash'])) {
+            RateLimit::increment($ip, 'login');
+            throw new \RuntimeException('Invalid credentials');
+        }
+
+        $token = self::generateToken($user['id']);
+        $isAdmin = self::isAdmin($user['id']);
+        RateLimit::reset($ip, 'login');
+        return [
+            'token'    => $token,
+            'user_id'  => $user['id'],
+            'is_admin' => $isAdmin,
+            'redirect' => $isAdmin ? '/admin' : '/',
+        ];
+    }
+
+    public static function isAdmin(string $userId): bool
+    {
+        $role = Database::fetchOne("SELECT id FROM user_roles WHERE user_id = ? AND role = 'admin'", [$userId]);
+        return $role !== null;
+    }
+
+    private static function generateToken(string $userId): string
+    {
+        $header = base64_encode(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
+        $payload = base64_encode(json_encode(['sub' => $userId, 'iat' => time(), 'exp' => time() + 86400]));
+        $signature = hash_hmac('sha256', "$header.$payload", getenv('APP_KEY'));
+        return "$header.$payload.$signature";
+    }
+
+    public static function validateToken(string $token): ?string
+    {
+        $parts = explode('.', $token);
+        if (count($parts) !== 3) return null;
+        [$header, $payload, $signature] = $parts;
+        $expectedSig = hash_hmac('sha256', "$header.$payload", getenv('APP_KEY'));
+        if (!hash_equals($expectedSig, $signature)) return null;
+        $data = json_decode(base64_decode($payload), true);
+        if (!$data || ($data['exp'] ?? 0) < time()) return null;
+        return $data['sub'] ?? null;
+    }
+}
+```
+
+---
+
+## Security
+
+### `src/Sanitizer.php`
+
+```php
+<?php
+declare(strict_types=1);
+
+class Sanitizer
+{
+    public static function cleanString(string $input, int $maxLen = 500): string
+    {
+        $clean = strip_tags($input);
+        $clean = htmlspecialchars($clean, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        return mb_substr(trim($clean), 0, $maxLen);
+    }
+
+    public static function isValidPhone(string $phone): bool
+    {
+        $clean = preg_replace('/[\s\-]/', '', $phone);
+        return (bool) preg_match('/^01[3-9]\d{8}$/', $clean);
+    }
+
+    public static function cleanPhone(string $phone): string
+    {
+        return preg_replace('/[\s\-]/', '', $phone);
+    }
+
+    public static function isValidEmail(string $email): bool
+    {
+        return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+    }
+
+    public static function escapeLike(string $value): string
+    {
+        return str_replace(['%', '_', '\\'], ['\\%', '\\_', '\\\\'], $value);
+    }
+}
+```
+
+### `src/CSRF.php`
+
+```php
+<?php
+declare(strict_types=1);
+
+class CSRF
+{
+    public static function generateToken(): string
+    {
+        $token = bin2hex(random_bytes(32));
+        $_SESSION['csrf_token'] = $token;
+        $_SESSION['csrf_time'] = time();
+        return $token;
+    }
+
+    public static function validate(string $token): bool
+    {
+        if (empty($_SESSION['csrf_token'])) return false;
+        if (!hash_equals($_SESSION['csrf_token'], $token)) return false;
+        if ((time() - ($_SESSION['csrf_time'] ?? 0)) > 3600) return false;
+        unset($_SESSION['csrf_token'], $_SESSION['csrf_time']);
+        return true;
+    }
+}
+```
+
+### `src/RateLimit.php`
+
+```php
+<?php
+declare(strict_types=1);
+
+class RateLimit
+{
+    public static function check(string $identifier, string $action, int $maxAttempts, int $windowSeconds): void
+    {
+        $record = Database::fetchOne(
+            "SELECT attempts, last_attempt_at, blocked_until FROM rate_limits WHERE identifier = ? AND action = ?",
+            [$identifier, $action]
+        );
+        if ($record) {
+            if ($record['blocked_until'] && strtotime($record['blocked_until']) > time()) {
+                throw new \RuntimeException('Too many attempts. Try again later.');
+            }
+            $windowStart = date('Y-m-d H:i:s', time() - $windowSeconds);
+            if ($record['last_attempt_at'] > $windowStart && $record['attempts'] >= $maxAttempts) {
+                Database::query(
+                    "UPDATE rate_limits SET blocked_until = ? WHERE identifier = ? AND action = ?",
+                    [date('Y-m-d H:i:s', time() + $windowSeconds), $identifier, $action]
+                );
+                throw new \RuntimeException('Too many attempts. Try again later.');
+            }
+        }
+    }
+
+    public static function increment(string $identifier, string $action): void
+    {
+        Database::query(
+            "INSERT INTO rate_limits (identifier, action, attempts, last_attempt_at)
+             VALUES (?, ?, 1, NOW())
+             ON DUPLICATE KEY UPDATE attempts = attempts + 1, last_attempt_at = NOW()",
+            [$identifier, $action]
+        );
+    }
+
+    public static function reset(string $identifier, string $action): void
+    {
+        Database::query("DELETE FROM rate_limits WHERE identifier = ? AND action = ?", [$identifier, $action]);
+    }
+}
+```
+
+### `src/Encryption.php` — AES-256
+
+```php
+<?php
+declare(strict_types=1);
+
+class Encryption
+{
+    private static function getKey(): string
+    {
+        $key = getenv('CREDENTIALS_ENCRYPTION_KEY');
+        if (!$key) throw new \RuntimeException('Encryption key not configured');
+        return hex2bin($key);
+    }
+
+    public static function encrypt(string $plaintext): string
+    {
+        $key = self::getKey();
+        $iv = random_bytes(12);
+        $tag = '';
+        $ciphertext = openssl_encrypt($plaintext, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $iv, $tag);
+        return 'enc:' . base64_encode($iv . $tag . $ciphertext);
+    }
+
+    public static function decrypt(string $encrypted): string
+    {
+        if (!str_starts_with($encrypted, 'enc:')) return $encrypted;
+        $key = self::getKey();
+        $data = base64_decode(substr($encrypted, 4));
+        $iv = substr($data, 0, 12);
+        $tag = substr($data, 12, 16);
+        $ciphertext = substr($data, 28);
+        $plaintext = openssl_decrypt($ciphertext, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $iv, $tag);
+        if ($plaintext === false) throw new \RuntimeException('Decryption failed');
+        return $plaintext;
+    }
+}
+```
+
+---
+
+## API Endpoints
+
+### `api/orders.php` — Secure Order Processing
+
+```php
+<?php
+declare(strict_types=1);
+require_once __DIR__ . '/../vendor/autoload.php';
+
+header('Content-Type: application/json');
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+
+try {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        exit(json_encode(['error' => 'Method not allowed']));
+    }
+
+    $body = json_decode(file_get_contents('php://input'), true);
+    if (!$body) {
+        http_response_code(400);
+        exit(json_encode(['error' => 'Invalid JSON']));
+    }
+
+    $items = $body['items'] ?? [];
+    $address = $body['address'] ?? [];
+    $paymentMethod = $body['payment_method'] ?? '';
+    $promoCode = $body['promo_code'] ?? null;
+    $notes = $body['notes'] ?? null;
+
+    // Validation
+    if (empty($items) || count($items) > 50) {
+        http_response_code(400);
+        exit(json_encode(['error' => 'Invalid cart items']));
+    }
+
+    if (empty($address['full_name']) || empty($address['phone'])) {
+        http_response_code(400);
+        exit(json_encode(['error' => 'Name and phone required']));
+    }
+
+    $cleanPhone = Sanitizer::cleanPhone($address['phone']);
+    if (!Sanitizer::isValidPhone($cleanPhone)) {
+        http_response_code(400);
+        exit(json_encode(['error' => 'Invalid phone number']));
+    }
+
+    $validMethods = ['cod', 'bkash', 'nagad', 'bank_transfer', 'sslcommerz', 'aamarpay', 'surjopay'];
+    if (!in_array($paymentMethod, $validMethods)) {
+        http_response_code(400);
+        exit(json_encode(['error' => 'Invalid payment method']));
+    }
+
+    // Blocked customer check
+    $blocked = Database::fetchOne("SELECT id FROM blocked_customers WHERE phone = ? AND is_active = 1", [$cleanPhone]);
+    if ($blocked) {
+        http_response_code(403);
+        exit(json_encode(['error' => 'Order cannot be processed. Contact support.']));
+    }
+
+    // Rate limiting by phone
+    RateLimit::check($cleanPhone, 'order', 5, 86400);
+
+    // Server-side price verification
+    $productIds = array_unique(array_column($items, 'product_id'));
+    $placeholders = implode(',', array_fill(0, count($productIds), '?'));
+    $products = Database::fetchAll(
+        "SELECT id, name, price, stock_quantity, is_preorderable, is_active FROM products WHERE id IN ($placeholders)",
+        $productIds
+    );
+    $productMap = array_column($products, null, 'id');
+
+    $serverSubtotal = 0;
+    $verifiedItems = [];
+    foreach ($items as $item) {
+        $product = $productMap[$item['product_id']] ?? null;
+        if (!$product || !$product['is_active']) {
+            http_response_code(400);
+            exit(json_encode(['error' => 'Product not found or inactive']));
+        }
+        $qty = max(1, min(100, intval($item['quantity'])));
+        if ($product['stock_quantity'] < $qty && !$product['is_preorderable']) {
+            http_response_code(400);
+            exit(json_encode(['error' => "\"{$product['name']}\" out of stock"]));
+        }
+        $serverSubtotal += $product['price'] * $qty;
+        $verifiedItems[] = [
+            'product_id' => $product['id'],
+            'product_name' => $product['name'],
+            'product_price' => $product['price'],
+            'quantity' => $qty,
+            'is_preorder' => $product['stock_quantity'] < $qty,
+        ];
+    }
+
+    // Shipping cost
+    $shippingCost = 0;
+    if (($body['shipping_method'] ?? '') !== 'pickup') {
+        $zone = Database::fetchOne(
+            "SELECT shipping_cost FROM delivery_zones WHERE district = ? AND is_active = 1 LIMIT 1",
+            [Sanitizer::cleanString($address['district'] ?? '', 100)]
+        );
+        $shippingCost = $zone ? $zone['shipping_cost'] : 120;
+        $checkoutSettings = Database::fetchOne("SELECT * FROM checkout_settings LIMIT 1");
+        if ($checkoutSettings && $checkoutSettings['free_shipping_threshold']
+            && $serverSubtotal >= $checkoutSettings['free_shipping_threshold']) {
+            $shippingCost = 0;
+        }
+    }
+
+    // Promo code
+    $promoDiscount = 0;
+    $promoId = null;
+    if ($promoCode) {
+        $promo = Database::fetchOne("SELECT * FROM promo_codes WHERE code = ? AND is_active = 1", [strtoupper(trim($promoCode))]);
+        if ($promo) {
+            $now = time();
+            $valid = (!$promo['expires_at'] || strtotime($promo['expires_at']) > $now)
+                  && (!$promo['starts_at'] || strtotime($promo['starts_at']) <= $now)
+                  && (!$promo['usage_limit'] || $promo['used_count'] < $promo['usage_limit'])
+                  && (!$promo['min_order_amount'] || $serverSubtotal >= $promo['min_order_amount']);
+            if ($valid) {
+                if ($promo['discount_type'] === 'percentage') {
+                    $promoDiscount = round($serverSubtotal * ($promo['discount_value'] / 100));
+                    if ($promo['max_discount_amount'] && $promoDiscount > $promo['max_discount_amount']) {
+                        $promoDiscount = $promo['max_discount_amount'];
+                    }
+                } else {
+                    $promoDiscount = $promo['discount_value'];
+                }
+                $promoId = $promo['id'];
+            }
+        }
+    }
+
+    // COD extra charge
+    $codCharge = 0;
+    if ($paymentMethod === 'cod') {
+        $cs = Database::fetchOne("SELECT cod_extra_charge FROM checkout_settings LIMIT 1");
+        $codCharge = $cs['cod_extra_charge'] ?? 0;
+    }
+
+    $serverTotal = max(0, $serverSubtotal + $shippingCost + $codCharge - $promoDiscount);
+
+    // Create address
+    $addressId = Database::insert('addresses', [
+        'user_id' => $body['user_id'] ?? '00000000-0000-0000-0000-000000000001',
+        'full_name' => Sanitizer::cleanString($address['full_name'], 100),
+        'phone' => $cleanPhone,
+        'division' => Sanitizer::cleanString($address['division'] ?? 'N/A', 50),
+        'district' => Sanitizer::cleanString($address['district'] ?? 'N/A', 50),
+        'thana' => Sanitizer::cleanString($address['thana'] ?? 'N/A', 50),
+        'address_line' => Sanitizer::cleanString($address['address_line'] ?? 'N/A', 300),
+    ]);
+
+    // Create order
+    $orderNumber = 'ORD-' . str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+    $orderId = Database::insert('orders', [
+        'order_number' => $orderNumber,
+        'user_id' => $body['user_id'] ?? null,
+        'address_id' => $addressId,
+        'payment_method' => $paymentMethod,
+        'subtotal' => $serverSubtotal,
+        'shipping_cost' => $shippingCost,
+        'total' => $serverTotal,
+        'discount_amount' => $promoDiscount,
+        'promo_code_id' => $promoId,
+        'notes' => $notes ? Sanitizer::cleanString($notes, 500) : null,
+        'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null,
+    ]);
+
+    // Create order items
+    foreach ($verifiedItems as $item) {
+        Database::insert('order_items', [
+            'order_id' => $orderId,
+            'product_id' => $item['product_id'],
+            'product_name' => $item['product_name'],
+            'product_price' => $item['product_price'],
+            'quantity' => $item['quantity'],
+            'is_preorder' => $item['is_preorder'] ? 1 : 0,
+        ]);
+    }
+
+    // Update promo usage
+    if ($promoId) {
+        Database::query("UPDATE promo_codes SET used_count = used_count + 1 WHERE id = ?", [$promoId]);
+    }
+
+    RateLimit::increment($cleanPhone, 'order');
+
+    // Send automatic email confirmation
+    OrderEmailService::sendOrderConfirmation($orderId);
+
+    // Send automatic SMS confirmation
+    OrderSMSService::sendOrderConfirmation($orderId);
+
+    echo json_encode([
+        'success' => true,
+        'order_id' => $orderId,
+        'order_number' => $orderNumber,
+        'total' => $serverTotal,
+    ]);
+
+} catch (\Throwable $e) {
+    error_log("Order error: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['error' => 'An unexpected error occurred.']);
+}
+```
+
+---
+
+## Payment Gateways
+
+### SSLCommerz (PHP)
+
+```php
+<?php
+class SSLCommerzPayment
+{
+    private string $storeId;
+    private string $storePass;
+    private string $baseUrl;
+
+    public function __construct()
+    {
+        $provider = Database::fetchOne(
+            "SELECT * FROM payment_providers WHERE provider_type = 'sslcommerz' AND is_active = 1"
+        );
+        $this->storeId = Encryption::decrypt($provider['store_id']);
+        $this->storePass = Encryption::decrypt($provider['store_password']);
+        $this->baseUrl = ($provider['is_sandbox'] ?? true)
+            ? 'https://sandbox.sslcommerz.com'
+            : 'https://securepay.sslcommerz.com';
+    }
+
+    public function initiatePayment(string $orderId, float $amount, array $customer): array
+    {
+        $postData = [
+            'store_id'     => $this->storeId,
+            'store_passwd' => $this->storePass,
+            'total_amount' => $amount,
+            'currency'     => 'BDT',
+            'tran_id'      => $orderId,
+            'success_url'  => getenv('APP_URL') . '/api/payment-callback.php?gateway=sslcommerz&status=success',
+            'fail_url'     => getenv('APP_URL') . '/api/payment-callback.php?gateway=sslcommerz&status=fail',
+            'cancel_url'   => getenv('APP_URL') . '/api/payment-callback.php?gateway=sslcommerz&status=cancel',
+            'ipn_url'      => getenv('APP_URL') . '/api/payment-callback.php?gateway=sslcommerz&type=ipn',
+            'cus_name'     => $customer['name'],
+            'cus_email'    => $customer['email'] ?? 'customer@artistiya.store',
+            'cus_phone'    => $customer['phone'],
+            'cus_add1'     => $customer['address'] ?? 'Bangladesh',
+            'cus_city'     => $customer['district'] ?? 'Dhaka',
+            'cus_country'  => 'Bangladesh',
+            'shipping_method' => 'NO',
+            'product_name'    => 'Artistiya Order',
+            'product_category'=> 'Handcraft',
+            'product_profile' => 'general',
+        ];
+
+        $ch = curl_init($this->baseUrl . '/gwprocess/v4/api.php');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $postData,
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        $response = json_decode(curl_exec($ch), true);
+        curl_close($ch);
+
+        if ($response['status'] !== 'SUCCESS') throw new \RuntimeException('Payment initiation failed');
+        return ['gateway_url' => $response['GatewayPageURL'], 'session_key' => $response['sessionkey']];
+    }
+
+    /**
+     * Validate payment via SSLCommerz Validation API
+     * Docs: https://developer.sslcommerz.com/doc/v4/ (Order Validation API)
+     * @param string $valId Validation ID from callback
+     * @return array Validation result with 'status' = VALID|VALIDATED|INVALID_TRANSACTION
+     */
+    public function validatePayment(string $valId): array
+    {
+        $url = $this->baseUrl . '/validator/api/validationserverAPI.php?' . http_build_query([
+            'val_id'       => $valId,
+            'store_id'     => $this->storeId,
+            'store_passwd' => $this->storePass,
+            'format'       => 'json',
+        ]);
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_TIMEOUT        => 30,
+        ]);
+        $response = json_decode(curl_exec($ch), true);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200 || !$response) {
+            throw new \RuntimeException('SSLCommerz validation API request failed');
+        }
+        return $response;
+    }
+}
+```
+
+### bKash Tokenized Checkout (PHP)
+
+```php
+<?php
+class BkashPayment
+{
+    private string $appKey;
+    private string $appSecret;
+    private string $username;
+    private string $password;
+    private string $baseUrl;
+
+    public function __construct()
+    {
+        $provider = Database::fetchOne("SELECT * FROM payment_providers WHERE provider_type = 'bkash' AND is_active = 1");
+        $config = json_decode($provider['config'] ?? '{}', true);
+        $this->appKey    = Encryption::decrypt($config['app_key'] ?? '');
+        $this->appSecret = Encryption::decrypt($config['app_secret'] ?? '');
+        $this->username  = Encryption::decrypt($config['username'] ?? '');
+        $this->password  = Encryption::decrypt($config['password'] ?? '');
+        $this->baseUrl   = ($provider['is_sandbox'] ?? true)
+            ? 'https://tokenized.sandbox.bka.sh/v1.2.0-beta'
+            : 'https://tokenized.pay.bka.sh/v1.2.0-beta';
+    }
+
+    public function grantToken(): string
+    {
+        $response = $this->apiCall('/tokenized/checkout/token/grant', [
+            'app_key' => $this->appKey, 'app_secret' => $this->appSecret,
+        ], ['username' => $this->username, 'password' => $this->password]);
+        return $response['id_token'];
+    }
+
+    public function createPayment(string $token, string $orderId, float $amount): array
+    {
+        return $this->apiCall('/tokenized/checkout/create', [
+            'mode' => '0011', 'payerReference' => $orderId,
+            'callbackURL' => getenv('APP_URL') . '/api/payment-callback.php?gateway=bkash',
+            'amount' => number_format($amount, 2, '.', ''),
+            'currency' => 'BDT', 'intent' => 'sale',
+            'merchantInvoiceNumber' => $orderId,
+        ], [], $token);
+    }
+
+    private function apiCall(string $endpoint, array $body, array $headers = [], ?string $token = null): array
+    {
+        $ch = curl_init($this->baseUrl . $endpoint);
+        $curlHeaders = ['Content-Type: application/json', 'Accept: application/json'];
+        if ($token) {
+            $curlHeaders[] = "Authorization: $token";
+            $curlHeaders[] = "X-APP-Key: {$this->appKey}";
+        }
+        foreach ($headers as $k => $v) { $curlHeaders[] = "$k: $v"; }
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($body),
+            CURLOPT_HTTPHEADER => $curlHeaders, CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        $response = json_decode(curl_exec($ch), true);
+        curl_close($ch);
+        return $response;
+    }
+}
+```
+
+### AamarPay Payment (PHP)
+
+```php
+<?php
+/**
+ * AamarPay Payment Gateway Integration
+ * Docs: https://docs.aamarpay.com/guides
+ * Flow: POST jsonpost.php → payment_url redirect → callback → verify
+ */
+class AamarPayPayment
+{
+    private string $storeId;
+    private string $signatureKey;
+    private string $baseUrl;
+
+    public function __construct()
+    {
+        $provider = Database::fetchOne(
+            "SELECT * FROM payment_providers WHERE provider_type = 'aamarpay' AND is_active = 1"
+        );
+        $this->storeId = Encryption::decrypt($provider['store_id']);
+        $this->signatureKey = Encryption::decrypt($provider['store_password']);
+        $this->baseUrl = ($provider['is_sandbox'] ?? true)
+            ? 'https://sandbox.aamarpay.com'
+            : 'https://secure.aamarpay.com';
+    }
+
+    /**
+     * Initiate payment session
+     * @param string $orderId Internal order UUID
+     * @param float $amount Server-verified total (never from client)
+     * @param array $customer ['name','email','phone','address','district']
+     * @return array ['payment_url' => string]
+     */
+    public function initiatePayment(string $orderId, float $amount, array $customer): array
+    {
+        $order = Database::fetchOne("SELECT order_number FROM orders WHERE id = ?", [$orderId]);
+        $postData = [
+            'store_id'      => $this->storeId,
+            'signature_key' => $this->signatureKey,
+            'tran_id'       => $order['order_number'],
+            'amount'        => number_format($amount, 2, '.', ''),
+            'currency'      => 'BDT',
+            'desc'          => 'Order ' . $order['order_number'],
+            'cus_name'      => Sanitizer::cleanString($customer['name'], 100),
+            'cus_email'     => $customer['email'] ?? 'customer@artistiya.store',
+            'cus_phone'     => $customer['phone'],
+            'cus_add1'      => $customer['address'] ?? 'Bangladesh',
+            'cus_city'      => $customer['district'] ?? 'Dhaka',
+            'cus_country'   => 'Bangladesh',
+            'success_url'   => getenv('APP_URL') . '/api/payment-callback.php?gateway=aamarpay',
+            'fail_url'      => getenv('APP_URL') . '/api/payment-callback.php?gateway=aamarpay',
+            'cancel_url'    => getenv('APP_URL') . '/checkout?error=cancel',
+            'type'          => 'json',
+            'opt_a'         => $orderId,
+            'opt_b'         => (string) $amount,
+        ];
+
+        $ch = curl_init($this->baseUrl . '/jsonpost.php');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode($postData),
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        $response = json_decode(curl_exec($ch), true);
+        curl_close($ch);
+
+        if (empty($response['payment_url'])) {
+            throw new \RuntimeException('AamarPay initiation failed: ' . ($response['error'] ?? 'Unknown'));
+        }
+        return ['payment_url' => $response['payment_url']];
+    }
+
+    /**
+     * Verify transaction via Search API
+     * @param string $tranId Transaction/order number
+     * @return array Verification result
+     */
+    public function verifyPayment(string $tranId): array
+    {
+        $url = $this->baseUrl . '/api/v1/trxcheck/request.php?' . http_build_query([
+            'request_id'    => $tranId,
+            'store_id'      => $this->storeId,
+            'signature_key' => $this->signatureKey,
+            'type'          => 'json',
+        ]);
+        $response = json_decode(file_get_contents($url), true);
+        return $response;
+    }
+}
+```
+
+### SurjoPay / ShurjoPay Payment (PHP)
+
+```php
+<?php
+/**
+ * SurjoPay (ShurjoPay) Payment Gateway Integration
+ * Docs: https://shurjopay.com.bd/developers/shurjopay-restapi
+ * Flow: get_token → execute_url (create payment) → checkout_url redirect → return callback → verification
+ */
+class SurjoPayPayment
+{
+    private string $username;
+    private string $password;
+    private string $baseUrl;
+
+    public function __construct()
+    {
+        $provider = Database::fetchOne(
+            "SELECT * FROM payment_providers WHERE provider_type = 'surjopay' AND is_active = 1"
+        );
+        $this->username = Encryption::decrypt($provider['store_id'] ?? '') ?: 'sp_sandbox';
+        $this->password = Encryption::decrypt($provider['store_password'] ?? '') ?: 'pyaborern';
+        $this->baseUrl = ($provider['is_sandbox'] ?? true)
+            ? 'https://sandbox.shurjopayment.com/api'
+            : 'https://engine.shurjopayment.com/api';
+    }
+
+    /**
+     * Step 1: Get authentication token
+     * @return array ['token', 'token_type', 'store_id', 'execute_url']
+     */
+    private function getToken(): array
+    {
+        $ch = curl_init($this->baseUrl . '/get_token');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode([
+                'username' => $this->username,
+                'password' => $this->password,
+            ]),
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        $result = json_decode(curl_exec($ch), true);
+        curl_close($ch);
+
+        if (empty($result['token'])) {
+            throw new \RuntimeException('SurjoPay authentication failed');
+        }
+        return $result;
+    }
+
+    /**
+     * Step 2: Create payment and get checkout URL
+     * @param string $orderId Internal order UUID
+     * @param float $amount Server-verified total
+     * @param array $customer Customer details
+     * @return array ['checkout_url', 'sp_order_id']
+     */
+    public function initiatePayment(string $orderId, float $amount, array $customer): array
+    {
+        $tokenResult = $this->getToken();
+        $order = Database::fetchOne("SELECT order_number FROM orders WHERE id = ?", [$orderId]);
+
+        $paymentData = [
+            'prefix'            => 'ART',
+            'token'             => $tokenResult['token'],
+            'store_id'          => $tokenResult['store_id'],
+            'return_url'        => getenv('APP_URL') . '/api/payment-callback.php?gateway=surjopay',
+            'cancel_url'        => getenv('APP_URL') . '/checkout?error=cancel',
+            'amount'            => $amount,
+            'order_id'          => $order['order_number'],
+            'currency'          => 'BDT',
+            'customer_name'     => Sanitizer::cleanString($customer['name'] ?? 'Customer', 100),
+            'customer_phone'    => Sanitizer::cleanString($customer['phone'] ?? 'N/A', 20),
+            'customer_email'    => Sanitizer::cleanString($customer['email'] ?? 'customer@store.com', 100),
+            'customer_address'  => Sanitizer::cleanString($customer['address'] ?? 'N/A', 200),
+            'customer_city'     => Sanitizer::cleanString($customer['district'] ?? 'Dhaka', 50),
+            'customer_post_code'=> '1000',
+            'client_ip'         => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1',
+            'value1'            => $orderId,
+            'value2'            => (string) $amount,
+        ];
+
+        $ch = curl_init($tokenResult['execute_url']);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode($paymentData),
+            CURLOPT_HTTPHEADER     => [
+                'Content-Type: application/json',
+                'Authorization: ' . $tokenResult['token_type'] . ' ' . $tokenResult['token'],
+            ],
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        $result = json_decode(curl_exec($ch), true);
+        curl_close($ch);
+
+        if (empty($result['checkout_url'])) {
+            throw new \RuntimeException('SurjoPay payment creation failed');
+        }
+        return ['checkout_url' => $result['checkout_url'], 'sp_order_id' => $result['sp_order_id']];
+    }
+
+    /**
+     * Step 3: Verify payment after callback
+     * @param string $spOrderId SurjoPay order ID from callback
+     * @return array Verification result (sp_code 1000 = success)
+     */
+    public function verifyPayment(string $spOrderId): array
+    {
+        $tokenResult = $this->getToken();
+
+        $ch = curl_init($this->baseUrl . '/verification');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode(['order_id' => $spOrderId]),
+            CURLOPT_HTTPHEADER     => [
+                'Content-Type: application/json',
+                'Authorization: ' . $tokenResult['token_type'] . ' ' . $tokenResult['token'],
+            ],
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        $result = json_decode(curl_exec($ch), true);
+        curl_close($ch);
+
+        return $result;
+    }
+}
+```
+
+### Unified Payment Callback Handler (PHP)
+
+```php
+<?php
+// api/payment-callback.php — Handles all gateway callbacks
+declare(strict_types=1);
+require_once __DIR__ . '/../vendor/autoload.php';
+
+$gateway = $_GET['gateway'] ?? '';
+
+try {
+    switch ($gateway) {
+        case 'sslcommerz':
+            $status = $_GET['status'] ?? $_POST['status'] ?? '';
+            $valId = $_POST['val_id'] ?? '';
+            $orderId = $_POST['value_a'] ?? '';
+            $amount = floatval($_POST['amount'] ?? 0);
+
+            if (in_array($status, ['success', 'VALID', 'VALIDATED']) && $valId) {
+                $ssl = new SSLCommerzPayment();
+                // Step 1: Validate with SSLCommerz Validation API
+                $validation = $ssl->validatePayment($valId);
+
+                if ($validation['status'] === 'VALID' || $validation['status'] === 'VALIDATED') {
+                    // Step 2: Verify amount matches server order total
+                    $order = Database::fetchOne("SELECT total, order_number FROM orders WHERE id = ?", [$orderId]);
+                    if ($order && abs($amount - floatval($order['total'])) <= 1) {
+                        Database::update('orders', [
+                            'status' => 'confirmed',
+                            'payment_transaction_id' => $valId,
+                        ], $orderId);
+                        header('Location: ' . getenv('APP_URL') . '/order-success?orderId=' . $orderId);
+                        exit;
+                    }
+                }
+            }
+            header('Location: ' . getenv('APP_URL') . '/checkout?error=' . ($status ?: 'failed'));
+            break;
+
+        case 'aamarpay':
+            $payStatus = $_POST['pay_status'] ?? '';
+            $tranId = $_POST['mer_txnid'] ?? '';
+            $orderId = $_POST['opt_a'] ?? '';
+            $paidAmount = floatval($_POST['amount'] ?? 0);
+
+            if ($payStatus === 'Successful') {
+                $order = Database::fetchOne("SELECT total FROM orders WHERE id = ?", [$orderId]);
+                if ($order && abs($paidAmount - floatval($order['total'])) <= 1) {
+                    // Verify with AamarPay Search API
+                    $aamarpay = new AamarPayPayment();
+                    $verify = $aamarpay->verifyPayment($tranId);
+                    if (($verify['pay_status'] ?? '') === 'Successful') {
+                        Database::update('orders', [
+                            'status' => 'confirmed',
+                            'payment_transaction_id' => $tranId,
+                        ], $orderId);
+                        header('Location: ' . getenv('APP_URL') . '/order-success?orderId=' . $orderId);
+                        exit;
+                    }
+                }
+            }
+            header('Location: ' . getenv('APP_URL') . '/checkout?error=failed');
+            break;
+
+        case 'surjopay':
+            $spOrderId = $_GET['order_id'] ?? $_POST['order_id'] ?? '';
+            if ($spOrderId) {
+                $surjo = new SurjoPayPayment();
+                $verify = $surjo->verifyPayment($spOrderId);
+                if (isset($verify[0]) && ($verify[0]['sp_code'] ?? 0) === 1000) {
+                    $orderId = $verify[0]['value1'] ?? '';
+                    $paidAmount = floatval($verify[0]['amount'] ?? 0);
+                    $order = Database::fetchOne("SELECT total FROM orders WHERE id = ?", [$orderId]);
+                    if ($order && abs($paidAmount - floatval($order['total'])) <= 1) {
+                        Database::update('orders', [
+                            'status' => 'confirmed',
+                            'payment_transaction_id' => $spOrderId,
+                        ], $orderId);
+                        header('Location: ' . getenv('APP_URL') . '/order-success?orderId=' . $orderId);
+                        exit;
+                    }
+                    // Amount mismatch — flag
+                    Database::update('orders', [
+                        'notes' => "⚠️ AMOUNT MISMATCH: Paid ৳{$paidAmount}, Expected ৳{$order['total']}. SP: {$spOrderId}",
+                    ], $orderId);
+                }
+            }
+            header('Location: ' . getenv('APP_URL') . '/checkout?error=failed');
+            break;
+
+        case 'bkash':
+            // bKash callback handling
+            $paymentID = $_GET['paymentID'] ?? '';
+            // ... bKash execute + verify logic
+            break;
+
+        default:
+            header('Location: ' . getenv('APP_URL') . '/checkout?error=unknown_gateway');
+    }
+} catch (\Throwable $e) {
+    error_log("Payment callback error [{$gateway}]: " . $e->getMessage());
+    header('Location: ' . getenv('APP_URL') . '/checkout?error=processing');
+}
+```
+
+---
+
+## Delivery API (Bangladesh Courier Partners)
+
+### `src/DeliveryService.php` — Multi-Courier Integration
+
+```php
+<?php
+declare(strict_types=1);
+
+/**
+ * Unified Delivery Service for Bangladesh Courier Partners
+ * Supports: Pathao, Steadfast, RedX, eCourier, Paperfly, Delivery Tiger
+ * All API keys are stored encrypted in delivery_providers table
+ */
+class DeliveryService
+{
+    private string $provider;
+    private array $config;
+    private string $apiKey;
+    private string $apiSecret;
+    private string $baseUrl;
+
+    public function __construct(string $providerType)
+    {
+        $this->provider = $providerType;
+        $providerData = Database::fetchOne(
+            "SELECT * FROM delivery_providers WHERE provider_type = ? AND is_active = 1", [$providerType]
+        );
+        if (!$providerData) throw new \RuntimeException("Delivery provider '$providerType' not found or inactive");
+
+        $this->apiKey    = Encryption::decrypt($providerData['api_key'] ?? '');
+        $this->apiSecret = Encryption::decrypt($providerData['api_secret'] ?? '');
+        $this->config    = json_decode($providerData['config'] ?? '{}', true);
+    }
+
+    /**
+     * Create a parcel/consignment with the delivery provider
+     * @param array $order Order data from database
+     * @param array $address Delivery address
+     * @return array ['consignment_id', 'tracking_code', 'status']
+     */
+    public function createParcel(array $order, array $address): array
+    {
+        return match ($this->provider) {
+            'pathao'         => $this->createPathaoParcel($order, $address),
+            'steadfast'      => $this->createSteadfastParcel($order, $address),
+            'redx'           => $this->createRedXParcel($order, $address),
+            'ecourier'       => $this->createECourierParcel($order, $address),
+            'paperfly'       => $this->createPaperflyParcel($order, $address),
+            'delivery_tiger' => $this->createDeliveryTigerParcel($order, $address),
+            default          => throw new \RuntimeException("Unsupported provider: {$this->provider}"),
+        };
+    }
+
+    /**
+     * Track a parcel by consignment/tracking ID
+     */
+    public function trackParcel(string $trackingId): array
+    {
+        return match ($this->provider) {
+            'pathao'         => $this->trackPathao($trackingId),
+            'steadfast'      => $this->trackSteadfast($trackingId),
+            'redx'           => $this->trackRedX($trackingId),
+            'ecourier'       => $this->trackECourier($trackingId),
+            'paperfly'       => $this->trackPaperfly($trackingId),
+            'delivery_tiger' => $this->trackDeliveryTiger($trackingId),
+            default          => throw new \RuntimeException("Unsupported provider: {$this->provider}"),
+        };
+    }
+
+    /**
+     * Get area/zone list for pricing calculation
+     */
+    public function getAreas(string $city = ''): array
+    {
+        return match ($this->provider) {
+            'pathao'    => $this->getPathaoAreas($city),
+            'steadfast' => $this->getSteadfastAreas(),
+            'redx'      => $this->getRedXAreas(),
+            'ecourier'  => $this->getECourierAreas($city),
+            default     => [],
+        };
+    }
+
+    /**
+     * Calculate delivery charge
+     */
+    public function calculatePrice(string $fromCity, string $toCity, float $weight, float $codAmount = 0): array
+    {
+        return match ($this->provider) {
+            'pathao'    => $this->getPathaoPricing($fromCity, $toCity, $weight),
+            'steadfast' => ['delivery_charge' => $codAmount > 0 ? 130 : 120], // Steadfast fixed rate
+            'redx'      => $this->getRedXPricing($fromCity, $toCity),
+            'ecourier'  => $this->getECourierPricing($fromCity, $toCity, $weight),
+            default     => ['delivery_charge' => 120],
+        };
+    }
+
+    // ══════════════════════════════════════════════
+    // PATHAO COURIER — https://merchant.pathao.com/
+    // ══════════════════════════════════════════════
+
+    /**
+     * Get Pathao access token (auto-authenticate)
+     * Mirrors Edge Function behavior: auto-authenticates if no access_token in config.
+     */
+    private function getPathaoToken(): string
+    {
+        // Use cached token if available
+        if (!empty($this->config['access_token'])) {
+            return $this->config['access_token'];
+        }
+
+        $baseUrl = ($this->config['is_sandbox'] ?? true)
+            ? 'https://hermes-api.pathao.com'
+            : 'https://api-hermes.pathao.com';
+
+        $res = $this->curlPost($baseUrl . '/aladdin/api/v1/issue-token', [
+            'client_id'     => $this->apiKey ?: ($this->config['client_id'] ?? ''),
+            'client_secret' => $this->apiSecret ?: ($this->config['client_secret'] ?? ''),
+            'username'      => $this->config['username'] ?? '',
+            'password'      => isset($this->config['password']) ? Encryption::decrypt($this->config['password']) : '',
+            'grant_type'    => 'password',
+        ]);
+
+        $token = $res['access_token'] ?? '';
+        if (empty($token)) {
+            throw new \RuntimeException('Pathao authentication failed. Configure client_id, client_secret, username, password in delivery_providers config.');
+        }
+        return $token;
+    }
+
+    private function createPathaoParcel(array $order, array $address): array
+    {
+        $token = $this->getPathaoToken();
+        $baseUrl = $this->config['is_sandbox'] ?? true
+            ? 'https://hermes-api.p-stageenv.xyz'
+            : 'https://api-hermes.pathao.com';
+
+        $res = $this->curlPost($baseUrl . '/aladdin/api/v1/orders', [
+            'store_id'            => $this->config['store_id'] ?? '',
+            'merchant_order_id'   => $order['order_number'],
+            'recipient_name'      => $address['full_name'],
+            'recipient_phone'     => $address['phone'],
+            'recipient_address'   => $address['address_line'],
+            'recipient_city'      => $this->getPathaoCityId($address['district']),
+            'recipient_zone'      => $this->getPathaoZoneId($address['thana']),
+            'delivery_type'       => 48, // 48=Normal, 12=On Demand
+            'item_type'           => 2,  // 1=Document, 2=Parcel
+            'special_instruction' => $order['notes'] ?? '',
+            'item_quantity'       => 1,
+            'item_weight'         => 0.5,
+            'amount_to_collect'   => $order['payment_method'] === 'cod' ? $order['total'] : 0,
+        ], ['Authorization: Bearer ' . $token]);
+
+        return [
+            'consignment_id' => $res['data']['consignment_id'] ?? '',
+            'tracking_code'  => $res['data']['consignment_id'] ?? '',
+            'status'         => $res['type'] ?? 'unknown',
+        ];
+    }
+
+    private function trackPathao(string $trackingId): array
+    {
+        $token = $this->getPathaoToken();
+        $baseUrl = ($this->config['is_sandbox'] ?? true)
+            ? 'https://hermes-api.p-stageenv.xyz'
+            : 'https://api-hermes.pathao.com';
+
+        return $this->curlGet($baseUrl . "/aladdin/api/v1/orders/{$trackingId}", [
+            'Authorization: Bearer ' . $token,
+        ]);
+    }
+
+    private function getPathaoAreas(string $city): array
+    {
+        $token = $this->getPathaoToken();
+        $baseUrl = ($this->config['is_sandbox'] ?? true)
+            ? 'https://hermes-api.p-stageenv.xyz'
+            : 'https://api-hermes.pathao.com';
+
+        if ($city) {
+            $cityId = $this->getPathaoCityId($city);
+            return $this->curlGet($baseUrl . "/aladdin/api/v1/cities/{$cityId}/zone-list", [
+                'Authorization: Bearer ' . $token,
+            ]);
+        }
+        return $this->curlGet($baseUrl . '/aladdin/api/v1/city-list', [
+            'Authorization: Bearer ' . $token,
+        ]);
+    }
+
+    private function getPathaoPricing(string $from, string $to, float $weight): array
+    {
+        $token = $this->getPathaoToken();
+        $baseUrl = ($this->config['is_sandbox'] ?? true)
+            ? 'https://hermes-api.p-stageenv.xyz'
+            : 'https://api-hermes.pathao.com';
+
+        return $this->curlPost($baseUrl . '/aladdin/api/v1/merchant/price-plan', [
+            'store_id'  => $this->config['store_id'] ?? '',
+            'item_type' => 2,
+            'delivery_type' => 48,
+            'item_weight' => $weight,
+            'recipient_city' => $this->getPathaoCityId($to),
+            'recipient_zone' => 1, // default zone
+        ], ['Authorization: Bearer ' . $token]);
+    }
+
+    private function getPathaoCityId(string $name): int { return $this->config['city_map'][$name] ?? 1; }
+    private function getPathaoZoneId(string $name): int { return $this->config['zone_map'][$name] ?? 1; }
+
+    // ══════════════════════════════════════════════════
+    // STEADFAST COURIER — https://steadfast.com.bd/
+    // ══════════════════════════════════════════════════
+
+    private function createSteadfastParcel(array $order, array $address): array
+    {
+        $res = $this->curlPost('https://portal.steadfast.com.bd/api/v1/create_order', [
+            'invoice'          => $order['order_number'],
+            'recipient_name'   => $address['full_name'],
+            'recipient_phone'  => $address['phone'],
+            'recipient_address'=> $address['address_line'] . ', ' . $address['thana'] . ', ' . $address['district'],
+            'cod_amount'       => $order['payment_method'] === 'cod' ? $order['total'] : 0,
+            'note'             => $order['notes'] ?? '',
+        ], [
+            'Api-Key: ' . $this->apiKey,
+            'Secret-Key: ' . $this->apiSecret,
+        ]);
+
+        return [
+            'consignment_id' => $res['consignment']['consignment_id'] ?? '',
+            'tracking_code'  => $res['consignment']['tracking_code'] ?? '',
+            'status'         => $res['status'] ?? 200,
+        ];
+    }
+
+    private function trackSteadfast(string $trackingId): array
+    {
+        return $this->curlGet(
+            "https://portal.steadfast.com.bd/api/v1/status_by_trackingcode/{$trackingId}",
+            ['Api-Key: ' . $this->apiKey, 'Secret-Key: ' . $this->apiSecret]
+        );
+    }
+
+    private function getSteadfastAreas(): array
+    {
+        return $this->curlGet(
+            'https://portal.steadfast.com.bd/api/v1/get_areas',
+            ['Api-Key: ' . $this->apiKey, 'Secret-Key: ' . $this->apiSecret]
+        );
+    }
+
+    /**
+     * Steadfast bulk order upload
+     */
+    public function bulkCreateSteadfast(array $orders): array
+    {
+        $payload = array_map(fn($o) => [
+            'invoice'          => $o['order_number'],
+            'recipient_name'   => $o['recipient_name'],
+            'recipient_phone'  => $o['recipient_phone'],
+            'recipient_address'=> $o['recipient_address'],
+            'cod_amount'       => $o['cod_amount'],
+        ], $orders);
+
+        return $this->curlPost('https://portal.steadfast.com.bd/api/v1/create_order/bulk-order', $payload, [
+            'Api-Key: ' . $this->apiKey,
+            'Secret-Key: ' . $this->apiSecret,
+        ]);
+    }
+
+    /**
+     * Steadfast account balance check
+     */
+    public function getSteadfastBalance(): array
+    {
+        return $this->curlGet(
+            'https://portal.steadfast.com.bd/api/v1/get_balance',
+            ['Api-Key: ' . $this->apiKey, 'Secret-Key: ' . $this->apiSecret]
+        );
+    }
+
+    // ═══════════════════════════════════════
+    // REDX COURIER — https://redx.com.bd/
+    // ═══════════════════════════════════════
+
+    private function createRedXParcel(array $order, array $address): array
+    {
+        $res = $this->curlPost('https://openapi.redx.com.bd/v1.0.0-beta/parcel', [
+            'customer_name'          => $address['full_name'],
+            'customer_phone'         => $address['phone'],
+            'delivery_area'          => $address['thana'] . ', ' . $address['district'],
+            'delivery_area_id'       => $this->config['area_map'][$address['thana']] ?? 1,
+            'merchant_invoice_id'    => $order['order_number'],
+            'cash_collection_amount' => $order['payment_method'] === 'cod' ? $order['total'] : 0,
+            'parcel_weight'          => 500, // grams
+            'instruction'            => $order['notes'] ?? '',
+            'value'                  => $order['total'],
+        ], ['API-ACCESS-TOKEN: Bearer ' . $this->apiKey]);
+
+        return [
+            'consignment_id' => $res['tracking_id'] ?? '',
+            'tracking_code'  => $res['tracking_id'] ?? '',
+            'status'         => 'created',
+        ];
+    }
+
+    private function trackRedX(string $trackingId): array
+    {
+        return $this->curlGet(
+            "https://openapi.redx.com.bd/v1.0.0-beta/parcel/track/{$trackingId}",
+            ['API-ACCESS-TOKEN: Bearer ' . $this->apiKey]
+        );
+    }
+
+    private function getRedXAreas(): array
+    {
+        return $this->curlGet(
+            'https://openapi.redx.com.bd/v1.0.0-beta/areas',
+            ['API-ACCESS-TOKEN: Bearer ' . $this->apiKey]
+        );
+    }
+
+    private function getRedXPricing(string $from, string $to): array
+    {
+        // RedX uses area-based pricing
+        $fromAreaId = $this->config['area_map'][$from] ?? 1;
+        $toAreaId   = $this->config['area_map'][$to] ?? 1;
+        $sameCity   = ($fromAreaId === $toAreaId);
+        return ['delivery_charge' => $sameCity ? 70 : 130];
+    }
+
+    // ════════════════════════════════════════════
+    // eCOURIER — https://ecourier.com.bd/
+    // ════════════════════════════════════════════
+
+    private function createECourierParcel(array $order, array $address): array
+    {
+        $res = $this->curlPost('https://backoffice.ecourier.com.bd/api/order-place', [
+            'recipient_name'    => $address['full_name'],
+            'recipient_mobile'  => $address['phone'],
+            'recipient_city'    => $address['district'],
+            'recipient_thana'   => $address['thana'],
+            'recipient_area'    => $address['address_line'],
+            'recipient_address' => $address['address_line'] . ', ' . $address['thana'] . ', ' . $address['district'],
+            'package_code'      => '#' . $order['order_number'],
+            'product_price'     => $order['total'],
+            'payment_method'    => $order['payment_method'] === 'cod' ? 'COD' : 'MPAY',
+            'product_id'        => $order['order_number'],
+            'parcel_type'       => 'BOX',
+            'requested_delivery_time' => 'any',
+            'delivery_hour'     => 'any',
+            'comments'          => $order['notes'] ?? '',
+            'number_of_item'    => 1,
+            'actual_product_price' => $order['total'],
+        ], [
+            'API-KEY: ' . $this->apiKey,
+            'API-SECRET: ' . $this->apiSecret,
+            'USER-ID: ' . ($this->config['user_id'] ?? ''),
+        ]);
+
+        return [
+            'consignment_id' => $res['ID'] ?? '',
+            'tracking_code'  => $res['tracking'] ?? $res['ecr_id'] ?? '',
+            'status'         => $res['success'] ?? false ? 'created' : 'failed',
+        ];
+    }
+
+    private function trackECourier(string $trackingId): array
+    {
+        return $this->curlPost('https://backoffice.ecourier.com.bd/api/track', [
+            'ecr' => $trackingId,
+        ], [
+            'API-KEY: ' . $this->apiKey,
+            'API-SECRET: ' . $this->apiSecret,
+            'USER-ID: ' . ($this->config['user_id'] ?? ''),
+        ]);
+    }
+
+    private function getECourierAreas(string $city): array
+    {
+        $endpoint = $city ? 'thana-list' : 'city-list';
+        $payload = $city ? ['city' => $city] : [];
+        return $this->curlPost("https://backoffice.ecourier.com.bd/api/{$endpoint}", $payload, [
+            'API-KEY: ' . $this->apiKey,
+            'API-SECRET: ' . $this->apiSecret,
+            'USER-ID: ' . ($this->config['user_id'] ?? ''),
+        ]);
+    }
+
+    private function getECourierPricing(string $from, string $to, float $weight): array
+    {
+        return $this->curlPost('https://backoffice.ecourier.com.bd/api/packages', [
+            'from' => $from, 'to' => $to, 'weight' => $weight,
+        ], [
+            'API-KEY: ' . $this->apiKey,
+            'API-SECRET: ' . $this->apiSecret,
+            'USER-ID: ' . ($this->config['user_id'] ?? ''),
+        ]);
+    }
+
+    // ═════════════════════════════════════════
+    // PAPERFLY — https://go.paperfly.com.bd/
+    // ═════════════════════════════════════════
+
+    private function createPaperflyParcel(array $order, array $address): array
+    {
+        $res = $this->curlPost('https://go-app.paperfly.com.bd/merchant/api/react-api/create-order', [
+            'merOrderRef'    => $order['order_number'],
+            'pickMerchantName' => $this->config['merchant_name'] ?? 'Artistiya',
+            'pickMerchantAddress' => $this->config['pickup_address'] ?? '',
+            'pickMerchantThana' => $this->config['pickup_thana'] ?? '',
+            'pickMerchantDistrict' => $this->config['pickup_district'] ?? '',
+            'custname'       => $address['full_name'],
+            'custphone'      => $address['phone'],
+            'custaddress'    => $address['address_line'],
+            'custthana'      => $address['thana'],
+            'custdistrict'   => $address['district'],
+            'packagePrice'   => $order['total'],
+            'productSizeWeight' => 'standard',
+            'numberOfItem'   => 1,
+            'max_weight'     => 0.5,
+        ], [
+            'paperflykey: ' . $this->apiKey,
+        ]);
+
+        return [
+            'consignment_id' => $res['orderid'] ?? '',
+            'tracking_code'  => $res['orderid'] ?? '',
+            'status'         => 'created',
+        ];
+    }
+
+    private function trackPaperfly(string $trackingId): array
+    {
+        return $this->curlPost('https://go-app.paperfly.com.bd/merchant/api/react-api/tracker', [
+            'trackingId' => $trackingId,
+        ], ['paperflykey: ' . $this->apiKey]);
+    }
+
+    // ══════════════════════════════════════════════
+    // DELIVERY TIGER — https://deliverytiger.com.bd/
+    // ══════════════════════════════════════════════
+
+    private function createDeliveryTigerParcel(array $order, array $address): array
+    {
+        $res = $this->curlPost('https://api.deliverytiger.com.bd/api/order/create', [
+            'MerchantOrderId' => $order['order_number'],
+            'CustomerName'    => $address['full_name'],
+            'CustomerPhone'   => $address['phone'],
+            'CustomerAddress' => $address['address_line'] . ', ' . $address['thana'],
+            'DistrictId'      => $this->config['district_map'][$address['district']] ?? 14,
+            'ThanaId'         => $this->config['thana_map'][$address['thana']] ?? 1,
+            'CollectionAmount'=> $order['payment_method'] === 'cod' ? $order['total'] : 0,
+            'ProductPrice'    => $order['total'],
+            'Weight'          => 0.5,
+            'DeliveryType'    => 0, // 0=Normal, 1=Express
+        ], ['Authorization: Bearer ' . $this->apiKey]);
+
+        return [
+            'consignment_id' => $res['OrderId'] ?? '',
+            'tracking_code'  => $res['TrackingNumber'] ?? '',
+            'status'         => 'created',
+        ];
+    }
+
+    private function trackDeliveryTiger(string $trackingId): array
+    {
+        return $this->curlGet(
+            "https://api.deliverytiger.com.bd/api/order/track/{$trackingId}",
+            ['Authorization: Bearer ' . $this->apiKey]
+        );
+    }
+
+    // ═══════════════════════════════════
+    // HTTP Helpers
+    // ═══════════════════════════════════
+
+    private function curlPost(string $url, array $data, array $extraHeaders = []): array
+    {
+        $ch = curl_init($url);
+        $headers = array_merge(['Content-Type: application/json', 'Accept: application/json'], $extraHeaders);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode($data),
+            CURLOPT_HTTPHEADER     => $headers,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_TIMEOUT        => 30,
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode >= 400) {
+            error_log("Delivery API error [{$this->provider}] HTTP {$httpCode}: {$response}");
+        }
+        return json_decode($response ?: '{}', true) ?: [];
+    }
+
+    private function curlGet(string $url, array $extraHeaders = []): array
+    {
+        $ch = curl_init($url);
+        $headers = array_merge(['Accept: application/json'], $extraHeaders);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER     => $headers,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_TIMEOUT        => 30,
+        ]);
+        $response = curl_exec($ch);
+        curl_close($ch);
+        return json_decode($response ?: '{}', true) ?: [];
+    }
+}
+```
+
+### Delivery API Endpoint — `api/delivery.php`
+
+```php
+<?php
+// api/delivery.php — Frontend-facing delivery API
+declare(strict_types=1);
+require_once __DIR__ . '/../vendor/autoload.php';
+
+header('Content-Type: application/json');
+$user = Auth::requireAuth();
+if (!Auth::isAdmin($user['id'])) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Admin access required']);
+    exit;
+}
+
+$input = json_decode(file_get_contents('php://input'), true);
+$action = $input['action'] ?? $_GET['action'] ?? '';
+$provider = $input['provider'] ?? $_GET['provider'] ?? 'steadfast';
+
+try {
+    $delivery = new DeliveryService($provider);
+
+    switch ($action) {
+        case 'create_parcel':
+            $order = Database::fetchOne("SELECT * FROM orders WHERE id = ?", [$input['order_id']]);
+            $address = Database::fetchOne("SELECT * FROM addresses WHERE id = ?", [$order['address_id']]);
+            $result = $delivery->createParcel($order, $address);
+
+            // Save tracking info to order
+            Database::query(
+                "UPDATE orders SET delivery_tracking_id = ?, delivery_partner_id = (SELECT id FROM delivery_partners WHERE LOWER(name) = ? LIMIT 1), status = 'shipped' WHERE id = ?",
+                [$result['tracking_code'], strtolower($provider), $input['order_id']]
+            );
+            echo json_encode(['success' => true, 'data' => $result]);
+            break;
+
+        case 'track':
+            $result = $delivery->trackParcel($input['tracking_id']);
+            echo json_encode(['success' => true, 'data' => $result]);
+            break;
+
+        case 'areas':
+            $result = $delivery->getAreas($input['city'] ?? '');
+            echo json_encode(['success' => true, 'data' => $result]);
+            break;
+
+        case 'price':
+            $result = $delivery->calculatePrice(
+                $input['from_city'] ?? 'Dhaka',
+                $input['to_city'] ?? '',
+                floatval($input['weight'] ?? 0.5),
+                floatval($input['cod_amount'] ?? 0)
+            );
+            echo json_encode(['success' => true, 'data' => $result]);
+            break;
+
+        case 'balance':
+            if ($provider === 'steadfast') {
+                $result = $delivery->getSteadfastBalance();
+                echo json_encode(['success' => true, 'data' => $result]);
+            } else {
+                echo json_encode(['error' => 'Balance check not supported for this provider']);
+            }
+            break;
+
+        case 'bulk_create':
+            if ($provider === 'steadfast') {
+                $result = $delivery->bulkCreateSteadfast($input['orders']);
+                echo json_encode(['success' => true, 'data' => $result]);
+            } else {
+                echo json_encode(['error' => 'Bulk create not supported for this provider']);
+            }
+            break;
+
+        default:
+            echo json_encode(['error' => 'Invalid action. Use: create_parcel, track, areas, price, balance, bulk_create']);
+    }
+} catch (\Throwable $e) {
+    error_log("Delivery API error: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['error' => 'Delivery service error']);
+}
+```
+
+### Bulk Dispatch from Admin Panel — `api/delivery-dispatch.php`
+
+```php
+<?php
+// api/delivery-dispatch.php — Bulk/Single order dispatch to courier API
+declare(strict_types=1);
+require_once __DIR__ . '/../vendor/autoload.php';
+
+header('Content-Type: application/json');
+$user = Auth::requireAuth();
+if (!Auth::isAdmin($user['id'])) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Admin access required']);
+    exit;
+}
+
+$input = json_decode(file_get_contents('php://input'), true);
+$provider = $input['provider'] ?? '';
+$orderIds = $input['order_ids'] ?? [];
+
+if (empty($provider) || empty($orderIds)) {
+    http_response_code(400);
+    echo json_encode(['error' => 'provider and order_ids required']);
+    exit;
+}
+
+$delivery = new DeliveryService($provider);
+$results = [];
+
+// Steadfast bulk support
+if ($provider === 'steadfast' && count($orderIds) > 1) {
+    $orders = [];
+    foreach ($orderIds as $orderId) {
+        $order = Database::fetchOne("SELECT o.*, a.full_name, a.phone, a.address_line, a.thana, a.district, a.division FROM orders o LEFT JOIN addresses a ON o.address_id = a.id WHERE o.id = ?", [$orderId]);
+        if ($order) {
+            $codAmount = $order['payment_method'] === 'cod' ? $order['total'] : 0;
+            $orders[] = [
+                'invoice' => $order['order_number'],
+                'recipient_name' => $order['full_name'],
+                'recipient_phone' => $order['phone'],
+                'recipient_address' => "{$order['address_line']}, {$order['thana']}, {$order['district']}, {$order['division']}",
+                'cod_amount' => $codAmount,
+            ];
+        }
+    }
+    $bulkResult = $delivery->bulkCreateSteadfast($orders);
+    
+    // Update all orders
+    foreach ($orderIds as $orderId) {
+        Database::query(
+            "UPDATE orders SET status = 'shipped', shipped_at = NOW() WHERE id = ?",
+            [$orderId]
+        );
+    }
+    echo json_encode(['success' => true, 'data' => $bulkResult]);
+    exit;
+}
+
+// Single dispatch per order
+foreach ($orderIds as $orderId) {
+    try {
+        $order = Database::fetchOne("SELECT o.*, a.full_name, a.phone, a.address_line, a.thana, a.district, a.division FROM orders o LEFT JOIN addresses a ON o.address_id = a.id WHERE o.id = ?", [$orderId]);
+        
+        if (!$order) {
+            $results[] = ['order_id' => $orderId, 'success' => false, 'error' => 'Order not found'];
+            continue;
+        }
+
+        $result = $delivery->createParcel($order, [
+            'full_name' => $order['full_name'],
+            'phone' => $order['phone'],
+            'address_line' => $order['address_line'],
+            'thana' => $order['thana'],
+            'district' => $order['district'],
+            'division' => $order['division'],
+        ]);
+
+        $trackingId = $result['tracking_code'] ?? $result['consignment_id'] ?? null;
+        
+        Database::query(
+            "UPDATE orders SET status = 'shipped', shipped_at = NOW(), tracking_number = ? WHERE id = ?",
+            [$trackingId, $orderId]
+        );
+
+        $results[] = [
+            'order_id' => $orderId,
+            'order_number' => $order['order_number'],
+            'success' => true,
+            'tracking_id' => $trackingId,
+        ];
+    } catch (\Throwable $e) {
+        $results[] = ['order_id' => $orderId, 'success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+echo json_encode(['success' => true, 'results' => $results]);
+```
+
+### React Frontend Integration Example
+
+```typescript
+// hooks/useDelivery.ts — Call PHP delivery API from React
+const createParcel = async (orderId: string, provider: string) => {
+  const res = await fetch('/api/delivery.php', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ action: 'create_parcel', provider, order_id: orderId }),
+  });
+  return res.json();
+};
+
+// Bulk dispatch
+const bulkDispatch = async (orderIds: string[], provider: string) => {
+  const res = await fetch('/api/delivery-dispatch.php', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ provider, order_ids: orderIds }),
+  });
+  return res.json();
+};
+
+const trackParcel = async (trackingId: string, provider: string) => {
+  const res = await fetch('/api/delivery.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ action: 'track', provider, tracking_id: trackingId }),
+  });
+  return res.json();
+};
+
+const getAreas = async (provider: string, city?: string) => {
+  const res = await fetch('/api/delivery.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ action: 'areas', provider, city }),
+  });
+  return res.json();
+};
+```
+
+### Composer Dependencies for Delivery
+
+```json
+{
+    "require": {
+        "php": ">=8.1",
+        "ext-curl": "*"
+    }
+}
+```
+
+> **Note:** No external Composer packages needed — all courier APIs use direct cURL calls.
+> **Pathao Auto-Authentication**: Both the Edge Function (`delivery-api`) and PHP `DeliveryService` 
+> automatically authenticate with Pathao's API by calling `/aladdin/api/v1/issue-token` before each request.
+> No need to manually run an 'auth' action first. Just ensure `client_id`, `client_secret`, `username`, 
+> and `password` are stored in the `delivery_providers.config` JSON field.
+>
+> For Pathao, Steadfast, RedX: API keys are obtained from their respective merchant dashboards.
+> Store API credentials encrypted in `delivery_providers` table via admin panel.
+
+---
+
+## Email System (Hostinger SMTP)
+
+### `src/EmailService.php`
+
+```php
+<?php
+declare(strict_types=1);
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
+class EmailService
+{
+    private string $host;
+    private int $port;
+    private string $encryption;
+    private string $username;
+    private string $password;
+    private string $fromEmail;
+    private string $fromName;
+    private string $replyTo;
+
+    public function __construct()
+    {
+        $this->host       = getenv('SMTP_HOST') ?: 'smtp.hostinger.com';
+        $this->port       = (int)(getenv('SMTP_PORT') ?: 465);
+        $this->encryption = getenv('SMTP_ENCRYPTION') ?: 'ssl';
+        $this->username   = getenv('SMTP_USER') ?: '';
+        $this->password   = getenv('SMTP_PASS') ?: '';
+        $this->fromEmail  = getenv('SMTP_FROM_EMAIL') ?: $this->username;
+        $this->fromName   = getenv('SMTP_FROM_NAME') ?: 'Artistiya';
+        $this->replyTo    = getenv('SMTP_REPLY_TO') ?: $this->fromEmail;
+    }
+
+    /**
+     * Send email via configured provider (Hostinger SMTP or Resend API)
+     */
+    public function send(string $to, string $subject, string $htmlBody, array $options = []): bool
+    {
+        try {
+            // Check DB settings (admin panel overrides .env)
+            $settings = Database::fetchOne("SELECT * FROM email_settings LIMIT 1");
+            if ($settings && !$settings['is_enabled']) return false;
+
+            if ($settings) {
+                if ($settings['smtp_host']) $this->host = $settings['smtp_host'];
+                if ($settings['smtp_port']) $this->port = (int)$settings['smtp_port'];
+                if ($settings['smtp_user']) $this->username = Encryption::decrypt($settings['smtp_user']);
+                if ($settings['smtp_password']) $this->password = Encryption::decrypt($settings['smtp_password']);
+                if ($settings['from_email']) $this->fromEmail = $settings['from_email'];
+                if ($settings['from_name']) $this->fromName = $settings['from_name'];
+                if ($settings['reply_to_email']) $this->replyTo = $settings['reply_to_email'];
+            }
+
+            if (($settings['provider'] ?? 'smtp') === 'resend') {
+                return $this->sendViaResend($to, $subject, $htmlBody, $settings['resend_api_key'] ?? '');
+            }
+
+            return $this->sendViaPHPMailer($to, $subject, $htmlBody, $options);
+        } catch (\Throwable $e) {
+            error_log("Email error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Send via PHPMailer with Hostinger SMTP
+     * Official: smtp.hostinger.com | Port 465 (SSL) or 587 (TLS/STARTTLS)
+     */
+    private function sendViaPHPMailer(string $to, string $subject, string $htmlBody, array $options = []): bool
+    {
+        $mail = new PHPMailer(true);
+
+        $mail->isSMTP();
+        $mail->Host       = $this->host;
+        $mail->SMTPAuth   = true;
+        $mail->Username   = $this->username;
+        $mail->Password   = $this->password;
+        $mail->Port       = $this->port;
+
+        if ($this->encryption === 'ssl' || $this->port === 465) {
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+        } elseif ($this->encryption === 'tls' || $this->port === 587) {
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        }
+
+        $mail->SMTPDebug = (getenv('APP_DEBUG') === 'true') ? SMTP::DEBUG_SERVER : SMTP::DEBUG_OFF;
+        $mail->setFrom($this->fromEmail, $this->fromName);
+        $mail->addReplyTo($this->replyTo, $this->fromName);
+
+        $recipients = is_array($to) ? $to : [$to];
+        foreach ($recipients as $recipient) { $mail->addAddress(trim($recipient)); }
+
+        if (!empty($options['cc'])) {
+            foreach ((array)$options['cc'] as $cc) { $mail->addCC(trim($cc)); }
+        }
+        if (!empty($options['bcc'])) {
+            foreach ((array)$options['bcc'] as $bcc) { $mail->addBCC(trim($bcc)); }
+        }
+
+        $mail->isHTML(true);
+        $mail->CharSet  = 'UTF-8';
+        $mail->Encoding = 'base64';
+        $mail->Subject  = $subject;
+        $mail->Body     = $htmlBody;
+        $mail->AltBody  = strip_tags(str_replace(['<br>', '<br/>', '<br />', '</p>', '</div>'], "\n", $htmlBody));
+
+        if (!empty($options['attachments'])) {
+            foreach ($options['attachments'] as $attachment) {
+                if (is_array($attachment)) {
+                    $mail->addAttachment($attachment['path'], $attachment['name'] ?? '');
+                } else {
+                    $mail->addAttachment($attachment);
+                }
+            }
+        }
+
+        $mail->send();
+        $this->logEmailSent($to, $subject, 'hostinger_smtp');
+        return true;
+    }
+
+    /**
+     * Send via Resend API (fallback / alternative provider)
+     */
+    private function sendViaResend(string $to, string $subject, string $htmlBody, string $apiKey): bool
+    {
+        $decryptedKey = Encryption::decrypt($apiKey);
+        $ch = curl_init('https://api.resend.com/emails');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json', "Authorization: Bearer $decryptedKey"],
+            CURLOPT_POSTFIELDS     => json_encode([
+                'from' => "{$this->fromName} <{$this->fromEmail}>",
+                'to' => [$to], 'subject' => $subject, 'html' => $htmlBody,
+                'reply_to' => $this->replyTo,
+            ]),
+        ]);
+        $response = json_decode(curl_exec($ch), true);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200) throw new \RuntimeException('Resend API error: ' . json_encode($response));
+        $this->logEmailSent($to, $subject, 'resend');
+        return true;
+    }
+
+    private function logEmailSent(string $to, string $subject, string $provider): void
+    {
+        try {
+            Database::insert('email_log', [
+                'recipient' => is_array($to) ? implode(', ', $to) : $to,
+                'subject'   => mb_substr($subject, 0, 500),
+                'provider'  => $provider,
+                'status'    => 'sent',
+                'sent_at'   => date('Y-m-d H:i:s'),
+            ]);
+        } catch (\Throwable $e) {
+            error_log("Email log error: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Test SMTP connection (callable from admin panel)
+     */
+    public function testConnection(): array
+    {
+        $mail = new PHPMailer(true);
+        try {
+            $mail->isSMTP();
+            $mail->Host       = $this->host;
+            $mail->SMTPAuth   = true;
+            $mail->Username   = $this->username;
+            $mail->Password   = $this->password;
+            $mail->Port       = $this->port;
+            $mail->SMTPSecure = ($this->port === 465) ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->smtpConnect();
+            $mail->smtpClose();
+            return ['success' => true, 'message' => 'SMTP connection successful!'];
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => "SMTP connection failed: {$mail->ErrorInfo}"];
+        }
+    }
+}
+```
+
+### `src/EmailTemplateEngine.php`
+
+```php
+<?php
+declare(strict_types=1);
+
+class EmailTemplateEngine
+{
+    public static function render(string $templateKey, array $variables = []): string
+    {
+        $template = Database::fetchOne(
+            "SELECT html_content FROM email_templates WHERE template_key = ? AND is_active = 1",
+            [$templateKey]
+        );
+        if ($template) return self::replaceVariables($template['html_content'], $variables);
+
+        $filePath = __DIR__ . "/../templates/emails/{$templateKey}.html";
+        if (file_exists($filePath)) return self::replaceVariables(file_get_contents($filePath), $variables);
+
+        throw new \RuntimeException("Email template not found: $templateKey");
+    }
+
+    private static function replaceVariables(string $html, array $variables): string
+    {
+        foreach ($variables as $key => $value) {
+            $html = str_replace('{{' . $key . '}}', htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'), $html);
+        }
+        $branding = Database::fetchOne("SELECT * FROM site_branding LIMIT 1");
+        if ($branding) {
+            $html = str_replace('{{site_name}}', htmlspecialchars($branding['site_name'] ?? 'Artistiya', ENT_QUOTES, 'UTF-8'), $html);
+            $html = str_replace('{{site_url}}', htmlspecialchars(getenv('APP_URL') ?: '', ENT_QUOTES, 'UTF-8'), $html);
+            $html = str_replace('{{site_logo}}', htmlspecialchars($branding['logo_url'] ?? '', ENT_QUOTES, 'UTF-8'), $html);
+            $html = str_replace('{{site_phone}}', htmlspecialchars($branding['phone'] ?? '', ENT_QUOTES, 'UTF-8'), $html);
+            $html = str_replace('{{site_email}}', htmlspecialchars($branding['email'] ?? '', ENT_QUOTES, 'UTF-8'), $html);
+        }
+        $html = str_replace('{{year}}', date('Y'), $html);
+        return $html;
+    }
+
+    public static function renderSubject(string $templateKey, array $variables = []): string
+    {
+        $template = Database::fetchOne(
+            "SELECT subject FROM email_templates WHERE template_key = ? AND is_active = 1",
+            [$templateKey]
+        );
+        $subject = $template['subject'] ?? self::getDefaultSubject($templateKey);
+        foreach ($variables as $key => $value) {
+            $subject = str_replace('{{' . $key . '}}', (string)$value, $subject);
+        }
+        return $subject;
+    }
+
+    private static function getDefaultSubject(string $key): string
+    {
+        return match ($key) {
+            'order-confirmation' => 'Order Confirmation — #{{order_number}}',
+            'order-shipped'      => 'Your Order Has Been Shipped — #{{order_number}}',
+            'order-delivered'    => 'Order Delivered — #{{order_number}}',
+            'password-reset'     => 'Password Reset — Artistiya',
+            'welcome'            => 'Welcome to Artistiya!',
+            'newsletter'         => 'Artistiya Newsletter',
+            'otp-verification'   => 'Your Verification Code — Artistiya',
+            default              => 'Artistiya — Notification',
+        };
+    }
+}
+```
+
+### `src/EmailQueue.php`
+
+```php
+<?php
+declare(strict_types=1);
+
+class EmailQueue
+{
+    public static function enqueue(string $to, string $subject, string $htmlBody, int $priority = 5): string
+    {
+        return Database::insert('email_queue', [
+            'recipient'    => $to,
+            'subject'      => $subject,
+            'html_body'    => $htmlBody,
+            'priority'     => $priority,
+            'status'       => 'pending',
+            'attempts'     => 0,
+            'max_attempts' => 3,
+            'scheduled_at' => date('Y-m-d H:i:s'),
+        ]);
+    }
+
+    /**
+     * Cron Job: Process pending emails
+     * crontab: * * * * * php /path/to/cron/process-email-queue.php
+     */
+    public static function processQueue(int $batchSize = 10): int
+    {
+        $emails = Database::fetchAll(
+            "SELECT * FROM email_queue
+             WHERE status = 'pending' AND attempts < max_attempts AND scheduled_at <= NOW()
+             ORDER BY priority ASC, created_at ASC LIMIT ?",
+            [$batchSize]
+        );
+
+        $sent = 0;
+        $mailer = new EmailService();
+
+        foreach ($emails as $email) {
+            Database::update('email_queue', ['status' => 'processing', 'attempts' => $email['attempts'] + 1], $email['id']);
+
+            try {
+                $result = $mailer->send($email['recipient'], $email['subject'], $email['html_body']);
+                Database::update('email_queue', [
+                    'status' => $result ? 'sent' : 'failed',
+                    'sent_at' => $result ? date('Y-m-d H:i:s') : null,
+                    'error' => $result ? null : 'Send returned false',
+                ], $email['id']);
+                if ($result) $sent++;
+            } catch (\Throwable $e) {
+                Database::update('email_queue', [
+                    'status' => ($email['attempts'] + 1 >= $email['max_attempts']) ? 'failed' : 'pending',
+                    'error' => mb_substr($e->getMessage(), 0, 500),
+                ], $email['id']);
+            }
+
+            usleep(200000); // 200ms delay (Hostinger rate limit)
+        }
+        return $sent;
+    }
+}
+```
+
+### `src/OrderEmailService.php`
+
+```php
+<?php
+declare(strict_types=1);
+
+class OrderEmailService
+{
+    public static function sendOrderConfirmation(string $orderId): bool
+    {
+        $settings = Database::fetchOne("SELECT * FROM email_settings LIMIT 1");
+        if ($settings && !$settings['send_order_confirmation']) return false;
+
+        $order = self::getOrderData($orderId);
+        if (!$order) return false;
+
+        $html = EmailTemplateEngine::render('order-confirmation', [
+            'customer_name'  => $order['customer_name'],
+            'order_number'   => $order['order_number'],
+            'order_date'     => date('d M Y, h:i A', strtotime($order['created_at'])),
+            'items_html'     => self::buildItemsHtml($order['items']),
+            'subtotal'       => number_format($order['subtotal'], 0),
+            'shipping_cost'  => number_format($order['shipping_cost'], 0),
+            'total'          => number_format($order['total'], 0),
+            'payment_method' => self::getPaymentLabel($order['payment_method']),
+            'address'        => self::formatAddress($order['address']),
+            'track_url'      => getenv('APP_URL') . '/track-order?order=' . $order['order_number'],
+        ]);
+
+        $subject = EmailTemplateEngine::renderSubject('order-confirmation', ['order_number' => $order['order_number']]);
+        $customerEmail = $order['customer_email'] ?? null;
+        if ($customerEmail) {
+            EmailQueue::enqueue($customerEmail, $subject, $html, 1);
+        }
+        return true;
+    }
+
+    public static function sendShippingUpdate(string $orderId, string $trackingNumber = '', string $courierName = ''): bool
+    {
+        $settings = Database::fetchOne("SELECT * FROM email_settings LIMIT 1");
+        if ($settings && !$settings['send_shipping_update']) return false;
+
+        $order = self::getOrderData($orderId);
+        if (!$order) return false;
+
+        $html = EmailTemplateEngine::render('order-shipped', [
+            'customer_name'   => $order['customer_name'],
+            'order_number'    => $order['order_number'],
+            'tracking_number' => $trackingNumber,
+            'courier_name'    => $courierName,
+            'track_url'       => getenv('APP_URL') . '/track-order?order=' . $order['order_number'],
+        ]);
+
+        $subject = EmailTemplateEngine::renderSubject('order-shipped', ['order_number' => $order['order_number']]);
+        $customerEmail = $order['customer_email'] ?? null;
+        if ($customerEmail) {
+            EmailQueue::enqueue($customerEmail, $subject, $html, 2);
+        }
+        return true;
+    }
+
+    public static function sendDeliveryConfirmation(string $orderId): bool
+    {
+        $settings = Database::fetchOne("SELECT * FROM email_settings LIMIT 1");
+        if ($settings && !$settings['send_delivery_notification']) return false;
+
+        $order = self::getOrderData($orderId);
+        if (!$order) return false;
+
+        $html = EmailTemplateEngine::render('order-delivered', [
+            'customer_name' => $order['customer_name'],
+            'order_number'  => $order['order_number'],
+        ]);
+
+        $subject = EmailTemplateEngine::renderSubject('order-delivered', ['order_number' => $order['order_number']]);
+        $customerEmail = $order['customer_email'] ?? null;
+        if ($customerEmail) {
+            EmailQueue::enqueue($customerEmail, $subject, $html, 2);
+        }
+        return true;
+    }
+
+    public static function sendPasswordReset(string $email, string $resetToken): bool
+    {
+        $html = EmailTemplateEngine::render('password-reset', [
+            'reset_url' => getenv('APP_URL') . '/auth?reset_token=' . $resetToken,
+            'expires_in' => '1 hour',
+        ]);
+        $subject = EmailTemplateEngine::renderSubject('password-reset', []);
+        return (new EmailService())->send($email, $subject, $html);
+    }
+
+    public static function sendWelcome(string $email, string $fullName): bool
+    {
+        $html = EmailTemplateEngine::render('welcome', [
+            'customer_name' => $fullName,
+            'shop_url'      => getenv('APP_URL') . '/shop',
+        ]);
+        $subject = EmailTemplateEngine::renderSubject('welcome', []);
+        EmailQueue::enqueue($email, $subject, $html, 5);
+        return true;
+    }
+
+    // ─── Helpers ───
+
+    private static function getOrderData(string $orderId): ?array
+    {
+        $order = Database::fetchOne(
+            "SELECT o.*, a.full_name, a.phone, a.division, a.district, a.thana, a.address_line
+             FROM orders o LEFT JOIN addresses a ON o.address_id = a.id WHERE o.id = ?",
+            [$orderId]
+        );
+        if (!$order) return null;
+
+        $items = Database::fetchAll("SELECT * FROM order_items WHERE order_id = ?", [$orderId]);
+
+        $customerEmail = null;
+        if ($order['user_id']) {
+            $customer = Database::fetchOne("SELECT email FROM customers WHERE user_id = ?", [$order['user_id']]);
+            $customerEmail = $customer['email'] ?? null;
+            if (!$customerEmail) {
+                $profile = Database::fetchOne("SELECT email FROM profiles WHERE user_id = ?", [$order['user_id']]);
+                $customerEmail = $profile['email'] ?? null;
+            }
+        }
+
+        return [
+            'order_number' => $order['order_number'], 'created_at' => $order['created_at'],
+            'subtotal' => $order['subtotal'], 'shipping_cost' => $order['shipping_cost'],
+            'total' => $order['total'], 'payment_method' => $order['payment_method'],
+            'customer_name' => $order['full_name'] ?? 'Customer',
+            'customer_email' => $customerEmail,
+            'items' => $items,
+            'address' => [
+                'full_name' => $order['full_name'], 'phone' => $order['phone'],
+                'division' => $order['division'], 'district' => $order['district'],
+                'thana' => $order['thana'], 'address_line' => $order['address_line'],
+            ],
+        ];
+    }
+
+    private static function buildItemsHtml(array $items): string
+    {
+        $html = '<table style="width:100%;border-collapse:collapse;margin:16px 0;">';
+        $html .= '<tr style="background:#f5f5f5;"><th style="padding:8px;text-align:left;border:1px solid #ddd;">Product</th><th style="padding:8px;text-align:center;border:1px solid #ddd;">Qty</th><th style="padding:8px;text-align:right;border:1px solid #ddd;">Price</th></tr>';
+        foreach ($items as $item) {
+            $lineTotal = $item['product_price'] * $item['quantity'];
+            $html .= '<tr>';
+            $html .= '<td style="padding:8px;border:1px solid #ddd;">' . htmlspecialchars($item['product_name']) . '</td>';
+            $html .= '<td style="padding:8px;text-align:center;border:1px solid #ddd;">' . $item['quantity'] . '</td>';
+            $html .= '<td style="padding:8px;text-align:right;border:1px solid #ddd;">৳' . number_format($lineTotal, 0) . '</td>';
+            $html .= '</tr>';
+        }
+        $html .= '</table>';
+        return $html;
+    }
+
+    private static function formatAddress(array $addr): string
+    {
+        return implode(', ', array_filter([$addr['address_line'] ?? '', $addr['thana'] ?? '', $addr['district'] ?? '', $addr['division'] ?? '']));
+    }
+
+    private static function getPaymentLabel(string $method): string
+    {
+        return match ($method) {
+            'cod'           => 'Cash on Delivery',
+            'bkash'         => 'bKash',
+            'nagad'         => 'Nagad',
+            'bank_transfer' => 'Bank Transfer',
+            'sslcommerz'    => 'SSLCommerz',
+            'aamarpay'      => 'AamarPay',
+            'surjopay'      => 'SurjoPay',
+            default         => $method,
+        };
+    }
+}
+```
+
+---
+
+## SMS System
+
+### `src/SMSService.php` — Multi-Provider SMS Gateway
+
+```php
+<?php
+declare(strict_types=1);
+
+class SMSService
+{
+    private string $provider;
+    private string $apiKey;
+    private string $apiSecret;
+    private string $senderId;
+    private array $config;
+
+    public function __construct()
+    {
+        $this->provider  = getenv('SMS_PROVIDER') ?: 'twilio';
+        $this->apiKey    = getenv('SMS_API_KEY') ?: '';
+        $this->apiSecret = getenv('SMS_API_SECRET') ?: '';
+        $this->senderId  = getenv('SMS_SENDER_ID') ?: 'Artistiya';
+        $this->config    = [];
+    }
+
+    /**
+     * Send SMS via configured provider
+     * Dynamic API key — admin panel settings override .env defaults
+     */
+    public function send(string $to, string $message): bool
+    {
+        try {
+            // Load settings from DB (admin panel)
+            $settings = Database::fetchOne("SELECT * FROM sms_settings LIMIT 1");
+            if ($settings && !$settings['is_enabled']) return false;
+
+            if ($settings) {
+                $this->provider  = $settings['provider'] ?? $this->provider;
+                $this->apiKey    = $settings['api_key'] ? Encryption::decrypt($settings['api_key']) : $this->apiKey;
+                $this->apiSecret = $settings['api_secret'] ? Encryption::decrypt($settings['api_secret']) : $this->apiSecret;
+                $this->senderId  = $settings['sender_id'] ?? $this->senderId;
+                $this->config    = json_decode($settings['config'] ?? '{}', true);
+            }
+
+            $cleanPhone = $this->formatPhone($to);
+
+            $result = match ($this->provider) {
+                'twilio'    => $this->sendViaTwilio($cleanPhone, $message),
+                'firebase'  => $this->sendViaFirebase($cleanPhone, $message),
+                'bulksmsbd' => $this->sendViaBulkSMSBD($cleanPhone, $message),
+                'smsq'      => $this->sendViaSMSQ($cleanPhone, $message),
+                'greenweb'  => $this->sendViaGreenWeb($cleanPhone, $message),
+                'infobip'   => $this->sendViaInfobip($cleanPhone, $message),
+                'nexmo'     => $this->sendViaNexmo($cleanPhone, $message),
+                'custom'    => $this->sendViaCustomAPI($cleanPhone, $message),
+                default     => throw new \RuntimeException("Unknown SMS provider: {$this->provider}"),
+            };
+
+            $this->logSMS($to, $message, 'sent');
+            return $result;
+        } catch (\Throwable $e) {
+            error_log("SMS error: " . $e->getMessage());
+            $this->logSMS($to, $message, 'failed', $e->getMessage());
+            return false;
+        }
+    }
+
+    // ── Provider Implementations ──
+
+    private function sendViaTwilio(string $to, string $message): bool
+    {
+        $url = "https://api.twilio.com/2010-04-01/Accounts/{$this->apiKey}/Messages.json";
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_USERPWD => "{$this->apiKey}:{$this->apiSecret}",
+            CURLOPT_POSTFIELDS => http_build_query([
+                'From' => $this->senderId,
+                'To'   => $to,
+                'Body' => $message,
+            ]),
+        ]);
+        $response = json_decode(curl_exec($ch), true);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($httpCode >= 400) throw new \RuntimeException('Twilio error: ' . ($response['message'] ?? 'Unknown'));
+        return true;
+    }
+
+    private function sendViaFirebase(string $to, string $message): bool
+    {
+        // Option 1: Firebase Cloud Function endpoint for general SMS
+        $functionUrl = $this->config['firebase_function_url'] ?? '';
+        if ($functionUrl) {
+            $ch = curl_init($functionUrl);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_HTTPHEADER => [
+                    'Content-Type: application/json',
+                    "Authorization: Bearer {$this->apiKey}",
+                ],
+                CURLOPT_POSTFIELDS => json_encode([
+                    'phone'   => $to,
+                    'message' => $message,
+                ]),
+            ]);
+            $response = json_decode(curl_exec($ch), true);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            if ($httpCode >= 400) throw new \RuntimeException('Firebase function error: ' . json_encode($response));
+            return true;
+        }
+
+        // Option 2: Firebase Identity Platform (OTP only)
+        $projectId = $this->config['firebase_project_id'] ?? '';
+        if (!$projectId) throw new \RuntimeException('Firebase project ID or function URL required');
+
+        $url = "https://identitytoolkit.googleapis.com/v1/accounts:sendVerificationCode?key={$this->apiKey}";
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_POSTFIELDS => json_encode(['phoneNumber' => $to]),
+        ]);
+        $response = json_decode(curl_exec($ch), true);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($httpCode >= 400) throw new \RuntimeException('Firebase Identity error: ' . json_encode($response));
+        return true;
+    }
+
+    private function sendViaBulkSMSBD(string $to, string $message): bool
+    {
+        $url = "http://bulksmsbd.net/api/smsapi";
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode([
+                'api_key'   => $this->apiKey,
+                'senderid'  => $this->senderId,
+                'number'    => $to,
+                'message'   => $message,
+                'type'      => 'text',
+            ]),
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        ]);
+        $response = json_decode(curl_exec($ch), true);
+        curl_close($ch);
+        return ($response['response_code'] ?? 0) == 202;
+    }
+
+    private function sendViaSMSQ(string $to, string $message): bool
+    {
+        $url = "https://api.smsq.global/api/v2/SendSMS";
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode([
+                'SenderId' => $this->senderId,
+                'ApiKey'   => $this->apiKey,
+                'ClientId' => $this->apiSecret,
+                'Message'  => $message,
+                'MobileNumbers' => $to,
+            ]),
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        ]);
+        $response = json_decode(curl_exec($ch), true);
+        curl_close($ch);
+        return !empty($response['Data']);
+    }
+
+    private function sendViaGreenWeb(string $to, string $message): bool
+    {
+        $url = "http://api.greenweb.com.bd/api.php";
+        $params = http_build_query([
+            'token' => $this->apiKey,
+            'to'    => $to,
+            'message' => $message,
+        ]);
+        $response = file_get_contents($url . '?' . $params);
+        return strpos($response, 'Ok') !== false;
+    }
+
+    private function sendViaInfobip(string $to, string $message): bool
+    {
+        $baseUrl = $this->config['infobip_base_url'] ?? 'https://api.infobip.com';
+        $ch = curl_init("$baseUrl/sms/2/text/advanced");
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                "Authorization: App {$this->apiKey}",
+            ],
+            CURLOPT_POSTFIELDS => json_encode([
+                'messages' => [[
+                    'from' => $this->senderId,
+                    'destinations' => [['to' => $to]],
+                    'text' => $message,
+                ]],
+            ]),
+        ]);
+        $response = json_decode(curl_exec($ch), true);
+        curl_close($ch);
+        return !empty($response['messages']);
+    }
+
+    private function sendViaNexmo(string $to, string $message): bool
+    {
+        $ch = curl_init("https://rest.nexmo.com/sms/json");
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode([
+                'api_key'    => $this->apiKey,
+                'api_secret' => $this->apiSecret,
+                'from'       => $this->senderId,
+                'to'         => $to,
+                'text'       => $message,
+            ]),
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        ]);
+        $response = json_decode(curl_exec($ch), true);
+        curl_close($ch);
+        return ($response['messages'][0]['status'] ?? '') === '0';
+    }
+
+    private function sendViaCustomAPI(string $to, string $message): bool
+    {
+        $url = $this->config['custom_url'] ?? '';
+        if (!$url) throw new \RuntimeException('Custom SMS API URL not configured');
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                "X-Api-Key: {$this->apiKey}",
+                "X-Api-Secret: {$this->apiSecret}",
+            ],
+            CURLOPT_POSTFIELDS => json_encode([
+                'to'      => $to,
+                'message' => $message,
+                'from'    => $this->senderId,
+            ]),
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        return $httpCode >= 200 && $httpCode < 300;
+    }
+
+    // ── Helpers ──
+
+    private function formatPhone(string $phone): string
+    {
+        $phone = preg_replace('/[\s\-\(\)]/', '', $phone);
+        if (preg_match('/^01[3-9]\d{8}$/', $phone)) {
+            return '+88' . $phone; // Bangladesh number
+        }
+        if (!str_starts_with($phone, '+')) {
+            $phone = '+' . $phone;
+        }
+        return $phone;
+    }
+
+    private function logSMS(string $to, string $message, string $status, ?string $error = null): void
+    {
+        try {
+            Database::insert('sms_log', [
+                'recipient'    => $to,
+                'message'      => mb_substr($message, 0, 500),
+                'provider'     => $this->provider,
+                'status'       => $status,
+                'message_type' => 'notification',
+                'error'        => $error,
+                'sent_at'      => date('Y-m-d H:i:s'),
+            ]);
+        } catch (\Throwable $e) {
+            error_log("SMS log error: " . $e->getMessage());
+        }
+    }
+}
+```
+
+### `src/OTPService.php` — OTP Generation & Verification
+
+```php
+<?php
+declare(strict_types=1);
+
+class OTPService
+{
+    private const OTP_LENGTH = 6;
+    private const OTP_EXPIRY_MINUTES = 5;
+    private const MAX_ATTEMPTS = 5;
+
+    /**
+     * Generate and send OTP to phone number
+     */
+    public static function sendOTP(string $phone, string $purpose = 'login'): array
+    {
+        $settings = Database::fetchOne("SELECT * FROM sms_settings LIMIT 1");
+        if (!$settings || !$settings['send_otp']) {
+            throw new \RuntimeException('OTP service is disabled');
+        }
+
+        // Rate limiting
+        RateLimit::check($phone, 'otp', 5, 300); // 5 OTP per 5 minutes
+
+        // Generate OTP
+        $otp = str_pad((string)random_int(0, 999999), self::OTP_LENGTH, '0', STR_PAD_LEFT);
+        $expiresAt = date('Y-m-d H:i:s', time() + (self::OTP_EXPIRY_MINUTES * 60));
+
+        // Store OTP (hashed)
+        $otpHash = password_hash($otp, PASSWORD_BCRYPT);
+
+        // Invalidate previous OTPs for this phone
+        Database::query(
+            "UPDATE otp_codes SET is_used = 1 WHERE phone = ? AND purpose = ? AND is_used = 0",
+            [$phone, $purpose]
+        );
+
+        Database::insert('otp_codes', [
+            'phone'      => $phone,
+            'otp_hash'   => $otpHash,
+            'purpose'    => $purpose,
+            'expires_at' => $expiresAt,
+            'attempts'   => 0,
+            'is_used'    => 0,
+        ]);
+
+        // Send SMS
+        $sms = new SMSService();
+        $message = "Your Artistiya verification code is: $otp. Valid for " . self::OTP_EXPIRY_MINUTES . " minutes. Do not share this code.";
+        $sms->send($phone, $message);
+
+        RateLimit::increment($phone, 'otp');
+
+        return ['success' => true, 'expires_in' => self::OTP_EXPIRY_MINUTES * 60];
+    }
+
+    /**
+     * Verify OTP
+     */
+    public static function verifyOTP(string $phone, string $otp, string $purpose = 'login'): bool
+    {
+        $record = Database::fetchOne(
+            "SELECT * FROM otp_codes WHERE phone = ? AND purpose = ? AND is_used = 0 ORDER BY created_at DESC LIMIT 1",
+            [$phone, $purpose]
+        );
+
+        if (!$record) throw new \RuntimeException('No OTP found for this number');
+        if (strtotime($record['expires_at']) < time()) throw new \RuntimeException('OTP has expired');
+        if ($record['attempts'] >= self::MAX_ATTEMPTS) throw new \RuntimeException('Maximum verification attempts exceeded');
+
+        // Increment attempts
+        Database::query("UPDATE otp_codes SET attempts = attempts + 1 WHERE id = ?", [$record['id']]);
+
+        if (!password_verify($otp, $record['otp_hash'])) {
+            return false;
+        }
+
+        // Mark as used
+        Database::update('otp_codes', ['is_used' => 1, 'verified_at' => date('Y-m-d H:i:s')], $record['id']);
+        return true;
+    }
+}
+```
+
+### `src/OrderSMSService.php` — Order SMS Automation
+
+```php
+<?php
+declare(strict_types=1);
+
+class OrderSMSService
+{
+    public static function sendOrderConfirmation(string $orderId): bool
+    {
+        $settings = Database::fetchOne("SELECT * FROM sms_settings LIMIT 1");
+        if (!$settings || !$settings['is_enabled'] || !$settings['send_order_confirmation']) return false;
+
+        $order = self::getOrderData($orderId);
+        if (!$order || !$order['phone']) return false;
+
+        $message = "Thank you for your order #{$order['order_number']}! "
+                 . "Total: BDT {$order['total']}. "
+                 . "Track: " . getenv('APP_URL') . "/track-order?order={$order['order_number']}";
+
+        return (new SMSService())->send($order['phone'], $message);
+    }
+
+    public static function sendShippingUpdate(string $orderId, string $trackingNumber = ''): bool
+    {
+        $settings = Database::fetchOne("SELECT * FROM sms_settings LIMIT 1");
+        if (!$settings || !$settings['is_enabled'] || !$settings['send_shipping_update']) return false;
+
+        $order = self::getOrderData($orderId);
+        if (!$order || !$order['phone']) return false;
+
+        $message = "Your order #{$order['order_number']} has been shipped! "
+                 . ($trackingNumber ? "Tracking: $trackingNumber. " : '')
+                 . "Track: " . getenv('APP_URL') . "/track-order?order={$order['order_number']}";
+
+        return (new SMSService())->send($order['phone'], $message);
+    }
+
+    public static function sendDeliveryConfirmation(string $orderId): bool
+    {
+        $settings = Database::fetchOne("SELECT * FROM sms_settings LIMIT 1");
+        if (!$settings || !$settings['is_enabled'] || !$settings['send_delivery_notification']) return false;
+
+        $order = self::getOrderData($orderId);
+        if (!$order || !$order['phone']) return false;
+
+        $message = "Your order #{$order['order_number']} has been delivered! "
+                 . "Thank you for shopping with Artistiya.";
+
+        return (new SMSService())->send($order['phone'], $message);
+    }
+
+    private static function getOrderData(string $orderId): ?array
+    {
+        $order = Database::fetchOne(
+            "SELECT o.order_number, o.total, a.phone
+             FROM orders o LEFT JOIN addresses a ON o.address_id = a.id WHERE o.id = ?",
+            [$orderId]
+        );
+        return $order ?: null;
+    }
+}
+```
+
+### `api/sms.php` — SMS API Endpoint
+
+```php
+<?php
+declare(strict_types=1);
+require_once __DIR__ . '/../vendor/autoload.php';
+header('Content-Type: application/json');
+
+try {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        exit(json_encode(['error' => 'Method not allowed']));
+    }
+
+    $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    $userId = Auth::validateToken(str_replace('Bearer ', '', $authHeader));
+    if (!$userId || !Auth::isAdmin($userId)) {
+        http_response_code(401);
+        exit(json_encode(['error' => 'Unauthorized']));
+    }
+
+    $body = json_decode(file_get_contents('php://input'), true);
+    $action = $body['action'] ?? '';
+
+    $result = match ($action) {
+        'send_order_sms' => OrderSMSService::sendOrderConfirmation($body['order_id'] ?? ''),
+        'send_shipping_sms' => OrderSMSService::sendShippingUpdate($body['order_id'] ?? '', $body['tracking_number'] ?? ''),
+        'send_delivery_sms' => OrderSMSService::sendDeliveryConfirmation($body['order_id'] ?? ''),
+        'send_test' => (new SMSService())->send($body['phone'] ?? '', $body['message'] ?? 'Test SMS from Artistiya'),
+        default => throw new \InvalidArgumentException('Invalid action'),
+    };
+
+    echo json_encode(['success' => $result]);
+} catch (\Throwable $e) {
+    error_log("SMS API error: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['error' => 'Failed to process SMS request']);
+}
+```
+
+### `api/otp.php` — OTP API Endpoint
+
+```php
+<?php
+declare(strict_types=1);
+require_once __DIR__ . '/../vendor/autoload.php';
+header('Content-Type: application/json');
+
+try {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        exit(json_encode(['error' => 'Method not allowed']));
+    }
+
+    $body = json_decode(file_get_contents('php://input'), true);
+    $action = $body['action'] ?? '';
+
+    match ($action) {
+        'send' => function() use ($body) {
+            $phone = Sanitizer::cleanPhone($body['phone'] ?? '');
+            if (!Sanitizer::isValidPhone($phone)) {
+                http_response_code(400);
+                exit(json_encode(['error' => 'Invalid phone number']));
+            }
+            $result = OTPService::sendOTP($phone, $body['purpose'] ?? 'login');
+            echo json_encode($result);
+        },
+        'verify' => function() use ($body) {
+            $phone = Sanitizer::cleanPhone($body['phone'] ?? '');
+            $otp = $body['otp'] ?? '';
+            $verified = OTPService::verifyOTP($phone, $otp, $body['purpose'] ?? 'login');
+            echo json_encode(['success' => $verified]);
+        },
+        default => throw new \InvalidArgumentException('Invalid action'),
+    };
+} catch (\Throwable $e) {
+    error_log("OTP API error: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['error' => $e->getMessage()]);
+}
+```
+
+### MySQL Tables for SMS & OTP
+
+Add these to `DATABASE_SCHEMA_MYSQL.sql`:
+
+```sql
+-- SMS Settings
+CREATE TABLE IF NOT EXISTS sms_settings (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    is_enabled TINYINT(1) DEFAULT 0,
+    provider VARCHAR(50) DEFAULT 'twilio',
+    api_key TEXT NULL,
+    api_secret TEXT NULL,
+    sender_id VARCHAR(50) NULL,
+    config JSON DEFAULT '{}',
+    send_order_confirmation TINYINT(1) DEFAULT 1,
+    send_shipping_update TINYINT(1) DEFAULT 1,
+    send_delivery_notification TINYINT(1) DEFAULT 1,
+    send_otp TINYINT(1) DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- SMS Log
+CREATE TABLE IF NOT EXISTS sms_log (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    recipient VARCHAR(20) NOT NULL,
+    message TEXT NOT NULL,
+    provider VARCHAR(50) DEFAULT 'twilio',
+    status VARCHAR(20) DEFAULT 'sent',
+    message_type VARCHAR(50) DEFAULT 'notification',
+    error TEXT NULL,
+    sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_sms_recipient (recipient),
+    INDEX idx_sms_sent_at (sent_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- OTP Codes
+CREATE TABLE IF NOT EXISTS otp_codes (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    phone VARCHAR(20) NOT NULL,
+    otp_hash VARCHAR(255) NOT NULL,
+    purpose VARCHAR(50) DEFAULT 'login',
+    expires_at DATETIME NOT NULL,
+    attempts TINYINT DEFAULT 0,
+    is_used TINYINT(1) DEFAULT 0,
+    verified_at DATETIME NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_otp_phone (phone, purpose, is_used),
+    INDEX idx_otp_expires (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+---
+
+## Email & SMS Integration in Order Flow
+
+### In `api/orders.php` — After Order Creation
+
+```php
+// Automatic email confirmation
+OrderEmailService::sendOrderConfirmation($orderId);
+
+// Automatic SMS confirmation
+OrderSMSService::sendOrderConfirmation($orderId);
+```
+
+### On Status Update (admin actions)
+
+```php
+if ($newStatus === 'shipped') {
+    OrderEmailService::sendShippingUpdate($orderId, $trackingNumber, $courierName);
+    OrderSMSService::sendShippingUpdate($orderId, $trackingNumber);
+}
+if ($newStatus === 'delivered') {
+    OrderEmailService::sendDeliveryConfirmation($orderId);
+    OrderSMSService::sendDeliveryConfirmation($orderId);
+}
+```
+
+---
+
+## File Upload
+
+### Image Upload Handler
+
+```php
+<?php
+class ImageUpload
+{
+    private static array $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    private static int $maxSize = 5 * 1024 * 1024; // 5MB
+
+    public static function upload(array $file, string $folder = 'products'): string
+    {
+        if ($file['error'] !== UPLOAD_ERR_OK) throw new \RuntimeException('Upload failed');
+        if ($file['size'] > self::$maxSize) throw new \RuntimeException('File too large (max 5MB)');
+
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($file['tmp_name']);
+        if (!in_array($mimeType, self::$allowedTypes)) throw new \RuntimeException('Invalid file type');
+
+        $ext = match ($mimeType) {
+            'image/jpeg' => 'jpg', 'image/png' => 'png',
+            'image/webp' => 'webp', 'image/gif' => 'gif',
+        };
+        $filename = bin2hex(random_bytes(16)) . '.' . $ext;
+        $uploadDir = __DIR__ . "/../storage/uploads/$folder/";
+        if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+
+        $path = $uploadDir . $filename;
+        if (!move_uploaded_file($file['tmp_name'], $path)) throw new \RuntimeException('Failed to save file');
+        return "/storage/uploads/$folder/$filename";
+    }
+}
+```
+
+---
+
+## `.htaccess` (Apache Security)
+
+```apache
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+Header always set X-Content-Type-Options "nosniff"
+Header always set X-Frame-Options "DENY"
+Header always set X-XSS-Protection "1; mode=block"
+Header always set Referrer-Policy "strict-origin-when-cross-origin"
+Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+<FilesMatch "^\.env|composer\.(json|lock)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+Options -Indexes
+
+php_value upload_max_filesize 10M
+php_value post_max_size 12M
+php_value max_execution_time 30
+```
+
+---
+
+## Cron Jobs (Hostinger hPanel)
+
+```
+# Email queue processor (every minute)
+Command:  php /home/u123456/public_html/cron/process-email-queue.php
+Schedule: */1 * * * *
+
+# Clean expired OTP codes (every hour)
+Command:  php -r "require '/home/u123456/public_html/vendor/autoload.php'; Database::query('DELETE FROM otp_codes WHERE expires_at < NOW() - INTERVAL 24 HOUR');"
+Schedule: 0 * * * *
+```
+
+---
+
+## Composer Setup
+
+```json
+{
+    "name": "artistiya/store-backend",
+    "description": "Artistiya E-Commerce PHP Backend",
+    "require": {
+        "php": ">=8.1",
+        "phpmailer/phpmailer": "^6.9",
+        "vlucas/phpdotenv": "^5.6"
+    },
+    "autoload": {
+        "classmap": ["src/"]
+    }
+}
+```
+
+Install via SSH:
+```bash
+cd /home/u123456/public_html
+composer2 install --no-dev --optimize-autoloader
+```
+
+---
+
+## Migration Checklist
+
+- [ ] Install MySQL 8.0+ and configure
+- [ ] Run `DATABASE_SCHEMA_MYSQL.sql` (includes email_queue, email_log, sms_settings, sms_log, otp_codes tables)
+- [ ] Export all table data from Supabase as CSV
+- [ ] Import data into MySQL
+- [ ] Configure `.env` file (Hostinger SMTP + SMS settings)
+- [ ] Setup SSL certificate
+- [ ] Encrypt payment gateway credentials and save to DB
+- [ ] **Hostinger Email Setup:**
+  - [ ] hPanel → Emails → Create email account (info@artistiya.store)
+  - [ ] SSH: `composer2 require phpmailer/phpmailer`
+  - [ ] Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS in `.env`
+  - [ ] Call `EmailService::testConnection()` to verify SMTP connection
+  - [ ] hPanel → Cron Jobs → Set `process-email-queue.php` to run every minute
+  - [ ] Send test email to confirm inbox delivery
+- [ ] **SMS Setup:**
+  - [ ] Choose SMS provider (Twilio, BulkSMSBD, etc.)
+  - [ ] Add API credentials in admin panel → SMS Settings
+  - [ ] Test SMS delivery
+- [ ] Create file upload directory and set permissions (755)
+- [ ] Add `.htaccess` security rules
+- [ ] Test rate limiting
+- [ ] Test payment sandbox
+- [ ] Test delivery API
+- [ ] Test all CRUD operations
+- [ ] Production deploy and final security audit
