@@ -1493,6 +1493,39 @@ export type Database = {
           },
         ]
       }
+      footer_payment_banners: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          image_url: string
+          is_active: boolean
+          link_url: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          image_url: string
+          is_active?: boolean
+          link_url?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          image_url?: string
+          is_active?: boolean
+          link_url?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       gallery_albums: {
         Row: {
           cover_image_url: string | null
@@ -3191,6 +3224,9 @@ export type Database = {
           footer_left_logo_link: string | null
           footer_left_logo_url: string | null
           footer_logo_size: string | null
+          footer_payment_bg_image_url: string | null
+          footer_payment_label: string | null
+          footer_payment_label_bn: string | null
           footer_right_logo_link: string | null
           footer_right_logo_url: string | null
           google_api_key: string | null
@@ -3235,6 +3271,9 @@ export type Database = {
           footer_left_logo_link?: string | null
           footer_left_logo_url?: string | null
           footer_logo_size?: string | null
+          footer_payment_bg_image_url?: string | null
+          footer_payment_label?: string | null
+          footer_payment_label_bn?: string | null
           footer_right_logo_link?: string | null
           footer_right_logo_url?: string | null
           google_api_key?: string | null
@@ -3279,6 +3318,9 @@ export type Database = {
           footer_left_logo_link?: string | null
           footer_left_logo_url?: string | null
           footer_logo_size?: string | null
+          footer_payment_bg_image_url?: string | null
+          footer_payment_label?: string | null
+          footer_payment_label_bn?: string | null
           footer_right_logo_link?: string | null
           footer_right_logo_url?: string | null
           google_api_key?: string | null
