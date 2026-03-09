@@ -180,7 +180,9 @@ const Footer = () => {
           footer_right_logo_link: brandingRes.data.footer_right_logo_link || null,
           payment_methods: paymentMethodsArray,
         });
+        setPaymentLabel(brandingRes.data.footer_payment_label || "We Accept");
       }
+      if (paymentBannersRes.data) setPaymentBanners(paymentBannersRes.data);
       if (groupsRes.data) setLinkGroups(groupsRes.data);
       if (linksRes.data) setLinks(linksRes.data);
       if (socialRes.data) setSocialLinks(socialRes.data);
