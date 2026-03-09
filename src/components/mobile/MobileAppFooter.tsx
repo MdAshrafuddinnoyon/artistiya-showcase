@@ -486,25 +486,34 @@ const MobileAppFooter = () => {
 
       {/* Payment Methods - Dynamic */}
       <div className="px-4 py-3 border-b border-border">
-        <p className="text-center text-[10px] text-muted-foreground mb-2">
-          {language === "bn" ? paymentLabel : paymentLabel}
+        <p className="text-center text-[10px] text-muted-foreground mb-2 uppercase tracking-wider">
+          {paymentLabel}
         </p>
-        <div className="flex justify-center gap-1.5 flex-wrap items-center">
+        <div className="flex justify-center gap-1 flex-wrap items-center">
           {paymentBanners.length > 0 ? (
             paymentBanners.map((banner) => (
               banner.link_url ? (
                 <a key={banner.id} href={banner.link_url} target="_blank" rel="noopener noreferrer">
-                  <img src={banner.image_url} alt={banner.name} className="h-6 w-auto object-contain" />
+                  <img 
+                    src={banner.image_url} 
+                    alt={banner.name} 
+                    className="h-5 w-auto object-contain bg-white rounded px-1 py-0.5" 
+                  />
                 </a>
               ) : (
-                <img key={banner.id} src={banner.image_url} alt={banner.name} className="h-6 w-auto object-contain" />
+                <img 
+                  key={banner.id} 
+                  src={banner.image_url} 
+                  alt={banner.name} 
+                  className="h-5 w-auto object-contain bg-white rounded px-1 py-0.5" 
+                />
               )
             ))
           ) : (
             branding.payment_methods.map((method) => (
               <div
                 key={method}
-                className={`${getPaymentColor(method)} px-2.5 py-1 rounded text-white text-[9px] font-medium`}
+                className={`${getPaymentColor(method)} px-2 py-0.5 rounded text-white text-[9px] font-medium`}
               >
                 {method}
               </div>
