@@ -47,6 +47,7 @@ if (preg_match('#^storage/([^/]+)/(.+)$#', $route, $m)) {
 }
 
 // Functions routes (replaces Supabase Edge Functions)
+// Supports sub-paths like functions/bkash-payment/create
 if (preg_match('#^functions/(.+)$#', $route, $m)) {
     $_GET['function_name'] = $m[1];
     require_once __DIR__ . '/functions/handler.php';
