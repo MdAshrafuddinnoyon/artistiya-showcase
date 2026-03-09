@@ -153,12 +153,13 @@ const Footer = () => {
 
   const fetchData = async () => {
     try {
-      const [brandingRes, groupsRes, linksRes, socialRes, newsletterRes] = await Promise.all([
+      const [brandingRes, groupsRes, linksRes, socialRes, newsletterRes, paymentBannersRes] = await Promise.all([
         supabase.from("site_branding").select("*").single(),
         supabase.from("footer_link_groups").select("*").eq("is_active", true).order("display_order"),
         supabase.from("footer_links").select("*").eq("is_active", true).order("display_order"),
         supabase.from("social_links").select("*").eq("is_active", true).order("display_order"),
         supabase.from("newsletter_settings").select("*").single(),
+        supabase.from("footer_payment_banners").select("*").eq("is_active", true).order("display_order"),
       ]);
 
       if (brandingRes.data) {
