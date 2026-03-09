@@ -173,6 +173,7 @@ const menuSections = [
       { id: "branding", name: "Site Branding", icon: Palette },
       { id: "announcement", name: "Announcement Bar", icon: Megaphone },
       { id: "menu-manager", name: "Menu Management", icon: Menu },
+      { id: "payment-banners", name: "Payment Banners", icon: CreditCard },
     ],
   },
   {
