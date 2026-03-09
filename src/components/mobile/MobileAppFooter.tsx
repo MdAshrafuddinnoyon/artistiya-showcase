@@ -123,6 +123,7 @@ const MobileAppFooter = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'footer_links' }, fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'social_links' }, fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'newsletter_settings' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'footer_payment_banners' }, fetchData)
       .subscribe();
 
     return () => {
