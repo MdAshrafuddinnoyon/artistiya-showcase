@@ -104,6 +104,7 @@ import AdminFilterSettings from "@/components/admin/AdminFilterSettings";
 import AdminPromoCodes from "@/components/admin/AdminPromoCodes";
 import AdminNotifications from "@/components/admin/AdminNotifications";
 import AdminCustomizationSettings from "@/components/admin/AdminCustomizationSettings";
+import AdminFooterPaymentBanners from "@/components/admin/AdminFooterPaymentBanners";
 
 // Menu sections for organized navigation
 const menuSections = [
