@@ -86,6 +86,35 @@ if ($action === 'upload') {
         'url' => $publicUrl,
     ]);
     
+} elseif ($action === 'list') {
+    // ── List Files ──────────────────────────────────────────
+    $folder = $_GET['folder'] ?? '';
+    $scanDir = $storageBase;
+    if ($folder) {
+        $scanDir .= '/' . basename($folder);
+    }
+    
+    $files = [];
+    if (is_dir($scanDir)) {
+        $items = scandir($scanDir);
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') continue;
+            $fullPath = $scanDir . '/' . $item;
+            $files[] = [
+                'name' => $item,
+                'id' => $item,
+                'updated_at' => date('c', filemtime($fullPath)),
+                'created_at' => date('c', filectime($fullPath)),
+                'metadata' => [
+                    'size' => filesize($fullPath),
+                    'mimetype' => is_file($fullPath) ? mime_content_type($fullPath) : 'folder',
+                ],
+            ];
+        }
+    }
+    
+    jsonResponse($files);
+
 } elseif ($action === 'delete') {
     // ── Delete ──────────────────────────────────────────────
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
