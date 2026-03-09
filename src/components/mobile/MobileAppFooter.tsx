@@ -151,7 +151,9 @@ const MobileAppFooter = () => {
           ...brandingRes.data,
           payment_methods: paymentMethodsArray,
         });
+        setPaymentLabel(brandingRes.data.footer_payment_label || "We Accept");
       }
+      if (paymentBannersRes.data) setPaymentBanners(paymentBannersRes.data);
       if (groupsRes.data) setLinkGroups(groupsRes.data);
       if (linksRes.data) setLinks(linksRes.data as FooterLink[]);
       if (socialRes.data) setSocialLinks(socialRes.data);
