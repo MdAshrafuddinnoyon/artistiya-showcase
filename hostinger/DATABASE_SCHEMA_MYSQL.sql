@@ -1826,9 +1826,179 @@ CREATE TABLE IF NOT EXISTS `otp_codes` (
   INDEX `idx_otp_expires` (`expires_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ─────────────────────────────────────────────
+-- ADDITIONAL TABLES (Added for complete Supabase parity)
+-- ─────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS `footer_payment_banners` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `name` VARCHAR(255) NOT NULL,
+  `image_url` TEXT NOT NULL,
+  `link_url` TEXT NULL,
+  `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  `display_order` INT NOT NULL DEFAULT 0,
+  `banner_size` VARCHAR(20) NOT NULL DEFAULT 'medium',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `newsletter_settings` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `is_enabled` TINYINT(1) DEFAULT 1,
+  `title` VARCHAR(255) NULL,
+  `title_bn` VARCHAR(255) NULL,
+  `subtitle` VARCHAR(500) NULL,
+  `subtitle_bn` VARCHAR(500) NULL,
+  `placeholder_text` VARCHAR(255) NULL,
+  `button_text` VARCHAR(100) NULL,
+  `button_text_bn` VARCHAR(100) NULL,
+  `success_message` VARCHAR(500) NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `site_integrations` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `integration_key` VARCHAR(100) NOT NULL,
+  `is_active` TINYINT(1) DEFAULT 0,
+  `settings` JSON NULL,
+  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_integration_key` (`integration_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `site_settings` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `key` VARCHAR(255) NOT NULL,
+  `value` JSON NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_settings_key` (`key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `shop_page_settings` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `hero_title` VARCHAR(255) NULL,
+  `hero_title_bn` VARCHAR(255) NULL,
+  `hero_subtitle` VARCHAR(500) NULL,
+  `hero_subtitle_bn` VARCHAR(500) NULL,
+  `hero_background_image` TEXT NULL,
+  `hero_overlay_opacity` DECIMAL(3,2) DEFAULT 0.5,
+  `sales_banner_enabled` TINYINT(1) DEFAULT 0,
+  `sales_banner_title` VARCHAR(255) NULL,
+  `sales_banner_title_bn` VARCHAR(255) NULL,
+  `sales_banner_image` TEXT NULL,
+  `sales_banner_link` TEXT NULL,
+  `sales_banner_start_date` DATETIME NULL,
+  `sales_banner_end_date` DATETIME NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `shop_settings` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `products_per_page` INT DEFAULT 20,
+  `default_sort` VARCHAR(50) DEFAULT 'newest',
+  `filter_position` VARCHAR(20) DEFAULT 'sidebar',
+  `min_price` DECIMAL(10,2) DEFAULT 0,
+  `max_price` DECIMAL(10,2) DEFAULT 100000,
+  `price_step` DECIMAL(10,2) DEFAULT 100,
+  `show_out_of_stock` TINYINT(1) DEFAULT 1,
+  `show_showcase_products` TINYINT(1) DEFAULT 1,
+  `show_promo_banner` TINYINT(1) DEFAULT 0,
+  `promo_banner_image` TEXT NULL,
+  `promo_banner_link` TEXT NULL,
+  `promo_banner_position` VARCHAR(20) DEFAULT 'top',
+  `show_sales_banner` TINYINT(1) DEFAULT 0,
+  `sales_banner_text` VARCHAR(500) NULL,
+  `sales_banner_text_bn` VARCHAR(500) NULL,
+  `sales_banner_link` TEXT NULL,
+  `sales_banner_position` VARCHAR(20) DEFAULT 'top',
+  `sales_banner_bg_color` VARCHAR(20) NULL,
+  `sales_banner_text_color` VARCHAR(20) NULL,
+  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `qr_discount_settings` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `is_active` TINYINT(1) DEFAULT 0,
+  `discount_type` VARCHAR(20) DEFAULT 'percentage',
+  `discount_value` DECIMAL(10,2) DEFAULT 0,
+  `discount_percent` DECIMAL(5,2) DEFAULT 0,
+  `min_order_value` DECIMAL(10,2) DEFAULT 0,
+  `expires_after_days` INT DEFAULT 30,
+  `usage_limit_per_customer` INT DEFAULT 1,
+  `message` TEXT NULL,
+  `message_bn` TEXT NULL,
+  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `theme_settings` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `setting_key` VARCHAR(100) NOT NULL,
+  `setting_value` JSON NOT NULL DEFAULT (JSON_OBJECT()),
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_theme_key` (`setting_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `upsell_offers` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `title` VARCHAR(255) NOT NULL,
+  `description` TEXT NULL,
+  `product_id` CHAR(36) NULL,
+  `trigger_type` VARCHAR(50) NULL,
+  `trigger_value` VARCHAR(255) NULL,
+  `trigger_categories` JSON NULL,
+  `discount_percent` DECIMAL(5,2) DEFAULT 0,
+  `display_order` INT DEFAULT 0,
+  `is_active` TINYINT(1) DEFAULT 1,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `youtube_videos` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `video_id` VARCHAR(50) NOT NULL,
+  `title` VARCHAR(255) NOT NULL,
+  `title_bn` VARCHAR(255) NULL,
+  `description` TEXT NULL,
+  `description_bn` TEXT NULL,
+  `thumbnail_url` TEXT NULL,
+  `display_order` INT DEFAULT 0,
+  `is_active` TINYINT(1) DEFAULT 1,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `reviews` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `product_id` CHAR(36) NOT NULL,
+  `user_id` CHAR(36) NOT NULL,
+  `rating` INT NOT NULL,
+  `comment` TEXT NULL,
+  `is_approved` TINYINT(1) DEFAULT 0,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================
 -- END OF COMPLETE SCHEMA
--- Total: 60 tables + 1 view + 4 functions + 6 triggers + 2 procedures
+-- Total: 75+ tables + 1 view + 4 functions + 6 triggers + 2 procedures
+-- Full parity with Supabase database (updated 2026-03-09)
 -- ============================================================
