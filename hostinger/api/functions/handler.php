@@ -83,6 +83,22 @@ switch ($functionName) {
 
 // ── Function Implementations ──────────────────────────────
 
+function handleIsAdmin(array $body): void {
+    $user = optionalAuth();
+    $checkUserId = $body['check_user_id'] ?? ($user ? $user['user_id'] : null);
+    
+    if (!$checkUserId) {
+        jsonResponse(false);
+        return;
+    }
+    
+    $pdo = getDB();
+    $stmt = $pdo->prepare("SELECT 1 FROM user_roles WHERE user_id = ? AND role = 'admin' LIMIT 1");
+    $stmt->execute([$checkUserId]);
+    
+    jsonResponse((bool) $stmt->fetch());
+}
+
 function handleGenerateInvoice(array $body): void {
     $user = requireAdmin();
     $orderId = $body['order_id'] ?? null;
