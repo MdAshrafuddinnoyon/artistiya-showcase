@@ -17,6 +17,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $body = getJsonBody();
 
 switch ($functionName) {
+    case 'is_admin':
+    case 'is-admin':
+        handleIsAdmin($body);
+        break;
+        
     case 'create-order':
         require_once __DIR__ . '/../orders/create.php';
         break;
@@ -42,6 +47,9 @@ switch ($functionName) {
         break;
         
     case 'bkash-payment':
+    case 'bkash-payment/create':
+    case 'bkash-payment/callback':
+        $_GET['bkash_action'] = str_contains($functionName, '/') ? explode('/', $functionName)[1] : 'create';
         require_once __DIR__ . '/../payments/bkash.php';
         break;
         
