@@ -45,6 +45,7 @@ $ADMIN_REQUIRED_TABLES = [
     'team_members', 'social_links', 'currency_rates', 'invoice_settings',
     'blocked_customers', 'notifications', 'newsletter_settings', 'sms_settings',
     'qr_discount_settings', 'customization_settings', 'customers', 'crm_reports',
+    'abandoned_carts', 'leads',
 ];
 
 // Tables readable by public (no auth)
