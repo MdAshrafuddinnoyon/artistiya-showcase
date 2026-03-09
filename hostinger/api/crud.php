@@ -327,20 +327,50 @@ function handleSelect(PDO $pdo, string $table, ?array $user): void {
         $params[] = $user['user_id'];
     }
     
+    // Orders: non-admin users can only see their own orders
+    if (in_array($table, ['orders', 'order_items']) && $user && !isAdmin($user)) {
+        if ($table === 'orders') {
+            $where[] = "`user_id` = ?";
+            $params[] = $user['user_id'];
+        }
+        // order_items: allow if querying by order_id (user ownership checked at order level)
+    }
+    
+    // Orders: allow public tracking by order_number (no auth needed)
+    // This is handled by allowing orders in PUBLIC_READ_TABLES
+    
     $whereSQL = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
     
-    // Order
+    // Order — support multiple order columns via comma separation
     $orderSQL = '';
     if (isset($_GET['order'])) {
-        $parts = explode('.', $_GET['order']);
-        $orderCol = validateColumn($parts[0]);
-        $orderDir = (isset($parts[1]) && strtolower($parts[1]) === 'desc') ? 'DESC' : 'ASC';
-        $orderSQL = "ORDER BY `{$orderCol}` {$orderDir}";
+        $orderParts = explode(',', $_GET['order']);
+        $orderClauses = [];
+        foreach ($orderParts as $orderPart) {
+            $parts = explode('.', trim($orderPart));
+            $orderCol = validateColumn($parts[0]);
+            $orderDir = (isset($parts[1]) && strtolower($parts[1]) === 'desc') ? 'DESC' : 'ASC';
+            $orderClauses[] = "`{$orderCol}` {$orderDir}";
+        }
+        if (!empty($orderClauses)) {
+            $orderSQL = "ORDER BY " . implode(', ', $orderClauses);
+        }
     }
     
     // Limit & Offset
     $limit = isset($_GET['limit']) ? min(1000, max(1, intval($_GET['limit']))) : 1000;
     $offset = isset($_GET['offset']) ? max(0, intval($_GET['offset'])) : 0;
+    
+    // Count mode
+    $doCount = isset($_GET['count']) && $_GET['count'] === 'exact';
+    $totalCount = null;
+    if ($doCount) {
+        $countSQL = "SELECT COUNT(*) FROM `{$table}` {$whereSQL}";
+        $countStmt = $pdo->prepare($countSQL);
+        $countStmt->execute($params);
+        $totalCount = (int) $countStmt->fetchColumn();
+        header("X-Total-Count: {$totalCount}");
+    }
     
     $sql = "SELECT {$columns} FROM `{$table}` {$whereSQL} {$orderSQL} LIMIT {$limit} OFFSET {$offset}";
     
@@ -366,8 +396,6 @@ function handleSelect(PDO $pdo, string $table, ?array $user): void {
         jsonResponse($data[0] ?? null);
     }
     
-    // Return with data wrapper for compatibility with some frontend components
-    // But also support direct array return for Supabase-style queries
     jsonResponse($data);
 }
 
