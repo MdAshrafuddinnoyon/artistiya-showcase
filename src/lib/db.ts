@@ -159,8 +159,9 @@ class QueryBuilder {
       }
     }
 
-    for (const o of this._order) {
-      params.set('order', `${o.column}.${o.ascending ? 'asc' : 'desc'}`);
+    if (this._order.length > 0) {
+      const orderStr = this._order.map(o => `${o.column}.${o.ascending ? 'asc' : 'desc'}`).join(',');
+      params.set('order', orderStr);
     }
 
     if (this._limit !== null) params.set('limit', String(this._limit));

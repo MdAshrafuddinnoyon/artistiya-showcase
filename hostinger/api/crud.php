@@ -198,6 +198,29 @@ function parseFilters(): array {
                 $where[] = $orResult['sql'];
                 $params = array_merge($params, $orResult['params']);
             }
+        } elseif (preg_match('/^cs\.(.+)$/', $key, $m)) {
+            // Contains (for JSON/array columns): cs.col=val
+            $col = validateColumn($m[1]);
+            $where[] = "JSON_CONTAINS(`{$col}`, ?)";
+            $params[] = $value;
+        } elseif (preg_match('/^cd\.(.+)$/', $key, $m)) {
+            // Contained by: cd.col=val
+            $col = validateColumn($m[1]);
+            $where[] = "JSON_CONTAINS(?, `{$col}`)";
+            $params[] = $value;
+        } elseif (preg_match('/^fts\.(.+)$/', $key, $m)) {
+            // Full text search: fts.col=query
+            $col = validateColumn($m[1]);
+            // MySQL FULLTEXT or fallback to LIKE
+            $words = explode(' ', trim($value));
+            $ftsParts = [];
+            foreach ($words as $word) {
+                $ftsParts[] = "LOWER(`{$col}`) LIKE LOWER(?)";
+                $params[] = '%' . $word . '%';
+            }
+            if (!empty($ftsParts)) {
+                $where[] = '(' . implode(' AND ', $ftsParts) . ')';
+            }
         }
     }
     
