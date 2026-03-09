@@ -6,7 +6,7 @@ import { Mail, Phone, MapPin, Clock, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 

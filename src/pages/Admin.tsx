@@ -47,7 +47,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 
 // Admin Components
 import AdminDashboardHome from "@/components/admin/AdminDashboardHome";

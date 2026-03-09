@@ -6,7 +6,7 @@ import { ArrowLeft, Mail, Phone, Facebook, Linkedin, Twitter } from "lucide-reac
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 
