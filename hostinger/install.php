@@ -265,9 +265,50 @@ function getTableList($pdo) {
 }
 
 function createAdminUser($pdo, $email, $password, $fullName) {
-    $userId = generateUUID();
     $passwordHash = password_hash($password, PASSWORD_ARGON2ID, ['memory_cost' => 65536, 'time_cost' => 4, 'threads' => 3]);
     
+    // Check if admin already exists
+    $stmt = $pdo->prepare("SELECT id FROM `users` WHERE `email` = ?");
+    $stmt->execute([$email]);
+    $existingUser = $stmt->fetch();
+    
+    if ($existingUser) {
+        // Admin exists — update password and ensure admin role
+        $userId = $existingUser['id'];
+        
+        try {
+            $pdo->beginTransaction();
+            
+            // Update password
+            $stmt = $pdo->prepare("UPDATE `users` SET `password_hash` = ?, `raw_user_meta_data` = ? WHERE `id` = ?");
+            $stmt->execute([$passwordHash, json_encode(['full_name' => $fullName, 'role' => 'admin']), $userId]);
+            
+            // Ensure profile exists
+            $stmt = $pdo->prepare("SELECT id FROM `profiles` WHERE `user_id` = ?");
+            $stmt->execute([$userId]);
+            if (!$stmt->fetch()) {
+                $stmt = $pdo->prepare("INSERT INTO `profiles` (`id`, `user_id`, `full_name`, `email`) VALUES (?, ?, ?, ?)");
+                $stmt->execute([generateUUID(), $userId, $fullName, $email]);
+            }
+            
+            // Ensure admin role exists
+            $stmt = $pdo->prepare("SELECT id FROM `user_roles` WHERE `user_id` = ? AND `role` = 'admin'");
+            $stmt->execute([$userId]);
+            if (!$stmt->fetch()) {
+                $stmt = $pdo->prepare("INSERT INTO `user_roles` (`id`, `user_id`, `role`) VALUES (?, ?, 'admin')");
+                $stmt->execute([generateUUID(), $userId]);
+            }
+            
+            $pdo->commit();
+            return ['success' => true, 'user_id' => $userId, 'message' => 'Existing admin updated successfully'];
+        } catch (PDOException $e) {
+            $pdo->rollBack();
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+    
+    // Create new admin
+    $userId = generateUUID();
     $pdo->beginTransaction();
     
     try {
@@ -276,19 +317,16 @@ function createAdminUser($pdo, $email, $password, $fullName) {
         $stmt->execute([$userId, $email, $passwordHash, json_encode(['full_name' => $fullName, 'role' => 'admin'])]);
         
         // Insert into profiles table
-        $profileId = generateUUID();
         $stmt = $pdo->prepare("INSERT INTO `profiles` (`id`, `user_id`, `full_name`, `email`) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$profileId, $userId, $fullName, $email]);
+        $stmt->execute([generateUUID(), $userId, $fullName, $email]);
         
         // Insert admin role
-        $roleId = generateUUID();
         $stmt = $pdo->prepare("INSERT INTO `user_roles` (`id`, `user_id`, `role`) VALUES (?, ?, 'admin')");
-        $stmt->execute([$roleId, $userId]);
+        $stmt->execute([generateUUID(), $userId]);
         
-        // Also insert into customers table
-        $customerId = generateUUID();
+        // Insert into customers table
         $stmt = $pdo->prepare("INSERT INTO `customers` (`id`, `user_id`, `full_name`, `email`) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$customerId, $userId, $fullName, $email]);
+        $stmt->execute([generateUUID(), $userId, $fullName, $email]);
         
         $pdo->commit();
         return ['success' => true, 'user_id' => $userId];
