@@ -1,7 +1,6 @@
 <?php
 /**
- * POST /api/auth/login
- * Authenticate user and return JWT token.
+ * POST /api/auth/login — Authenticate user and return JWT token
  */
 
 require_once __DIR__ . '/../middleware.php';
@@ -20,45 +19,62 @@ if (empty($email) || empty($password)) {
 
 $pdo = getDB();
 
+// Rate limiting
+$ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+$stmt = $pdo->prepare("SELECT attempts, blocked_until FROM rate_limits WHERE identifier = ? AND action = 'login'");
+$stmt->execute([$ip]);
+$rateLimit = $stmt->fetch();
+
+if ($rateLimit && $rateLimit['blocked_until'] && strtotime($rateLimit['blocked_until']) > time()) {
+    $minutes = ceil((strtotime($rateLimit['blocked_until']) - time()) / 60);
+    jsonError("Too many login attempts. Try again in {$minutes} minutes.", 429);
+}
+
 // Find user
-$stmt = $pdo->prepare("SELECT id, email, password_hash, email_verified_at, raw_user_meta_data FROM users WHERE email = ?");
+$stmt = $pdo->prepare("SELECT id, email, password_hash FROM users WHERE email = ?");
 $stmt->execute([$email]);
 $user = $stmt->fetch();
 
 if (!$user || !password_verify($password, $user['password_hash'])) {
-    jsonError('Invalid login credentials', 401);
+    // Track failed attempts
+    $stmt = $pdo->prepare("INSERT INTO rate_limits (identifier, action, attempts, last_attempt_at) VALUES (?, 'login', 1, NOW())
+                           ON DUPLICATE KEY UPDATE attempts = attempts + 1, last_attempt_at = NOW(), 
+                           blocked_until = IF(attempts >= 5, DATE_ADD(NOW(), INTERVAL 15 MINUTE), blocked_until)");
+    $stmt->execute([$ip]);
+    
+    jsonError('Invalid email or password', 401);
 }
 
-if (!$user['email_verified_at']) {
-    jsonError('Email not verified. Please check your inbox.', 403);
-}
+// Clear rate limit on success
+$pdo->prepare("DELETE FROM rate_limits WHERE identifier = ? AND action = 'login'")->execute([$ip]);
 
-// Get user roles
-$stmt = $pdo->prepare("SELECT role FROM user_roles WHERE user_id = ?");
+// Check admin status
+$stmt = $pdo->prepare("SELECT role FROM user_roles WHERE user_id = ? AND role = 'admin'");
 $stmt->execute([$user['id']]);
-$roles = $stmt->fetchAll(PDO::FETCH_COLUMN);
+$isAdmin = (bool) $stmt->fetch();
 
 // Get profile
-$stmt = $pdo->prepare("SELECT full_name, phone, avatar_url FROM profiles WHERE user_id = ?");
+$stmt = $pdo->prepare("SELECT full_name, avatar_url FROM profiles WHERE user_id = ?");
 $stmt->execute([$user['id']]);
 $profile = $stmt->fetch() ?: [];
 
 // Generate JWT
 $token = generateJWT([
     'user_id' => $user['id'],
-    'email'   => $user['email'],
-    'roles'   => $roles,
+    'email' => $user['email'],
+    'is_admin' => $isAdmin,
 ]);
 
 jsonResponse([
-    'token'   => $token,
-    'user'    => [
-        'id'        => $user['id'],
-        'email'     => $user['email'],
-        'full_name' => $profile['full_name'] ?? null,
-        'phone'     => $profile['phone'] ?? null,
-        'avatar_url' => $profile['avatar_url'] ?? null,
-        'roles'     => $roles,
-        'is_admin'  => in_array('admin', $roles),
+    'user' => [
+        'id' => $user['id'],
+        'email' => $user['email'],
+        'user_metadata' => [
+            'full_name' => $profile['full_name'] ?? null,
+            'avatar_url' => $profile['avatar_url'] ?? null,
+        ],
     ],
+    'token' => $token,
+    'user_id' => $user['id'],
+    'is_admin' => $isAdmin,
 ]);

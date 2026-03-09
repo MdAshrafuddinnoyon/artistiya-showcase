@@ -1,21 +1,28 @@
 /**
  * PHP API Client — Drop-in replacement for Supabase SDK
  * 
- * Usage (PHP backend mode):
+ * This client communicates with the PHP backend API.
+ * All methods mirror the Supabase SDK patterns used throughout the frontend.
+ * 
+ * Usage:
  *   import { api } from "@/lib/api";
  *   const { data, error } = await api.select("products", { eq: { is_active: true }, limit: 12 });
  * 
- * Currently this project uses Supabase (Lovable Cloud). 
- * When migrating to PHP, replace imports:
- *   - FROM: import { supabase } from "@/integrations/supabase/client";
- *   - TO:   import { api } from "@/lib/api";
+ * For Hostinger deployment:
+ *   Set VITE_API_BASE_URL=https://yourdomain.com/api in your build env
  * 
- * See docs/migration/FRONTEND_MIGRATION_GUIDE.md for full mapping.
+ * For Lovable (Supabase) mode:
+ *   This file is not used — the app uses supabase client directly.
  */
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 type RequestOptions = RequestInit & { headers?: Record<string, string> };
+
+interface ApiResponse<T> {
+  data: T | null;
+  error: Error | null;
+}
 
 class ApiClient {
   private token: string | null = null;
@@ -37,7 +44,7 @@ class ApiClient {
   private async request<T>(
     endpoint: string,
     options: RequestOptions = {}
-  ): Promise<{ data: T | null; error: Error | null }> {
+  ): Promise<ApiResponse<T>> {
     try {
       const existingHeaders = (options.headers || {}) as Record<string, string>;
       const headers: Record<string, string> = {
@@ -69,14 +76,22 @@ class ApiClient {
     params?: {
       columns?: string;
       eq?: Record<string, any>;
+      neq?: Record<string, any>;
       in?: Record<string, any[]>;
+      gt?: Record<string, any>;
+      gte?: Record<string, any>;
+      lt?: Record<string, any>;
+      lte?: Record<string, any>;
+      like?: Record<string, any>;
+      ilike?: Record<string, any>;
+      is?: Record<string, string>;
       filters?: Record<string, any>;
       order?: { column: string; ascending?: boolean };
       limit?: number;
       offset?: number;
       single?: boolean;
     }
-  ): Promise<{ data: T | null; error: Error | null }> {
+  ): Promise<ApiResponse<T>> {
     const query = new URLSearchParams();
     if (params?.columns) query.set('select', params.columns);
     if (params?.order) {
@@ -85,9 +100,26 @@ class ApiClient {
     if (params?.limit) query.set('limit', String(params.limit));
     if (params?.offset) query.set('offset', String(params.offset));
     if (params?.single) query.set('single', 'true');
-    if (params?.eq) {
-      Object.entries(params.eq).forEach(([k, v]) => query.set(`eq.${k}`, String(v)));
+    
+    // Filter operators
+    const filterOps: [string, Record<string, any> | undefined][] = [
+      ['eq', params?.eq],
+      ['neq', params?.neq],
+      ['gt', params?.gt],
+      ['gte', params?.gte],
+      ['lt', params?.lt],
+      ['lte', params?.lte],
+      ['like', params?.like],
+      ['ilike', params?.ilike],
+      ['is', params?.is],
+    ];
+    
+    for (const [op, values] of filterOps) {
+      if (values) {
+        Object.entries(values).forEach(([k, v]) => query.set(`${op}.${k}`, String(v)));
+      }
     }
+    
     if (params?.in) {
       Object.entries(params.in).forEach(([k, v]) => query.set(`in.${k}`, JSON.stringify(v)));
     }
@@ -100,7 +132,7 @@ class ApiClient {
   async insert<T = any>(
     table: string,
     data: Record<string, any> | Record<string, any>[]
-  ): Promise<{ data: T | null; error: Error | null }> {
+  ): Promise<ApiResponse<T>> {
     return this.request<T>(`/${table}`, {
       method: 'POST',
       body: JSON.stringify(data),
@@ -111,7 +143,7 @@ class ApiClient {
     table: string,
     data: Record<string, any>,
     filters: Record<string, any>
-  ): Promise<{ data: T | null; error: Error | null }> {
+  ): Promise<ApiResponse<T>> {
     const query = new URLSearchParams();
     Object.entries(filters).forEach(([k, v]) => query.set(`eq.${k}`, String(v)));
     return this.request<T>(`/${table}?${query.toString()}`, {
@@ -120,22 +152,46 @@ class ApiClient {
     });
   }
 
+  async upsert<T = any>(
+    table: string,
+    data: Record<string, any>,
+    options?: { onConflict?: string }
+  ): Promise<ApiResponse<T>> {
+    // Upsert: try insert, if conflict update
+    // PHP side handles this via INSERT ... ON DUPLICATE KEY UPDATE
+    return this.request<T>(`/${table}?upsert=true`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   async delete(
     table: string,
     filters: Record<string, any>
-  ): Promise<{ data: null; error: Error | null }> {
+  ): Promise<ApiResponse<null>> {
     const query = new URLSearchParams();
     Object.entries(filters).forEach(([k, v]) => query.set(`eq.${k}`, String(v)));
     return this.request(`/${table}?${query.toString()}`, { method: 'DELETE' });
   }
 
+  // ── RPC (replaces supabase.rpc()) ─────────────────────────
+
+  async rpc<T = any>(functionName: string, params?: Record<string, any>): Promise<ApiResponse<T>> {
+    return this.request<T>(`/functions/${functionName}`, {
+      method: 'POST',
+      body: JSON.stringify(params || {}),
+    });
+  }
+
   // ── Authentication (replaces supabase.auth.*) ──────────────
 
   async signUp(email: string, password: string, metadata?: Record<string, any>) {
-    return this.request<{ user: any; token: string }>('/auth/signup', {
+    const result = await this.request<{ user: any; token: string; user_id: string }>('/auth/signup', {
       method: 'POST',
       body: JSON.stringify({ email, password, ...metadata }),
     });
+    if (result.data?.token) this.setToken(result.data.token);
+    return result;
   }
 
   async signIn(email: string, password: string) {
@@ -148,7 +204,7 @@ class ApiClient {
   }
 
   async signOut() {
-    const result = await this.request('/auth/logout', { method: 'POST' });
+    await this.request('/auth/logout', { method: 'POST' });
     this.setToken(null);
     return { error: null };
   }
@@ -159,11 +215,60 @@ class ApiClient {
     return this.request<{ session: any }>('/auth/session');
   }
 
+  async getUser() {
+    const token = this.getToken();
+    if (!token) return { data: { user: null }, error: null };
+    return this.request<any>('/auth/profile');
+  }
+
   async resetPassword(email: string) {
     return this.request('/auth/reset-password', {
       method: 'POST',
       body: JSON.stringify({ email }),
     });
+  }
+
+  async updatePassword(password: string, token: string) {
+    return this.request('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ password, token }),
+    });
+  }
+
+  // ── Auth State (simplified for PHP JWT) ────────────────────
+
+  onAuthStateChange(callback: (event: string, session: any) => void) {
+    // Check if there's a stored token on init
+    const token = this.getToken();
+    if (token) {
+      this.getSession().then(({ data }) => {
+        callback('SIGNED_IN', data?.session || null);
+      });
+    } else {
+      callback('SIGNED_OUT', null);
+    }
+    
+    // Listen for storage changes (cross-tab)
+    const handler = (e: StorageEvent) => {
+      if (e.key === 'auth_token') {
+        if (e.newValue) {
+          this.getSession().then(({ data }) => {
+            callback('SIGNED_IN', data?.session || null);
+          });
+        } else {
+          callback('SIGNED_OUT', null);
+        }
+      }
+    };
+    window.addEventListener('storage', handler);
+    
+    return {
+      data: {
+        subscription: {
+          unsubscribe: () => window.removeEventListener('storage', handler),
+        },
+      },
+    };
   }
 
   // ── Storage (replaces supabase.storage.*) ──────────────────
@@ -184,7 +289,7 @@ class ApiClient {
         body: formData,
       });
       const data = await res.json();
-      if (!res.ok) return { data: null, error: new Error(data.message || 'Upload failed') };
+      if (!res.ok) return { data: null, error: new Error(data.message || data.error || 'Upload failed') };
       return { data, error: null };
     } catch (err) {
       return { data: null, error: err as Error };

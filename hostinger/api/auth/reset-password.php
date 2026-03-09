@@ -1,7 +1,6 @@
 <?php
 /**
- * POST /api/auth/reset-password
- * Reset user password (requires current password or admin token).
+ * POST /api/auth/reset-password — Request password reset or set new password
  */
 
 require_once __DIR__ . '/../middleware.php';
@@ -11,39 +10,59 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $body = getJsonBody();
-$email = trim($body['email'] ?? '');
-$currentPassword = $body['current_password'] ?? '';
-$newPassword = $body['new_password'] ?? '';
-
-if (empty($newPassword) || strlen($newPassword) < 8) {
-    jsonError('New password must be at least 8 characters');
-}
-
 $pdo = getDB();
 
-// If user is authenticated, allow password change with current password
-$authUser = optionalAuth();
-
-if ($authUser) {
-    $stmt = $pdo->prepare("SELECT password_hash FROM users WHERE id = ?");
-    $stmt->execute([$authUser['user_id']]);
-    $user = $stmt->fetch();
-
-    if (!$user || !password_verify($currentPassword, $user['password_hash'])) {
-        jsonError('Current password is incorrect', 401);
+// If token and new password provided → reset
+if (!empty($body['token']) && !empty($body['password'])) {
+    $tokenData = verifyJWT($body['token']);
+    if (!$tokenData || ($tokenData['purpose'] ?? '') !== 'password_reset') {
+        jsonError('Invalid or expired reset token', 401);
     }
-
-    $newHash = password_hash($newPassword, PASSWORD_ARGON2ID);
+    
+    $userId = $tokenData['user_id'] ?? null;
+    if (!$userId) jsonError('Invalid token');
+    
+    $newHash = password_hash($body['password'], PASSWORD_ARGON2ID, [
+        'memory_cost' => 65536,
+        'time_cost' => 4,
+        'threads' => 3,
+    ]);
+    
     $stmt = $pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ?");
-    $stmt->execute([$newHash, $authUser['user_id']]);
-
+    $stmt->execute([$newHash, $userId]);
+    
     jsonSuccess('Password updated successfully');
 }
 
-// Without auth, just acknowledge (don't reveal if email exists)
-if (!empty($email)) {
-    // In production: send reset email with token
-    jsonSuccess('If an account with that email exists, a reset link has been sent.');
+// Otherwise → send reset email
+$email = trim($body['email'] ?? '');
+if (empty($email)) jsonError('Email is required');
+
+$stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+$stmt->execute([$email]);
+$user = $stmt->fetch();
+
+// Always return success (don't reveal if email exists)
+if ($user) {
+    $resetToken = generateJWT([
+        'user_id' => $user['id'],
+        'purpose' => 'password_reset',
+    ]);
+    
+    // Queue email
+    try {
+        $stmt = $pdo->prepare("INSERT INTO email_queue (id, recipient, subject, html_body, priority) VALUES (?, ?, ?, ?, 1)");
+        $appUrl = defined('APP_URL') ? APP_URL : 'https://yourdomain.com';
+        $resetLink = "{$appUrl}/reset-password?token={$resetToken}";
+        $stmt->execute([
+            generateUUID(),
+            $email,
+            'Password Reset - Artistiya',
+            "<p>Click the link below to reset your password:</p><p><a href='{$resetLink}'>{$resetLink}</a></p><p>This link expires in 24 hours.</p>",
+        ]);
+    } catch (PDOException $e) {
+        // Non-critical
+    }
 }
 
-jsonError('Email or authentication required');
+jsonSuccess('If an account exists with that email, a reset link has been sent.');
