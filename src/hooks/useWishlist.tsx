@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
 
@@ -17,7 +17,6 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
   const [wishlistItems, setWishlistItems] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch wishlist items
   useEffect(() => {
     const fetchWishlist = async () => {
       if (!user) {
@@ -32,7 +31,7 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
           .eq("user_id", user.id);
 
         if (!error && data) {
-          setWishlistItems(data.map(item => item.product_id));
+          setWishlistItems(data.map((item: any) => item.product_id));
         }
       } catch (error) {
         console.error("Error fetching wishlist:", error);
@@ -55,7 +54,6 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     try {
       if (isInWishlist(productId)) {
-        // Remove from wishlist
         const { error } = await supabase
           .from("wishlist_items")
           .delete()
@@ -66,7 +64,6 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
         setWishlistItems(prev => prev.filter(id => id !== productId));
         toast.success("Removed from wishlist");
       } else {
-        // Add to wishlist
         const { error } = await supabase
           .from("wishlist_items")
           .insert({ user_id: user.id, product_id: productId });
