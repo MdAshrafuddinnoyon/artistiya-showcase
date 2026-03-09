@@ -69,24 +69,45 @@ CREATE TABLE IF NOT EXISTS `profiles` (
 -- 2. CATEGORIES & PRODUCTS
 -- ─────────────────────────────────────────────
 
+-- ─────────────────────────────────────────────
+-- CATEGORIES TABLE
+-- Full parity with Supabase categories table
+-- icon_emoji: used for mobile category slider (emoji icon)
+-- icon_name:  lucide/react icon name (optional, for future use)
+-- mobile_image_url: separate image for mobile category slider
+--   Priority on mobile: mobile_image_url > image_url > icon_emoji
+-- ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS `categories` (
-  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
-  `name` VARCHAR(255) NOT NULL,
-  `name_bn` VARCHAR(255) NULL,
-  `slug` VARCHAR(255) NOT NULL,
-  `description` TEXT NULL,
-  `image_url` TEXT NULL,
-  `mobile_image_url` TEXT NULL,
-  `icon_name` VARCHAR(100) NULL,
-  `icon_emoji` VARCHAR(10) NULL,
-  `parent_id` CHAR(36) NULL,
-  `display_order` INT DEFAULT 0,
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `id`               CHAR(36)     NOT NULL DEFAULT (UUID()),
+  `name`             VARCHAR(255) NOT NULL,
+  `name_bn`          VARCHAR(255) NULL COMMENT 'Bengali name for bilingual display',
+  `slug`             VARCHAR(255) NOT NULL,
+  `description`      TEXT         NULL,
+  `image_url`        TEXT         NULL COMMENT 'Main category image (desktop)',
+  `mobile_image_url` TEXT         NULL COMMENT 'Separate image for mobile slider circle',
+  `icon_name`        VARCHAR(100) NULL COMMENT 'Lucide icon name (optional)',
+  `icon_emoji`       VARCHAR(20)  NULL COMMENT 'Emoji icon for mobile slider (e.g. 💍, 👜)',
+  `parent_id`        CHAR(36)     NULL COMMENT 'Self-referencing parent category',
+  `display_order`    INT          NOT NULL DEFAULT 0,
+  `created_at`       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_categories_slug` (`slug`),
   INDEX `idx_categories_parent` (`parent_id`),
+  INDEX `idx_categories_display_order` (`display_order`),
   FOREIGN KEY (`parent_id`) REFERENCES `categories`(`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Product categories with mobile icon support';
+
+-- ─────────────────────────────────────────────
+-- MIGRATION HELPER: ALTER TABLE (for existing databases)
+-- Run these if upgrading from an older schema that lacks icon fields
+-- ─────────────────────────────────────────────
+-- ALTER TABLE `categories` ADD COLUMN IF NOT EXISTS `mobile_image_url` TEXT NULL COMMENT 'Mobile slider image' AFTER `image_url`;
+-- ALTER TABLE `categories` ADD COLUMN IF NOT EXISTS `icon_name` VARCHAR(100) NULL COMMENT 'Lucide icon name' AFTER `mobile_image_url`;
+-- ALTER TABLE `categories` ADD COLUMN IF NOT EXISTS `icon_emoji` VARCHAR(20)  NULL COMMENT 'Emoji for mobile slider' AFTER `icon_name`;
+-- ALTER TABLE `categories` ADD COLUMN IF NOT EXISTS `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER `created_at`;
+-- ALTER TABLE `categories` ADD INDEX `idx_categories_display_order` (`display_order`);
+-- ─────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS `products` (
   `id` CHAR(36) NOT NULL DEFAULT (UUID()),
