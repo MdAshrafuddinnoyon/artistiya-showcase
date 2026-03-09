@@ -19,7 +19,7 @@ import MobileAppBottomNav from "@/components/mobile/MobileAppBottomNav";
 import ProductCustomOrderModal from "@/components/modals/ProductCustomOrderModal";
 import ProductDiscountBadge from "@/components/product/ProductDiscountBadge";
 import QuickCheckoutDrawer from "@/components/checkout/QuickCheckoutDrawer";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
