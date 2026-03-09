@@ -63,6 +63,7 @@ $PUBLIC_READ_TABLES = [
     'customization_settings', 'payment_providers', 'product_variants',
     'product_colors', 'product_sizes', 'reviews', 'product_reviews',
     'newsletter_subscribers', 'qr_discount_settings',
+    'orders', 'order_items', 'promo_codes', 'notifications',
 ];
 
 function handleCRUD(string $table): void {
