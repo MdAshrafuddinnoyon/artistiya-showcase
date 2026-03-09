@@ -3,7 +3,7 @@ import { Upload, Library, ZoomIn, X, Image as ImageIcon, Loader2 } from "lucide-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import { toast } from "sonner";
 import MediaPickerModal from "./MediaPickerModal";
 

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
 
@@ -90,7 +90,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const fetchCart = async () => {
     setLoading(true);
     try {
-      // Logged-in cart (persisted in DB)
       if (user) {
         const { data, error } = await supabase
           .from("cart_items")
@@ -117,7 +116,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      // Guest cart (persisted in localStorage)
       const guestEntries = safeReadGuestCart();
       if (guestEntries.length === 0) {
         setItems([]);
@@ -127,9 +125,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       const productIds = Array.from(new Set(guestEntries.map((e) => e.product_id)));
       const { data: products, error: productsError } = await supabase
         .from("products")
-        .select(
-          "id,name,name_bn,price,images,stock_quantity,is_preorderable,production_time,category_id"
-        )
+        .select("id,name,name_bn,price,images,stock_quantity,is_preorderable,production_time,category_id")
         .in("id", productIds);
 
       if (productsError) throw productsError;
@@ -202,12 +198,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       });
 
       const results = await Promise.all(ops);
-      const firstError = results.find((r) => r.error)?.error;
+      const firstError = results.find((r: any) => r.error)?.error;
       if (firstError) throw firstError;
 
       clearGuestCart();
     } catch (error) {
-      // If merge fails, keep guest cart to avoid data loss.
       console.error("Error migrating guest cart:", error);
     }
   };
@@ -225,9 +220,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const addToCart = async (productId: string, quantity = 1) => {
     try {
-      // Logged-in
       if (user) {
-        // Check if item already in cart
         const existingItem = items.find((item) => item.product_id === productId);
 
         if (existingItem) {
@@ -247,7 +240,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      // Guest
       const guestEntries = safeReadGuestCart();
       const idx = guestEntries.findIndex((e) => e.product_id === productId);
 
@@ -264,7 +256,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       toast.success("Added to cart");
       await fetchCart();
       
-      // Track as abandoned cart for marketing
       await trackAbandonedCart(guestEntries);
     } catch (error) {
       console.error("Error adding to cart:", error);
@@ -274,7 +265,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const trackAbandonedCart = async (cartEntries: GuestCartEntry[]) => {
     try {
-      // Only track for guest users with items
       if (user || cartEntries.length === 0) return;
 
       const productIds = cartEntries.map((e) => e.product_id);
@@ -284,11 +274,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         .in("id", productIds);
 
       const cartTotal = cartEntries.reduce((sum, entry) => {
-        const product = products?.find((p) => p.id === entry.product_id);
+        const product = products?.find((p: any) => p.id === entry.product_id);
         return sum + (product?.price || 0) * entry.quantity;
       }, 0);
 
-      // Upsert abandoned cart
       await supabase.from("abandoned_carts").upsert(
         {
           cart_data: cartEntries,
@@ -298,7 +287,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         { onConflict: "id", ignoreDuplicates: false }
       );
     } catch (error) {
-      // Silent fail - don't interrupt user experience
       console.error("Error tracking abandoned cart:", error);
     }
   };

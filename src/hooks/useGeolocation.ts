@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import { divisions, getDistrictsByDivision, getThanasByDistrict } from "@/data/bangladeshLocations";
 
 interface LocationResult {

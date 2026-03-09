@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import { useIsMobile } from "@/hooks/use-mobile";
 import heroImage from "@/assets/hero-artisan.jpg";
 import MobileHeroSlider from "./MobileHeroSlider";

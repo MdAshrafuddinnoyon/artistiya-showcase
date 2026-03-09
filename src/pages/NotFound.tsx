@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { useLanguage } from "@/hooks/useLanguage";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 
 const NotFound = () => {
   const location = useLocation();

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Instagram, Facebook, MessageCircle, Twitter, Youtube, Linkedin, Pin, Music, Send, Camera, Mail, Phone, Globe, ExternalLink, Loader2, CheckCircle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";

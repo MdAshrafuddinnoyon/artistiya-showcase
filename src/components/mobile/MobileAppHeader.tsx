@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Bell, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import InlineSearch from "@/components/search/InlineSearch";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Badge } from "@/components/ui/badge";

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Search, X, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import { useDebounce } from "@/hooks/useDebounce";
 
 interface Product {

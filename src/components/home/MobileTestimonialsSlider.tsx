@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Star, Quote, User } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import useEmblaCarousel from "embla-carousel-react";
 
 interface Testimonial {

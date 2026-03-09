@@ -20,7 +20,7 @@ import { useCart } from "@/hooks/useCart";
 import { useLanguage } from "@/hooks/useLanguage";
 import { usePayment } from "@/hooks/usePayment";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import { toast } from "sonner";
 import { divisions, calculateShippingCost, isDhakaDistrict, getDistrictsByDivision, getThanasByDistrict } from "@/data/bangladeshLocations";
 import { useGeolocation, useShippingCost } from "@/hooks/useGeolocation";

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import { useAuth } from "@/hooks/useAuth";
 import { usePayment } from "@/hooks/usePayment";
 import { useCustomizationSettings } from "@/hooks/useCustomizationSettings";

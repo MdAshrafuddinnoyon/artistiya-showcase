@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, ShoppingBag, Eye, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import { useCart } from "@/hooks/useCart";
 import { useWishlist } from "@/hooks/useWishlist";
 import QuickViewModal from "@/components/product/QuickViewModal";

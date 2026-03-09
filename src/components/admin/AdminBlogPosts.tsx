@@ -27,7 +27,7 @@ import RichTextEditor from "./RichTextEditor";
 import AdminBlogCategories from "./AdminBlogCategories";
 import AdminBlogSettings from "./AdminBlogSettings";
 import ImageUploadZone from "./ImageUploadZone";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import { toast } from "sonner";
 
 interface BlogPost {

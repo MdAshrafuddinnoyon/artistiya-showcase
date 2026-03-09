@@ -9,7 +9,7 @@ import {
   Clock,
   AlertCircle,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 
 interface Stats {
   totalProducts: number;

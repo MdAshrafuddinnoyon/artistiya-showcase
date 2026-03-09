@@ -20,7 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import { toast } from "sonner";
 import EnhancedProductForm from "./EnhancedProductForm";
 import BulkProductUpload from "./BulkProductUpload";
