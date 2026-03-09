@@ -120,6 +120,8 @@ const Footer = () => {
     placeholder_text: "Enter your email",
     success_message: "Thank you for subscribing!",
   });
+  const [paymentBanners, setPaymentBanners] = useState<{ id: string; name: string; image_url: string; link_url: string | null; display_order: number }[]>([]);
+  const [paymentLabel, setPaymentLabel] = useState("We Accept");
   const [email, setEmail] = useState("");
   const [subscribing, setSubscribing] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
