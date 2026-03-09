@@ -107,7 +107,7 @@ const MobileAppFooter = () => {
     success_message: "Thank you for subscribing!",
   });
   
-  const [paymentBanners, setPaymentBanners] = useState<{ id: string; name: string; image_url: string; link_url: string | null }[]>([]);
+  const [paymentBanners, setPaymentBanners] = useState<{ id: string; name: string; image_url: string; link_url: string | null; banner_size: string }[]>([]);
   const [paymentLabel, setPaymentLabel] = useState("We Accept");
   const [email, setEmail] = useState("");
   const [subscribing, setSubscribing] = useState(false);
