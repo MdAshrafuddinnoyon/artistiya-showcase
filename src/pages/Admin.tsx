@@ -391,6 +391,8 @@ const Admin = () => {
         return <AdminNotifications />;
       case "customization":
         return <AdminCustomizationSettings />;
+      case "payment-banners":
+        return <AdminFooterPaymentBanners />;
       case "settings":
         return <AdminSettings />;
       default:
