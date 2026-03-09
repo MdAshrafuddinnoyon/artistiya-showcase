@@ -120,6 +120,8 @@ const Footer = () => {
     placeholder_text: "Enter your email",
     success_message: "Thank you for subscribing!",
   });
+  const [paymentBanners, setPaymentBanners] = useState<{ id: string; name: string; image_url: string; link_url: string | null; display_order: number }[]>([]);
+  const [paymentLabel, setPaymentLabel] = useState("We Accept");
   const [email, setEmail] = useState("");
   const [subscribing, setSubscribing] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
@@ -144,6 +146,9 @@ const Footer = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'newsletter_settings' }, () => {
         fetchData();
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'footer_payment_banners' }, () => {
+        fetchData();
+      })
       .subscribe();
 
     return () => {
@@ -153,12 +158,13 @@ const Footer = () => {
 
   const fetchData = async () => {
     try {
-      const [brandingRes, groupsRes, linksRes, socialRes, newsletterRes] = await Promise.all([
+      const [brandingRes, groupsRes, linksRes, socialRes, newsletterRes, paymentBannersRes] = await Promise.all([
         supabase.from("site_branding").select("*").single(),
         supabase.from("footer_link_groups").select("*").eq("is_active", true).order("display_order"),
         supabase.from("footer_links").select("*").eq("is_active", true).order("display_order"),
         supabase.from("social_links").select("*").eq("is_active", true).order("display_order"),
         supabase.from("newsletter_settings").select("*").single(),
+        supabase.from("footer_payment_banners").select("*").eq("is_active", true).order("display_order"),
       ]);
 
       if (brandingRes.data) {
@@ -177,7 +183,9 @@ const Footer = () => {
           footer_right_logo_link: brandingRes.data.footer_right_logo_link || null,
           payment_methods: paymentMethodsArray,
         });
+        setPaymentLabel(brandingRes.data.footer_payment_label || "We Accept");
       }
+      if (paymentBannersRes.data) setPaymentBanners(paymentBannersRes.data);
       if (groupsRes.data) setLinkGroups(groupsRes.data);
       if (linksRes.data) setLinks(linksRes.data);
       if (socialRes.data) setSocialLinks(socialRes.data);
@@ -521,17 +529,29 @@ const Footer = () => {
         <div className="container mx-auto px-4 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row items-center justify-center gap-4">
             <span className="text-sm text-muted-foreground">
-              We Accept:
+              {paymentLabel}:
             </span>
-            <div className="flex flex-wrap justify-center gap-3">
-              {branding.payment_methods.map((method, index) => (
-                <div
-                  key={index}
-                  className={`${getPaymentColor(method)} px-4 py-2 rounded-md text-white text-xs font-semibold tracking-wide`}
-                >
-                  {method}
-                </div>
-              ))}
+            <div className="flex flex-wrap justify-center gap-3 items-center">
+              {paymentBanners.length > 0 ? (
+                paymentBanners.map((banner) => (
+                  banner.link_url ? (
+                    <a key={banner.id} href={banner.link_url} target="_blank" rel="noopener noreferrer">
+                      <img src={banner.image_url} alt={banner.name} className="h-8 w-auto object-contain" />
+                    </a>
+                  ) : (
+                    <img key={banner.id} src={banner.image_url} alt={banner.name} className="h-8 w-auto object-contain" />
+                  )
+                ))
+              ) : (
+                branding.payment_methods.map((method, index) => (
+                  <div
+                    key={index}
+                    className={`${getPaymentColor(method)} px-4 py-2 rounded-md text-white text-xs font-semibold tracking-wide`}
+                  >
+                    {method}
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

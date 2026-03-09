@@ -104,6 +104,7 @@ import AdminFilterSettings from "@/components/admin/AdminFilterSettings";
 import AdminPromoCodes from "@/components/admin/AdminPromoCodes";
 import AdminNotifications from "@/components/admin/AdminNotifications";
 import AdminCustomizationSettings from "@/components/admin/AdminCustomizationSettings";
+import AdminFooterPaymentBanners from "@/components/admin/AdminFooterPaymentBanners";
 
 // Menu sections for organized navigation
 const menuSections = [
@@ -172,6 +173,7 @@ const menuSections = [
       { id: "branding", name: "Site Branding", icon: Palette },
       { id: "announcement", name: "Announcement Bar", icon: Megaphone },
       { id: "menu-manager", name: "Menu Management", icon: Menu },
+      { id: "payment-banners", name: "Payment Banners", icon: CreditCard },
     ],
   },
   {
@@ -389,6 +391,8 @@ const Admin = () => {
         return <AdminNotifications />;
       case "customization":
         return <AdminCustomizationSettings />;
+      case "payment-banners":
+        return <AdminFooterPaymentBanners />;
       case "settings":
         return <AdminSettings />;
       default:

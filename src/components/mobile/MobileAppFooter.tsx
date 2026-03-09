@@ -107,6 +107,8 @@ const MobileAppFooter = () => {
     success_message: "Thank you for subscribing!",
   });
   
+  const [paymentBanners, setPaymentBanners] = useState<{ id: string; name: string; image_url: string; link_url: string | null }[]>([]);
+  const [paymentLabel, setPaymentLabel] = useState("We Accept");
   const [email, setEmail] = useState("");
   const [subscribing, setSubscribing] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
@@ -121,6 +123,7 @@ const MobileAppFooter = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'footer_links' }, fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'social_links' }, fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'newsletter_settings' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'footer_payment_banners' }, fetchData)
       .subscribe();
 
     return () => {
@@ -130,12 +133,13 @@ const MobileAppFooter = () => {
 
   const fetchData = async () => {
     try {
-      const [brandingRes, groupsRes, linksRes, socialRes, newsletterRes] = await Promise.all([
+      const [brandingRes, groupsRes, linksRes, socialRes, newsletterRes, paymentBannersRes] = await Promise.all([
         supabase.from("site_branding").select("*").single(),
         supabase.from("footer_link_groups").select("*").eq("is_active", true).order("display_order"),
         supabase.from("footer_links").select("*").eq("is_active", true).order("display_order"),
         supabase.from("social_links").select("*").eq("is_active", true).order("display_order"),
         supabase.from("newsletter_settings").select("*").single(),
+        supabase.from("footer_payment_banners").select("*").eq("is_active", true).order("display_order"),
       ]);
 
       if (brandingRes.data) {
@@ -147,7 +151,9 @@ const MobileAppFooter = () => {
           ...brandingRes.data,
           payment_methods: paymentMethodsArray,
         });
+        setPaymentLabel(brandingRes.data.footer_payment_label || "We Accept");
       }
+      if (paymentBannersRes.data) setPaymentBanners(paymentBannersRes.data);
       if (groupsRes.data) setLinkGroups(groupsRes.data);
       if (linksRes.data) setLinks(linksRes.data as FooterLink[]);
       if (socialRes.data) setSocialLinks(socialRes.data);
@@ -481,17 +487,29 @@ const MobileAppFooter = () => {
       {/* Payment Methods - Dynamic */}
       <div className="px-4 py-3 border-b border-border">
         <p className="text-center text-[10px] text-muted-foreground mb-2">
-          {language === "bn" ? "পেমেন্ট অপশন" : "We Accept"}
+          {language === "bn" ? paymentLabel : paymentLabel}
         </p>
-        <div className="flex justify-center gap-1.5 flex-wrap">
-          {branding.payment_methods.map((method) => (
-            <div
-              key={method}
-              className={`${getPaymentColor(method)} px-2.5 py-1 rounded text-white text-[9px] font-medium`}
-            >
-              {method}
-            </div>
-          ))}
+        <div className="flex justify-center gap-1.5 flex-wrap items-center">
+          {paymentBanners.length > 0 ? (
+            paymentBanners.map((banner) => (
+              banner.link_url ? (
+                <a key={banner.id} href={banner.link_url} target="_blank" rel="noopener noreferrer">
+                  <img src={banner.image_url} alt={banner.name} className="h-6 w-auto object-contain" />
+                </a>
+              ) : (
+                <img key={banner.id} src={banner.image_url} alt={banner.name} className="h-6 w-auto object-contain" />
+              )
+            ))
+          ) : (
+            branding.payment_methods.map((method) => (
+              <div
+                key={method}
+                className={`${getPaymentColor(method)} px-2.5 py-1 rounded text-white text-[9px] font-medium`}
+              >
+                {method}
+              </div>
+            ))
+          )}
         </div>
       </div>
 
