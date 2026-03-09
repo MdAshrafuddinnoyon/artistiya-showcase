@@ -29,8 +29,8 @@
 // CONFIGURATION
 // ============================================================
 define('SCHEMA_FILE', __DIR__ . '/DATABASE_SCHEMA_MYSQL.sql');
-define('CONFIG_FILE', __DIR__ . '/../../config/database.php');
-define('ENV_FILE', __DIR__ . '/../../.env.php');
+define('CONFIG_FILE', __DIR__ . '/config/database.php');
+define('ENV_FILE', __DIR__ . '/.env.php');
 define('LOCK_FILE', __DIR__ . '/install.lock');
 define('MAX_EXECUTION_TIME', 300); // 5 minutes for large schemas
 
