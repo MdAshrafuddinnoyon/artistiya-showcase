@@ -197,6 +197,22 @@ const AdminFooterPaymentBanners = () => {
                         placeholder="https://..."
                       />
                     </div>
+                    <div>
+                      <Label className="text-xs">ব্যানার সাইজ</Label>
+                      <Select
+                        value={banner.banner_size || "medium"}
+                        onValueChange={val => updateBanner(banner.id, { banner_size: val })}
+                      >
+                        <SelectTrigger className="h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="small">Small (ছোট)</SelectItem>
+                          <SelectItem value="medium">Medium (মাঝারি)</SelectItem>
+                          <SelectItem value="large">Large (বড়)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
