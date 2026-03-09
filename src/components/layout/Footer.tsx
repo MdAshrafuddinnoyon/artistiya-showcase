@@ -541,7 +541,7 @@ const Footer = () => {
                       <img 
                         src={banner.image_url} 
                         alt={banner.name} 
-                        className="h-7 md:h-8 w-auto object-contain bg-white rounded px-1.5 py-1" 
+                        className={`${banner.banner_size === 'small' ? 'h-5 md:h-6' : banner.banner_size === 'large' ? 'h-10 md:h-12' : 'h-7 md:h-8'} w-auto object-contain bg-white rounded px-1.5 py-1`} 
                       />
                     </a>
                   ) : (
@@ -549,7 +549,7 @@ const Footer = () => {
                       key={banner.id} 
                       src={banner.image_url} 
                       alt={banner.name} 
-                      className="h-7 md:h-8 w-auto object-contain bg-white rounded px-1.5 py-1" 
+                      className={`${banner.banner_size === 'small' ? 'h-5 md:h-6' : banner.banner_size === 'large' ? 'h-10 md:h-12' : 'h-7 md:h-8'} w-auto object-contain bg-white rounded px-1.5 py-1`} 
                     />
                   )
                 ))}
