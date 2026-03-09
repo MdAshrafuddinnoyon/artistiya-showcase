@@ -283,13 +283,13 @@ function createAdminUser($pdo, $email, $password, $fullName) {
             $stmt = $pdo->prepare("UPDATE `users` SET `password_hash` = ?, `raw_user_meta_data` = ? WHERE `id` = ?");
             $stmt->execute([$passwordHash, json_encode(['full_name' => $fullName, 'role' => 'admin']), $userId]);
             
-            // Ensure profile exists
-            $stmt = $pdo->prepare("SELECT id FROM `profiles` WHERE `user_id` = ?");
-            $stmt->execute([$userId]);
-            if (!$stmt->fetch()) {
-                $stmt = $pdo->prepare("INSERT INTO `profiles` (`id`, `user_id`, `full_name`, `email`) VALUES (?, ?, ?, ?)");
-                $stmt->execute([generateUUID(), $userId, $fullName, $email]);
-            }
+            // Ensure profile exists (use INSERT IGNORE to avoid trigger duplicate)
+            $stmt = $pdo->prepare("INSERT IGNORE INTO `profiles` (`id`, `user_id`, `full_name`, `email`) VALUES (?, ?, ?, ?)");
+            $stmt->execute([generateUUID(), $userId, $fullName, $email]);
+            
+            // Update profile with correct name/email
+            $stmt = $pdo->prepare("UPDATE `profiles` SET `full_name` = ?, `email` = ? WHERE `user_id` = ?");
+            $stmt->execute([$fullName, $email, $userId]);
             
             // Ensure admin role exists
             $stmt = $pdo->prepare("SELECT id FROM `user_roles` WHERE `user_id` = ? AND `role` = 'admin'");
