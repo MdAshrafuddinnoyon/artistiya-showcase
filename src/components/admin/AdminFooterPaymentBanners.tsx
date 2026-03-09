@@ -79,6 +79,7 @@ const AdminFooterPaymentBanners = () => {
         link_url: banner.link_url,
         display_order: banner.display_order,
         is_active: banner.is_active,
+        banner_size: banner.banner_size,
       })
       .eq("id", banner.id);
 
