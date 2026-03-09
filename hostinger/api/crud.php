@@ -406,6 +406,8 @@ function handleInsert(PDO $pdo, string $table, ?array $user): void {
         jsonError('No data provided');
     }
     
+    $isUpsert = isset($_GET['upsert']);
+    
     // Handle array of records (bulk insert)
     $records = isset($body[0]) ? $body : [$body];
     $insertedIds = [];
@@ -434,7 +436,20 @@ function handleInsert(PDO $pdo, string $table, ?array $user): void {
         $colStr = implode(', ', array_map(fn($c) => "`{$c}`", $validatedCols));
         $placeholders = implode(', ', array_fill(0, count($cols), '?'));
         
-        $sql = "INSERT INTO `{$table}` ({$colStr}) VALUES ({$placeholders})";
+        if ($isUpsert) {
+            // INSERT ... ON DUPLICATE KEY UPDATE
+            $updateParts = [];
+            foreach ($validatedCols as $c) {
+                if ($c !== 'id') {
+                    $updateParts[] = "`{$c}` = VALUES(`{$c}`)";
+                }
+            }
+            $updateSQL = implode(', ', $updateParts);
+            $sql = "INSERT INTO `{$table}` ({$colStr}) VALUES ({$placeholders}) ON DUPLICATE KEY UPDATE {$updateSQL}";
+        } else {
+            $sql = "INSERT INTO `{$table}` ({$colStr}) VALUES ({$placeholders})";
+        }
+        
         $stmt = $pdo->prepare($sql);
         $stmt->execute(array_values($record));
         
