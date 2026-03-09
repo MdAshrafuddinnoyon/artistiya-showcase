@@ -17,6 +17,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $body = getJsonBody();
 
 switch ($functionName) {
+    case 'is_admin':
+    case 'is-admin':
+        handleIsAdmin($body);
+        break;
+        
     case 'create-order':
         require_once __DIR__ . '/../orders/create.php';
         break;
@@ -42,6 +47,9 @@ switch ($functionName) {
         break;
         
     case 'bkash-payment':
+    case 'bkash-payment/create':
+    case 'bkash-payment/callback':
+        $_GET['bkash_action'] = str_contains($functionName, '/') ? explode('/', $functionName)[1] : 'create';
         require_once __DIR__ . '/../payments/bkash.php';
         break;
         
@@ -74,6 +82,22 @@ switch ($functionName) {
 }
 
 // ── Function Implementations ──────────────────────────────
+
+function handleIsAdmin(array $body): void {
+    $user = optionalAuth();
+    $checkUserId = $body['check_user_id'] ?? ($user ? $user['user_id'] : null);
+    
+    if (!$checkUserId) {
+        jsonResponse(false);
+        return;
+    }
+    
+    $pdo = getDB();
+    $stmt = $pdo->prepare("SELECT 1 FROM user_roles WHERE user_id = ? AND role = 'admin' LIMIT 1");
+    $stmt->execute([$checkUserId]);
+    
+    jsonResponse((bool) $stmt->fetch());
+}
 
 function handleGenerateInvoice(array $body): void {
     $user = requireAdmin();

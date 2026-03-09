@@ -45,6 +45,7 @@ $ADMIN_REQUIRED_TABLES = [
     'team_members', 'social_links', 'currency_rates', 'invoice_settings',
     'blocked_customers', 'notifications', 'newsletter_settings', 'sms_settings',
     'qr_discount_settings', 'customization_settings', 'customers', 'crm_reports',
+    'abandoned_carts', 'leads',
 ];
 
 // Tables readable by public (no auth)
@@ -62,6 +63,7 @@ $PUBLIC_READ_TABLES = [
     'customization_settings', 'payment_providers', 'product_variants',
     'product_colors', 'product_sizes', 'reviews', 'product_reviews',
     'newsletter_subscribers', 'qr_discount_settings',
+    'orders', 'order_items', 'promo_codes', 'notifications',
 ];
 
 function handleCRUD(string $table): void {
@@ -160,10 +162,135 @@ function parseFilters(): array {
             $col = validateColumn($m[1]);
             $where[] = "LOWER(`{$col}`) LIKE LOWER(?)";
             $params[] = $value;
+        } elseif (preg_match('/^not\.([a-z]+)\.(.+)$/', $key, $m)) {
+            // NOT filters: not.eq.col=val, not.is.col=null, not.in.col=[...]
+            $op = $m[1];
+            $col = validateColumn($m[2]);
+            switch ($op) {
+                case 'eq':
+                    $where[] = "`{$col}` != ?";
+                    $params[] = $value;
+                    break;
+                case 'is':
+                    if ($value === 'null') $where[] = "`{$col}` IS NOT NULL";
+                    break;
+                case 'in':
+                    $vals = json_decode($value, true);
+                    if (is_array($vals) && count($vals) > 0) {
+                        $ph = implode(',', array_fill(0, count($vals), '?'));
+                        $where[] = "`{$col}` NOT IN ({$ph})";
+                        $params = array_merge($params, $vals);
+                    }
+                    break;
+                case 'like':
+                    $where[] = "`{$col}` NOT LIKE ?";
+                    $params[] = $value;
+                    break;
+                case 'ilike':
+                    $where[] = "LOWER(`{$col}`) NOT LIKE LOWER(?)";
+                    $params[] = $value;
+                    break;
+            }
+        } elseif ($key === 'or') {
+            // OR filter: or=(name.ilike.%q%,description.ilike.%q%)
+            $orResult = parseOrFilter($value);
+            if ($orResult) {
+                $where[] = $orResult['sql'];
+                $params = array_merge($params, $orResult['params']);
+            }
         }
     }
     
     return [$where, $params];
+}
+
+/**
+ * Parse Supabase-style OR filter string.
+ * Example: "name.ilike.%search%,description.ilike.%search%"
+ * Example: "is_global.eq.true,user_id.eq.abc-123"
+ */
+function parseOrFilter(string $orString): ?array {
+    // Remove wrapping parentheses if present
+    $orString = trim($orString, '()');
+    if (empty($orString)) return null;
+    
+    // Split by comma, but respect nested parentheses
+    $conditions = [];
+    $current = '';
+    $depth = 0;
+    for ($i = 0; $i < strlen($orString); $i++) {
+        $ch = $orString[$i];
+        if ($ch === '(') $depth++;
+        elseif ($ch === ')') $depth--;
+        elseif ($ch === ',' && $depth === 0) {
+            $conditions[] = trim($current);
+            $current = '';
+            continue;
+        }
+        $current .= $ch;
+    }
+    if ($current !== '') $conditions[] = trim($current);
+    
+    $sqlParts = [];
+    $params = [];
+    
+    foreach ($conditions as $cond) {
+        // Format: column.operator.value
+        if (preg_match('/^([a-z_][a-z0-9_]*)\.([a-z]+)\.(.+)$/i', $cond, $m)) {
+            $col = validateColumn($m[1]);
+            $op = $m[2];
+            $val = $m[3];
+            
+            switch ($op) {
+                case 'eq':
+                    if ($val === 'true') $val = 1;
+                    elseif ($val === 'false') $val = 0;
+                    $sqlParts[] = "`{$col}` = ?";
+                    $params[] = $val;
+                    break;
+                case 'neq':
+                    $sqlParts[] = "`{$col}` != ?";
+                    $params[] = $val;
+                    break;
+                case 'gt':
+                    $sqlParts[] = "`{$col}` > ?";
+                    $params[] = $val;
+                    break;
+                case 'gte':
+                    $sqlParts[] = "`{$col}` >= ?";
+                    $params[] = $val;
+                    break;
+                case 'lt':
+                    $sqlParts[] = "`{$col}` < ?";
+                    $params[] = $val;
+                    break;
+                case 'lte':
+                    $sqlParts[] = "`{$col}` <= ?";
+                    $params[] = $val;
+                    break;
+                case 'like':
+                    $sqlParts[] = "`{$col}` LIKE ?";
+                    $params[] = $val;
+                    break;
+                case 'ilike':
+                    $sqlParts[] = "LOWER(`{$col}`) LIKE LOWER(?)";
+                    $params[] = $val;
+                    break;
+                case 'is':
+                    if ($val === 'null') $sqlParts[] = "`{$col}` IS NULL";
+                    elseif ($val === 'true') { $sqlParts[] = "`{$col}` = ?"; $params[] = 1; }
+                    elseif ($val === 'false') { $sqlParts[] = "`{$col}` = ?"; $params[] = 0; }
+                    break;
+            }
+        }
+    }
+    
+    if (empty($sqlParts)) return null;
+    
+    return [
+        'sql' => '(' . implode(' OR ', $sqlParts) . ')',
+        'params' => $params,
+    ];
 }
 
 function validateColumn(string $col): string {
@@ -200,20 +327,50 @@ function handleSelect(PDO $pdo, string $table, ?array $user): void {
         $params[] = $user['user_id'];
     }
     
+    // Orders: non-admin users can only see their own orders
+    if (in_array($table, ['orders', 'order_items']) && $user && !isAdmin($user)) {
+        if ($table === 'orders') {
+            $where[] = "`user_id` = ?";
+            $params[] = $user['user_id'];
+        }
+        // order_items: allow if querying by order_id (user ownership checked at order level)
+    }
+    
+    // Orders: allow public tracking by order_number (no auth needed)
+    // This is handled by allowing orders in PUBLIC_READ_TABLES
+    
     $whereSQL = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
     
-    // Order
+    // Order — support multiple order columns via comma separation
     $orderSQL = '';
     if (isset($_GET['order'])) {
-        $parts = explode('.', $_GET['order']);
-        $orderCol = validateColumn($parts[0]);
-        $orderDir = (isset($parts[1]) && strtolower($parts[1]) === 'desc') ? 'DESC' : 'ASC';
-        $orderSQL = "ORDER BY `{$orderCol}` {$orderDir}";
+        $orderParts = explode(',', $_GET['order']);
+        $orderClauses = [];
+        foreach ($orderParts as $orderPart) {
+            $parts = explode('.', trim($orderPart));
+            $orderCol = validateColumn($parts[0]);
+            $orderDir = (isset($parts[1]) && strtolower($parts[1]) === 'desc') ? 'DESC' : 'ASC';
+            $orderClauses[] = "`{$orderCol}` {$orderDir}";
+        }
+        if (!empty($orderClauses)) {
+            $orderSQL = "ORDER BY " . implode(', ', $orderClauses);
+        }
     }
     
     // Limit & Offset
     $limit = isset($_GET['limit']) ? min(1000, max(1, intval($_GET['limit']))) : 1000;
     $offset = isset($_GET['offset']) ? max(0, intval($_GET['offset'])) : 0;
+    
+    // Count mode
+    $doCount = isset($_GET['count']) && $_GET['count'] === 'exact';
+    $totalCount = null;
+    if ($doCount) {
+        $countSQL = "SELECT COUNT(*) FROM `{$table}` {$whereSQL}";
+        $countStmt = $pdo->prepare($countSQL);
+        $countStmt->execute($params);
+        $totalCount = (int) $countStmt->fetchColumn();
+        header("X-Total-Count: {$totalCount}");
+    }
     
     $sql = "SELECT {$columns} FROM `{$table}` {$whereSQL} {$orderSQL} LIMIT {$limit} OFFSET {$offset}";
     
@@ -239,8 +396,6 @@ function handleSelect(PDO $pdo, string $table, ?array $user): void {
         jsonResponse($data[0] ?? null);
     }
     
-    // Return with data wrapper for compatibility with some frontend components
-    // But also support direct array return for Supabase-style queries
     jsonResponse($data);
 }
 
@@ -250,6 +405,8 @@ function handleInsert(PDO $pdo, string $table, ?array $user): void {
     if (empty($body)) {
         jsonError('No data provided');
     }
+    
+    $isUpsert = isset($_GET['upsert']);
     
     // Handle array of records (bulk insert)
     $records = isset($body[0]) ? $body : [$body];
@@ -279,7 +436,20 @@ function handleInsert(PDO $pdo, string $table, ?array $user): void {
         $colStr = implode(', ', array_map(fn($c) => "`{$c}`", $validatedCols));
         $placeholders = implode(', ', array_fill(0, count($cols), '?'));
         
-        $sql = "INSERT INTO `{$table}` ({$colStr}) VALUES ({$placeholders})";
+        if ($isUpsert) {
+            // INSERT ... ON DUPLICATE KEY UPDATE
+            $updateParts = [];
+            foreach ($validatedCols as $c) {
+                if ($c !== 'id') {
+                    $updateParts[] = "`{$c}` = VALUES(`{$c}`)";
+                }
+            }
+            $updateSQL = implode(', ', $updateParts);
+            $sql = "INSERT INTO `{$table}` ({$colStr}) VALUES ({$placeholders}) ON DUPLICATE KEY UPDATE {$updateSQL}";
+        } else {
+            $sql = "INSERT INTO `{$table}` ({$colStr}) VALUES ({$placeholders})";
+        }
+        
         $stmt = $pdo->prepare($sql);
         $stmt->execute(array_values($record));
         
