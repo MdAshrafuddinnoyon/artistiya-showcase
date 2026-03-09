@@ -162,10 +162,135 @@ function parseFilters(): array {
             $col = validateColumn($m[1]);
             $where[] = "LOWER(`{$col}`) LIKE LOWER(?)";
             $params[] = $value;
+        } elseif (preg_match('/^not\.([a-z]+)\.(.+)$/', $key, $m)) {
+            // NOT filters: not.eq.col=val, not.is.col=null, not.in.col=[...]
+            $op = $m[1];
+            $col = validateColumn($m[2]);
+            switch ($op) {
+                case 'eq':
+                    $where[] = "`{$col}` != ?";
+                    $params[] = $value;
+                    break;
+                case 'is':
+                    if ($value === 'null') $where[] = "`{$col}` IS NOT NULL";
+                    break;
+                case 'in':
+                    $vals = json_decode($value, true);
+                    if (is_array($vals) && count($vals) > 0) {
+                        $ph = implode(',', array_fill(0, count($vals), '?'));
+                        $where[] = "`{$col}` NOT IN ({$ph})";
+                        $params = array_merge($params, $vals);
+                    }
+                    break;
+                case 'like':
+                    $where[] = "`{$col}` NOT LIKE ?";
+                    $params[] = $value;
+                    break;
+                case 'ilike':
+                    $where[] = "LOWER(`{$col}`) NOT LIKE LOWER(?)";
+                    $params[] = $value;
+                    break;
+            }
+        } elseif ($key === 'or') {
+            // OR filter: or=(name.ilike.%q%,description.ilike.%q%)
+            $orResult = parseOrFilter($value);
+            if ($orResult) {
+                $where[] = $orResult['sql'];
+                $params = array_merge($params, $orResult['params']);
+            }
         }
     }
     
     return [$where, $params];
+}
+
+/**
+ * Parse Supabase-style OR filter string.
+ * Example: "name.ilike.%search%,description.ilike.%search%"
+ * Example: "is_global.eq.true,user_id.eq.abc-123"
+ */
+function parseOrFilter(string $orString): ?array {
+    // Remove wrapping parentheses if present
+    $orString = trim($orString, '()');
+    if (empty($orString)) return null;
+    
+    // Split by comma, but respect nested parentheses
+    $conditions = [];
+    $current = '';
+    $depth = 0;
+    for ($i = 0; $i < strlen($orString); $i++) {
+        $ch = $orString[$i];
+        if ($ch === '(') $depth++;
+        elseif ($ch === ')') $depth--;
+        elseif ($ch === ',' && $depth === 0) {
+            $conditions[] = trim($current);
+            $current = '';
+            continue;
+        }
+        $current .= $ch;
+    }
+    if ($current !== '') $conditions[] = trim($current);
+    
+    $sqlParts = [];
+    $params = [];
+    
+    foreach ($conditions as $cond) {
+        // Format: column.operator.value
+        if (preg_match('/^([a-z_][a-z0-9_]*)\.([a-z]+)\.(.+)$/i', $cond, $m)) {
+            $col = validateColumn($m[1]);
+            $op = $m[2];
+            $val = $m[3];
+            
+            switch ($op) {
+                case 'eq':
+                    if ($val === 'true') $val = 1;
+                    elseif ($val === 'false') $val = 0;
+                    $sqlParts[] = "`{$col}` = ?";
+                    $params[] = $val;
+                    break;
+                case 'neq':
+                    $sqlParts[] = "`{$col}` != ?";
+                    $params[] = $val;
+                    break;
+                case 'gt':
+                    $sqlParts[] = "`{$col}` > ?";
+                    $params[] = $val;
+                    break;
+                case 'gte':
+                    $sqlParts[] = "`{$col}` >= ?";
+                    $params[] = $val;
+                    break;
+                case 'lt':
+                    $sqlParts[] = "`{$col}` < ?";
+                    $params[] = $val;
+                    break;
+                case 'lte':
+                    $sqlParts[] = "`{$col}` <= ?";
+                    $params[] = $val;
+                    break;
+                case 'like':
+                    $sqlParts[] = "`{$col}` LIKE ?";
+                    $params[] = $val;
+                    break;
+                case 'ilike':
+                    $sqlParts[] = "LOWER(`{$col}`) LIKE LOWER(?)";
+                    $params[] = $val;
+                    break;
+                case 'is':
+                    if ($val === 'null') $sqlParts[] = "`{$col}` IS NULL";
+                    elseif ($val === 'true') { $sqlParts[] = "`{$col}` = ?"; $params[] = 1; }
+                    elseif ($val === 'false') { $sqlParts[] = "`{$col}` = ?"; $params[] = 0; }
+                    break;
+            }
+        }
+    }
+    
+    if (empty($sqlParts)) return null;
+    
+    return [
+        'sql' => '(' . implode(' OR ', $sqlParts) . ')',
+        'params' => $params,
+    ];
 }
 
 function validateColumn(string $col): string {
