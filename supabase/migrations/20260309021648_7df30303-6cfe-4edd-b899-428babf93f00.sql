@@ -1,0 +1,1 @@
+ALTER TABLE public.footer_payment_banners ADD COLUMN banner_size text NOT NULL DEFAULT 'medium';

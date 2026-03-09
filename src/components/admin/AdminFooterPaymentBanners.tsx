@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,6 +17,7 @@ interface PaymentBanner {
   link_url: string | null;
   display_order: number;
   is_active: boolean;
+  banner_size: string;
 }
 
 const AdminFooterPaymentBanners = () => {
@@ -77,6 +79,7 @@ const AdminFooterPaymentBanners = () => {
         link_url: banner.link_url,
         display_order: banner.display_order,
         is_active: banner.is_active,
+        banner_size: banner.banner_size,
       })
       .eq("id", banner.id);
 
@@ -177,7 +180,7 @@ const AdminFooterPaymentBanners = () => {
                   />
                 </div>
                 <div className="flex-1 space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
                       <Label className="text-xs">Name</Label>
                       <Input
@@ -193,6 +196,22 @@ const AdminFooterPaymentBanners = () => {
                         onChange={e => updateBanner(banner.id, { link_url: e.target.value || null })}
                         placeholder="https://..."
                       />
+                    </div>
+                    <div>
+                      <Label className="text-xs">ব্যানার সাইজ</Label>
+                      <Select
+                        value={banner.banner_size || "medium"}
+                        onValueChange={val => updateBanner(banner.id, { banner_size: val })}
+                      >
+                        <SelectTrigger className="h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="small">Small (ছোট)</SelectItem>
+                          <SelectItem value="medium">Medium (মাঝারি)</SelectItem>
+                          <SelectItem value="large">Large (বড়)</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">

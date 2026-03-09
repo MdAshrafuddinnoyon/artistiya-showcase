@@ -1495,6 +1495,7 @@ export type Database = {
       }
       footer_payment_banners: {
         Row: {
+          banner_size: string
           created_at: string
           display_order: number
           id: string
@@ -1505,6 +1506,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          banner_size?: string
           created_at?: string
           display_order?: number
           id?: string
@@ -1515,6 +1517,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          banner_size?: string
           created_at?: string
           display_order?: number
           id?: string

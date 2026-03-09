@@ -107,7 +107,7 @@ const MobileAppFooter = () => {
     success_message: "Thank you for subscribing!",
   });
   
-  const [paymentBanners, setPaymentBanners] = useState<{ id: string; name: string; image_url: string; link_url: string | null }[]>([]);
+  const [paymentBanners, setPaymentBanners] = useState<{ id: string; name: string; image_url: string; link_url: string | null; banner_size: string }[]>([]);
   const [paymentLabel, setPaymentLabel] = useState("We Accept");
   const [email, setEmail] = useState("");
   const [subscribing, setSubscribing] = useState(false);
@@ -497,7 +497,7 @@ const MobileAppFooter = () => {
                   <img 
                     src={banner.image_url} 
                     alt={banner.name} 
-                    className="h-5 w-auto object-contain bg-white rounded px-1 py-0.5" 
+                    className={`${banner.banner_size === 'small' ? 'h-4' : banner.banner_size === 'large' ? 'h-8' : 'h-5'} w-auto object-contain bg-white rounded px-1 py-0.5`} 
                   />
                 </a>
               ) : (
@@ -505,7 +505,7 @@ const MobileAppFooter = () => {
                   key={banner.id} 
                   src={banner.image_url} 
                   alt={banner.name} 
-                  className="h-5 w-auto object-contain bg-white rounded px-1 py-0.5" 
+                  className={`${banner.banner_size === 'small' ? 'h-4' : banner.banner_size === 'large' ? 'h-8' : 'h-5'} w-auto object-contain bg-white rounded px-1 py-0.5`} 
                 />
               )
             ))
