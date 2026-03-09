@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Instagram, Facebook, Mail, Twitter, Youtube, Linkedin, MessageCircle, Pin, Music, Globe, Phone, Send, Camera, ExternalLink, Loader2, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import { useIsMobile } from "@/hooks/use-mobile";
 import MobileAppFooter from "@/components/mobile/MobileAppFooter";
 import { useToast } from "@/hooks/use-toast";

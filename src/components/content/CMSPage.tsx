@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import DOMPurify from "dompurify";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 type ContentPageRow = {

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useCart } from "@/hooks/useCart";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import CartDrawer from "@/components/modals/CartDrawer";
 import AuthModal from "@/components/modals/AuthModal";
 import CustomOrderModal from "@/components/modals/CustomOrderModal";

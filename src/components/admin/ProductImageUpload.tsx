@@ -3,7 +3,7 @@ import { Upload, X, Image as ImageIcon, Loader2, Link as LinkIcon, FolderOpen } 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import { toast } from "sonner";
 import MediaPickerModal from "./MediaPickerModal";
 
