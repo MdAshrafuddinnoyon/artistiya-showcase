@@ -61,7 +61,7 @@ Redirect all HTTP requests to HTTPS
 ### Step 1: Import MySQL Schema
 
 ```bash
-mysql -u artistiya_user -p artistiya_store < docs/migration/DATABASE_SCHEMA_MYSQL.sql
+mysql -u artistiya_user -p artistiya_store < document/migration/DATABASE_SCHEMA_MYSQL.sql
 ```
 
 ### Step 2: Export Data from Supabase
@@ -90,6 +90,25 @@ IGNORE 1 ROWS;
 ### Step 4: UUID Migration
 
 Supabase UUIDs to MySQL UUIDs: No changes needed as MySQL 8.0+ supports UUID() natively.
+
+### Step 5: Upgrade Existing Categories Table (if needed)
+
+If your MySQL `categories` table was created before the icon fields were added, run:
+
+```sql
+-- Mobile icon fields (safe to run on existing databases — IF NOT EXISTS guard)
+ALTER TABLE `categories`
+  ADD COLUMN IF NOT EXISTS `mobile_image_url` TEXT         NULL COMMENT 'Mobile slider circle image'      AFTER `image_url`,
+  ADD COLUMN IF NOT EXISTS `icon_name`        VARCHAR(100) NULL COMMENT 'Lucide icon name (optional)'     AFTER `mobile_image_url`,
+  ADD COLUMN IF NOT EXISTS `icon_emoji`       VARCHAR(20)  NULL COMMENT 'Emoji icon (e.g. 💍, 👜, 🎨)'   AFTER `icon_name`,
+  ADD COLUMN IF NOT EXISTS `updated_at`       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER `created_at`;
+
+-- Index for performance
+ALTER TABLE `categories`
+  ADD INDEX IF NOT EXISTS `idx_categories_display_order` (`display_order`);
+```
+
+> **Mobile icon priority**: `mobile_image_url` → `image_url` → `icon_emoji` → default emoji (🛍️)
 
 ---
 
