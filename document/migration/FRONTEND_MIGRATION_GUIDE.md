@@ -532,23 +532,60 @@ await api.invoke("send-order-email", { body: emailData });
 
 ### 🟡 মাঝারি অগ্রাধিকার (Admin Panel)
 
-| ফাইল | Supabase ব্যবহার |
-|---|---|
-| `src/components/admin/AdminProducts.tsx` | products CRUD |
-| `src/components/admin/AdminOrders.tsx` | orders CRUD |
-| `src/components/admin/AdminCategories.tsx` | categories CRUD |
-| `src/components/admin/AdminCustomers.tsx` | customers CRUD |
-| `src/components/admin/AdminCRM.tsx` | CRM data queries |
-| `src/components/admin/AdminHeroSlider.tsx` | hero_slides CRUD |
-| `src/components/admin/AdminBlogPosts.tsx` | blog_posts CRUD |
-| `src/components/admin/AdminPromoCodes.tsx` | promo_codes CRUD |
-| `src/components/admin/AdminCollections.tsx` | collections CRUD |
-| `src/components/admin/AdminPaymentProviders.tsx` | payment_providers CRUD |
-| `src/components/admin/AdminDeliveryProviders.tsx` | delivery_providers CRUD |
-| `src/components/admin/AdminSettings.tsx` | site_branding, settings CRUD |
-| `src/components/admin/ProductImageUpload.tsx` | `supabase.storage` upload/delete |
-| `src/components/admin/ImageUploadZone.tsx` | `supabase.storage` upload |
-| `src/components/admin/MediaPickerModal.tsx` | `supabase.storage` list/upload |
+| ফাইল | Supabase ব্যবহার | Notes |
+|---|---|---|
+| `src/components/admin/AdminProducts.tsx` | products CRUD | — |
+| `src/components/admin/AdminOrders.tsx` | orders CRUD | — |
+| `src/components/admin/AdminCategories.tsx` | categories CRUD | `icon_emoji`, `mobile_image_url`, `icon_name` fields included |
+| `src/components/admin/AdminCustomers.tsx` | customers CRUD | — |
+| `src/components/admin/AdminCRM.tsx` | CRM data queries | — |
+| `src/components/admin/AdminHeroSlider.tsx` | hero_slides CRUD | — |
+| `src/components/admin/AdminBlogPosts.tsx` | blog_posts CRUD | — |
+| `src/components/admin/AdminPromoCodes.tsx` | promo_codes CRUD | — |
+| `src/components/admin/AdminCollections.tsx` | collections CRUD | — |
+| `src/components/admin/AdminPaymentProviders.tsx` | payment_providers CRUD | — |
+| `src/components/admin/AdminDeliveryProviders.tsx` | delivery_providers CRUD | — |
+| `src/components/admin/AdminSettings.tsx` | site_branding, settings CRUD | — |
+| `src/components/admin/ProductImageUpload.tsx` | `supabase.storage` upload/delete | — |
+| `src/components/admin/ImageUploadZone.tsx` | `supabase.storage` upload | — |
+| `src/components/admin/MediaPickerModal.tsx` | `supabase.storage` list/upload | — |
+
+#### Mobile Category Icons — PHP API (categories)
+
+The mobile category slider (`MobileCategorySlider.tsx`) fetches these fields:
+```
+id, name, name_bn, slug, image_url, icon_name, icon_emoji, mobile_image_url
+```
+
+PHP API endpoint for categories must return all icon fields. Example PHP response:
+
+```php
+// api/categories.php — GET /categories
+$stmt = $pdo->prepare("
+  SELECT id, name, name_bn, slug, image_url, mobile_image_url, icon_name, icon_emoji, display_order
+  FROM categories
+  ORDER BY display_order ASC
+");
+$stmt->execute();
+$categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Mobile icon priority logic (mirror frontend):
+// 1. mobile_image_url (if set) → show as circle image
+// 2. image_url (fallback image) → show as circle image
+// 3. icon_emoji (if set) → show emoji in circle
+// 4. default emoji 🛍️
+
+header('Content-Type: application/json');
+echo json_encode(['data' => $categories, 'error' => null]);
+```
+
+PATCH `/categories/:id` must accept and save all icon fields:
+```php
+// PATCH /categories/:id
+$allowed = ['name','name_bn','slug','description','image_url','mobile_image_url','icon_name','icon_emoji','display_order','parent_id'];
+$updates = array_intersect_key($body, array_flip($allowed));
+// build prepared statement from $updates...
+```
 
 ### 🟢 নিম্ন অগ্রাধিকার (Public Pages)
 
