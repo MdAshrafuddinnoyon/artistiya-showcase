@@ -529,17 +529,29 @@ const Footer = () => {
         <div className="container mx-auto px-4 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row items-center justify-center gap-4">
             <span className="text-sm text-muted-foreground">
-              We Accept:
+              {paymentLabel}:
             </span>
-            <div className="flex flex-wrap justify-center gap-3">
-              {branding.payment_methods.map((method, index) => (
-                <div
-                  key={index}
-                  className={`${getPaymentColor(method)} px-4 py-2 rounded-md text-white text-xs font-semibold tracking-wide`}
-                >
-                  {method}
-                </div>
-              ))}
+            <div className="flex flex-wrap justify-center gap-3 items-center">
+              {paymentBanners.length > 0 ? (
+                paymentBanners.map((banner) => (
+                  banner.link_url ? (
+                    <a key={banner.id} href={banner.link_url} target="_blank" rel="noopener noreferrer">
+                      <img src={banner.image_url} alt={banner.name} className="h-8 w-auto object-contain" />
+                    </a>
+                  ) : (
+                    <img key={banner.id} src={banner.image_url} alt={banner.name} className="h-8 w-auto object-contain" />
+                  )
+                ))
+              ) : (
+                branding.payment_methods.map((method, index) => (
+                  <div
+                    key={index}
+                    className={`${getPaymentColor(method)} px-4 py-2 rounded-md text-white text-xs font-semibold tracking-wide`}
+                  >
+                    {method}
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
