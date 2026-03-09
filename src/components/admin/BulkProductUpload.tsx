@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { Upload, FileSpreadsheet, X, Download, AlertCircle, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/db";
 import { toast } from "sonner";
 
 interface BulkProductUploadProps {
